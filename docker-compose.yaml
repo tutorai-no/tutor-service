@@ -20,14 +20,6 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - MONGODB_URI=${MONGODB_URI}
 
-  frontend:
-    build:
-      context: ./frontend
-    container_name: frontend
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
   db:
     image: postgres:13
     volumes:
