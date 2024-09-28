@@ -1,124 +1,47 @@
-from dataclasses import dataclass
+""" This module contains the Pydantic models for the learning resources. """
+
 from pydantic import BaseModel, Field, PrivateAttr
 
-
-@dataclass
-class Page:
-    text: str
-    page_num: int
-    pdf_name: str
-
-    def to_dict(self) -> dict:
-        return {
-            "text": self.text,
-            "page_num": self.page_num,
-            "pdf_name": self.pdf_name,
-        }
+class Page(BaseModel):
+    text: str = Field(description="The text content of the page")
+    page_num: int = Field(description="The page number")
+    pdf_name: str = Field(description="The name of the PDF file from which the page is extracted")
 
 
-@dataclass
-class QuestionAnswer:
-    question: str
-    answer: str
-
-    def to_dict(self) -> dict:
-        return {
-            "question": self.question,
-            "answer": self.answer,
-        }
+class QuestionAnswer(BaseModel):
+    question: str = Field(description="The question part of a QA pair")
+    answer: str = Field(description="The answer part of a QA pair")
 
 
-@dataclass
-class Quiz:
+class Quiz(BaseModel):
     # Metadata
-    document: str
-    start: int
-    end: int
+    document: str = Field(description="The name of the document")
+    start: int = Field(description="The starting page of the quiz")
+    end: int = Field(description="The ending page of the quiz")
 
     # The list of questions
-    questions: list[QuestionAnswer]
-
-    def to_dict(self) -> dict:
-        return {
-            "document": self.document,
-            "start": self.start,
-            "end": self.end,
-            "questions": [question.to_dict() for question in self.questions],
-        }
+    questions: list[QuestionAnswer] = Field(description="A list of question-answer pairs")
 
 
-@dataclass
-class Compendium:
+class Compendium(BaseModel):
     # Metadata
-    document_name: str
-    start: int
-    end: int
-    key_concepts: list[str]
-    summary: str
-
-    def to_dict(self) -> dict:
-        return {
-            "document": self.document_name,
-            "start": self.start,
-            "end": self.end,
-            "key_concepts": self.key_concepts,
-            "summary": self.summary,
-        }
+    document_name: str = Field(description="The name of the document")
+    start: int = Field(description="The starting page of the compendium")
+    end: int = Field(description="The ending page of the compendium")
+    key_concepts: list[str] = Field(description="A list of key concepts covered in the compendium")
+    summary: str = Field(description="A summary of the compendium")
 
 
-@dataclass
-class QuestionAnswer:
-    question: str
-    answer: str
-
-    def to_dict(self) -> dict:
-        return {
-            "question": self.question,
-            "answer": self.answer,
-        }
+class GradedQuiz(BaseModel):
+    answers_was_correct: list[bool] = Field(description="A list indicating whether each answer was correct")
+    feedback: list[str] = Field(description="Feedback for each question in the quiz")
 
 
-@dataclass
-class Quiz:
-    # Metadata
-    document: str
-    start: int
-    end: int
-
-    # The list of questions
-    questions: list[QuestionAnswer]
-
-    def to_dict(self) -> dict:
-        return {
-            "document": self.document,
-            "start": self.start,
-            "end": self.end,
-            "questions": [question.to_dict() for question in self.questions],
-        }
+class RagAnswer(BaseModel):
+    answer: str = Field(description="The answer to the question")
+    citations: list[Page] = Field(description="A list of citations related to the answer")
 
 
-@dataclass
-class GradedQuiz:
-    answers_was_correct: list[bool]
-    feedback: list[str]
-
-    def to_dict(self) -> dict:
-        return {
-            "answers_was_correct": self.answers_was_correct,
-            "feedback": self.feedback,
-        }
-
-
-@dataclass
-class RagAnswer:
-    answer: str
-    citations: list[Page]
-
-    def to_dict(self) -> dict:
-        return {
-            "answer": self.answer,
-            "citations": [citation.to_dict() for citation in self.citations],
-        }
 
 class Flashcard(BaseModel):
     front: str = Field(description="The front content of the flashcard")
