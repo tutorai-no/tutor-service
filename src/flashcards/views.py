@@ -107,7 +107,7 @@ class FlashcardCreationView(GenericAPIView):
 
             flashcards = process_flashcards(file_name, start, end)
             exportable_flashcard = parse_for_anki(flashcards)
-            flashcard_dicts = [flashcard.to_dict() for flashcard in flashcards]
+            flashcard_dicts = [flashcard.model_dump() for flashcard in flashcards]
 
             response = {
                 "flashcards": flashcard_dicts,
