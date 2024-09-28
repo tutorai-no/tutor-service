@@ -1,8 +1,6 @@
 from django.urls import path
 from .views import health_check
 from learning_materials.views import (
-    CurriculumUploadView,
-    # post_curriculum,
     FlashcardCreationView,
     RAGResponseView,
     QuizCreationView,
@@ -13,7 +11,6 @@ from learning_materials.views import (
 
 urlpatterns = [
     path("health-check/", health_check, name="health-check"),
-    path("curriculum/", CurriculumUploadView.as_view(), name="store-curriculum"),
     path(
         "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"
     ),
