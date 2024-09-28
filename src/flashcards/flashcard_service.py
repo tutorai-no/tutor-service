@@ -46,7 +46,6 @@ def process_flashcards(document_name: str, start: int, end: int) -> list[Flashca
 
     return flashcards
 
-
 def store_curriculum(uploaded_file: InMemoryUploadedFile) -> bool:
     """
     Process the file and store the pages as curriculum in a database.
@@ -65,21 +64,6 @@ def store_curriculum(uploaded_file: InMemoryUploadedFile) -> bool:
         # TODO: HANDLE FAILURE CASE OF POST CONTEXT
     return context_posted
 
-
-def request_flashcards_by_page_range(
-    pdf_name: str, page_num_start: int, page_num_end
-) -> list[Flashcard]:
-    """
-    Request flashcards for a specific page range and pdf from the database
-    """
-    # Get the flashcards from the database
-    pages: list[Page] = get_page_range(pdf_name, page_num_start, page_num_end)
-    flashcards: list[Flashcard] = []
-    for page in pages:
-        flashcards_from_page = generate_flashcards(page)
-        flashcards.extend(flashcards_from_page)
-
-    return flashcards
 
 
 def process_answer(
