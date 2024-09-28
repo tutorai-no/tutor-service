@@ -1,11 +1,10 @@
-# TutorAI
+# Tutor Service
 
 <div align="center">
 
 ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/SverreNystad/TutorAI/django.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/SverreNystad/TutorAI)
 ![GitHub language count](https://img.shields.io/github/languages/count/SverreNystad/TutorAI)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Project Version](https://img.shields.io/badge/version-1.0.0-blue)](https://img.shields.io/badge/version-1.0.0-blue)
 
 <img src="docs/images/TutorAI.png" width="50%" alt="Cogito Image" style="display: block; margin-left: auto; margin-right: auto;">
@@ -14,7 +13,7 @@
 <details> 
 <summary><b>📋 Table of contents </b></summary>
 
-- [TutorAI](#tutorai)
+- [Tutor Service](#tutor-service)
   - [Introduction](#introduction)
     - [Features](#features)
   - [Quick Start](#quick-start)
@@ -24,7 +23,6 @@
     - [Usage](#usage)
   - [📖 Documentations](#-documentations)
   - [Contributors](#contributors)
-  - [License](#license)
 
 </details>
 
@@ -156,6 +154,3 @@ This project would not have been possible without the hard work and dedication o
 </div>
 
 
-
-## License
-Licensed under the [MIT License](LICENSE).
