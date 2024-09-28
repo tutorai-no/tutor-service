@@ -1,35 +1,25 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.11.2
+# Use the official Python image from Docker Hub
+FROM python:3.11-slim
+
+# Set environment variables to prevent Python from buffering stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Make a new directory to put our code in.
-RUN mkdir /code
-
-# Change the working directory.
 WORKDIR /code
 
-# Copy only the requirements first
-COPY requirements.txt /code/
-RUN pip install -r requirements.txt
+# Install dependencies first to leverage Docker layer caching
+COPY requirements.txt /code/requirements.txt
 
-# Install Tesseract OCR using apt-get
-RUN apt-get update && \
-    apt-get install -y \
-    build-essential \
-    python3-dev \
-    python3-setuptools \
-    libgl1-mesa-glx \
-    tesseract-ocr \
-    tesseract-ocr-nor \
-    make \
-    gcc \
-    && python3 -m pip install -r requirements.txt \
-    && apt-get remove -y --purge make gcc build-essential \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 
-# Then copy the rest of the code
+# Copy the rest of the application code
 COPY . /code/
+
+# Expose the application port
+EXPOSE 8000
 
 # Run the application:
 CMD gunicorn --bind :8000 tutorai.wsgi --workers 1 --timeout 120
