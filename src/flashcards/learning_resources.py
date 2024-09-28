@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-
+from pydantic import BaseModel
 
 @dataclass
 class Page:
@@ -119,18 +119,8 @@ class RagAnswer:
             "citations": [citation.to_dict() for citation in self.citations],
         }
 
-
-@dataclass
-class Flashcard:
+class Flashcard(BaseModel):
     front: str
     back: str
     pdf_name: str
     page_num: int
-
-    def to_dict(self):
-        return {
-            "front": self.front,
-            "back": self.back,
-            "pdf_name": self.pdf_name,
-            "page_num": self.page_num,
-        }
