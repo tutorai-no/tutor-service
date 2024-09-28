@@ -1,7 +1,6 @@
 """ The service module contains the business logic of the application. """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from learning_materials.knowledge_base.response_formulation import (
     create_question_answer_pair,
@@ -11,7 +10,6 @@ from learning_materials.knowledge_base.response_formulation import (
 from learning_materials.knowledge_base.rag_service import (
     get_context,
     get_page_range,
-    post_context,
 )
 from learning_materials.flashcards.flashcards_service import generate_flashcards
 from learning_materials.learning_resources import (
@@ -44,24 +42,6 @@ def process_flashcards(document_name: str, start: int, end: int) -> list[Flashca
             flashcards.extend(future.result())
 
     return flashcards
-
-def store_curriculum(uploaded_file: InMemoryUploadedFile) -> bool:
-    """
-    Process the file and store the pages as curriculum in a database.
-    """
-    print("[INFO] Processing file", flush=True)
-
-    # Extract text from the uploaded file
-
-    extractor = TextExtractor()
-    pages: list[Page] = extractor.extractData(uploaded_file)
-
-    for page in pages:
-        print(f"[INFO] Processing page {page.page_num}", flush=True)
-        # Save content
-        context_posted: bool = post_context(page.text, page.page_num, page.pdf_name)
-        # TODO: HANDLE FAILURE CASE OF POST CONTEXT
-    return context_posted
 
 
 
