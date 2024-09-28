@@ -9,7 +9,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 
-from flashcards.flashcard_service import (
+from flashcards.learning_material_service import (
     generate_compendium,
     generate_quiz,
     grade_quiz,
@@ -17,7 +17,7 @@ from flashcards.flashcard_service import (
     store_curriculum,
     process_answer,
 )
-from flashcards.text_to_flashcards import parse_for_anki
+from flashcards.flashcards.flashcards_service import parse_for_anki
 
 
 from flashcards.serializer import (

@@ -1,16 +1,19 @@
+from pydantic import BaseModel
 
-from pydantic import BaseModel, Field
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
 from flashcards.learning_resources import Flashcard, Page
 from config import Config
-from dataclasses import dataclass
-from typing import Protocol
 
-model = ChatOpenAI(temperature=temperature, api_key=Config().API_KEY)
-flashcard_parser = PydanticOutputParser(pydantic_object=Flashcard)
+
+class FlashcardWrapper(BaseModel):
+    flashcards: list[Flashcard]
+
+
+model = ChatOpenAI(temperature=0, api_key=Config().API_KEY)
+flashcard_parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
 
 def generate_flashcards(page: Page) -> list[Flashcard]:
     template = _generate_template(page.text)
@@ -24,7 +27,8 @@ def generate_flashcards(page: Page) -> list[Flashcard]:
     chain = prompt | model | flashcard_parser
 
     # Generating the flashcards
-    flashcards = chain.invoke({"query": template})
+    wrapper = chain.invoke({"query": template})
+    flashcards = wrapper.flashcards
 
     # Ensuring page_num and pdf_name are set correctly
     for flashcard in flashcards:
@@ -35,8 +39,8 @@ def generate_flashcards(page: Page) -> list[Flashcard]:
 
 def _generate_template(context: str) -> str:
     """
-    Returns a template with the correct flashcard and prompt format which can be used to generate flashcards using the context
-
+    Returns a template with the correct flashcard and prompt format which can be used to generate flashcards using the context.
+    
     Args:
         context (str): The sample text to be used
 
@@ -44,10 +48,36 @@ def _generate_template(context: str) -> str:
         str: The template with the correct flashcard and prompt format which can be used to generate flashcards using the context
     """
 
-    example = f"Front: Which year was the person born? - Back: 1999 | Front: At what temperature does water boil? - Back: 100 degrees celsius | Front: MAC - Back: Message Authentication Code"
-    template = f"Create a set of flashcards using the following format: {example} from the following text: {context}. Use only information from the text to generate the flashcards. Use only the given format. Do not use line breaks. Do not use any other format"
+    template = (
+        f"""Create flashcards from the provided text using any of the following formats: Standard Q&A, Vocabulary, Fill-in-the-Blank, Multiple Choice, and True/False. Choose the best format(s) based on the content of the text. Follow these examples:
+        1. Q&A:
+        * Front: "What is the capital of France?"
+        * Back: "Paris"
 
+        2. Vocabulary:
+        * Front: "Photosynthesis"
+        * Back: "The process by which plants use sunlight to make food."
+
+        3. Fill-in-the-Blank:
+        * Front: "The largest ocean is ____."
+        * Back: "Pacific Ocean"
+
+        4. Multiple Choice:
+        * Front: "Which planet is the Red Planet? (a) Venus (b) Mars (c) Jupiter"
+        * Back: "(b) Mars"
+
+        5. True/False:
+        * Front: "The Eiffel Tower is in Paris. True or False?"
+        * Back: "True"
+
+        Generate flashcards that best represent the content of the text. 
+        Use only the formats listed above, and ensure each flashcard is clear, relevant, and directly derived from the text."
+        """
+        f"\n\nText:\n{context}"
+    )
+    
     return template
+
 
 
 def parse_for_anki(flashcards: list[Flashcard]) -> str:
