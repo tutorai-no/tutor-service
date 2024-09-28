@@ -1,4 +1,4 @@
-from flashcards.knowledge_base.db_interface import MongoDB
+from learning_materials.knowledge_base.db_interface import MongoDB
 
 if __name__ == '__main__':
     db = MongoDB()

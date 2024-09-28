@@ -1,7 +1,7 @@
 from django.test import TestCase
 from unittest.mock import patch
-from flashcards.learning_resources import Flashcard, Page
-from flashcards.flashcards.flashcards_service import generate_flashcards, parse_for_anki
+from learning_materials.learning_resources import Flashcard, Page
+from learning_materials.flashcards.flashcards_service import generate_flashcards, parse_for_anki
 
 
 class FlashcardGenerationTests(TestCase):

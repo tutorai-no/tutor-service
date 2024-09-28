@@ -1,7 +1,7 @@
 import openai
 from config import Config
 
-from flashcards.learning_resources import QuestionAnswer
+from learning_materials.learning_resources import QuestionAnswer
 
 # The api_key:
 api_key = Config().API_KEY

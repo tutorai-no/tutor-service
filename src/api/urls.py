@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import health_check
-from flashcards.views import (
+from learning_materials.views import (
     CurriculumUploadView,
     # post_curriculum,
     FlashcardCreationView,

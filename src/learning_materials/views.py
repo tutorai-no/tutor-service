@@ -1,6 +1,5 @@
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.parsers import MultiPartParser
-from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -9,7 +8,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 
-from flashcards.learning_material_service import (
+from learning_materials.learning_material_service import (
     generate_compendium,
     generate_quiz,
     grade_quiz,
@@ -17,10 +16,10 @@ from flashcards.learning_material_service import (
     store_curriculum,
     process_answer,
 )
-from flashcards.flashcards.flashcards_service import parse_for_anki
+from learning_materials.flashcards.flashcards_service import parse_for_anki
 
 
-from flashcards.serializer import (
+from learning_materials.serializer import (
     CurriculumSerializer,
     ChatSerializer,
     DocumentSerializer,

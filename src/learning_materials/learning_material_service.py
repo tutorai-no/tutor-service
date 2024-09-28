@@ -3,18 +3,18 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
-from flashcards.knowledge_base.response_formulation import (
+from learning_materials.knowledge_base.response_formulation import (
     create_question_answer_pair,
     grade_question_answer_pair,
     response_formulation,
 )
-from flashcards.knowledge_base.rag_service import (
+from learning_materials.knowledge_base.rag_service import (
     get_context,
     get_page_range,
     post_context,
 )
-from flashcards.flashcards.flashcards_service import generate_flashcards
-from flashcards.learning_resources import (
+from learning_materials.flashcards.flashcards_service import generate_flashcards
+from learning_materials.learning_resources import (
     Compendium,
     GradedQuiz,
     Page,

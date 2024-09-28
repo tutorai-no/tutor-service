@@ -1,11 +1,11 @@
 from django.test import TestCase, Client
-from flashcards.learning_material_service import process_answer
-from flashcards.flashcards.flashcards_service import (
+from learning_materials.learning_material_service import process_answer
+from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
     parse_for_anki,
 )
-from flashcards.learning_resources import Flashcard
-from flashcards.learning_resources import Page
+from learning_materials.learning_resources import Flashcard
+from learning_materials.learning_resources import Page
 import re
 from rest_framework import status
 
