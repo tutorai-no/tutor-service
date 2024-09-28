@@ -13,8 +13,7 @@ from flashcards.knowledge_base.rag_service import (
     get_page_range,
     post_context,
 )
-from flashcards.text_to_flashcards import generate_flashcards, OpenAIFlashcardGenerator
-from flashcards.text_scraper.text_extractor import TextExtractor
+from flashcards.flashcards.flashcards_service import generate_flashcards
 from flashcards.learning_resources import (
     Compendium,
     GradedQuiz,
@@ -143,14 +142,14 @@ def generate_compendium(document_name: str, start: int, end: int) -> Compendium:
         # Append the key concepts and summaries to the lists
 
         concept_template, summary_template = _generate_compendium_template(page.text)
-        concept = OpenAIFlashcardGenerator.request_chat_completion(
-            "system", message=concept_template
-        )
-        summary = OpenAIFlashcardGenerator.request_chat_completion(
-            "system", message=summary_template
-        )
-        key_concepts.extend(concept.split("|"))
-        summaries += summary
+        # concept = OpenAIFlashcardGenerator.request_chat_completion(
+        #    "system", message=concept_template
+        # )
+        # summary = OpenAIFlashcardGenerator.request_chat_completion(
+        #     "system", message=summary_template
+        # )
+        # key_concepts.extend(concept.split("|"))
+        # summaries += summary
 
     compendium = Compendium(document_name, start, end, key_concepts, summaries)
     return compendium

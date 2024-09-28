@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 @dataclass
@@ -122,6 +123,23 @@ class RagAnswer:
 class Flashcard(BaseModel):
     front: str = Field(description="The front content of the flashcard")
     back: str = Field(description="The back content of the flashcard")
-    pdf_name: str = Field(description="The name of the PDF file from which the flashcard was generated")
-    page_num: int = Field(description="The page number of the PDF")
+       # Private attributes for post-instantiation modification
+    _pdf_name: str = PrivateAttr(default=None)
+    _page_num: int = PrivateAttr(default=None)
+
+    @property
+    def pdf_name(self):
+        return self._pdf_name
+
+    @pdf_name.setter
+    def pdf_name(self, value: str):
+        self._pdf_name = value
+
+    @property
+    def page_num(self):
+        return self._page_num
+
+    @page_num.setter
+    def page_num(self, value: int):
+        self._page_num = value
 
