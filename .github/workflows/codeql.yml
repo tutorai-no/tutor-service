@@ -47,8 +47,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Change to frontend directory
-        run: cd frontend
+      - name: Change to Python server directory
+        run: cd src
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
