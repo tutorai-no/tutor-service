@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pydantic import BaseModel
+
 
 @dataclass
 class Page:
@@ -120,7 +120,8 @@ class RagAnswer:
         }
 
 class Flashcard(BaseModel):
-    front: str
-    back: str
-    pdf_name: str
-    page_num: int
+    front: str = Field(description="The front content of the flashcard")
+    back: str = Field(description="The back content of the flashcard")
+    pdf_name: str = Field(description="The name of the PDF file from which the flashcard was generated")
+    page_num: int = Field(description="The page number of the PDF")
+
