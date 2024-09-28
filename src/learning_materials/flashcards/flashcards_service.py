@@ -4,7 +4,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
-from flashcards.learning_resources import Flashcard, Page
+from learning_materials.learning_resources import Flashcard, Page
 from config import Config
 
 

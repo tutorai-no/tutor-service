@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from .embeddings import OpenAIEmbedding, cosine_similarity
 from config import Config
 from pymongo import MongoClient
-from flashcards.learning_resources import Page
+from learning_materials.learning_resources import Page
 
 
 class Database(ABC):

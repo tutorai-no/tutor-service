@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     # Own applications
     "api",
     # "users",
-    "flashcards",
+    "learning_materials",
 ]
 
 MIDDLEWARE = [
