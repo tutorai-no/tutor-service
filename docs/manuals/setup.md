@@ -28,7 +28,7 @@ To setup the project, one needs to have all the prerequisites installed. Then on
 ### Clone the repository
 
 ```bash
-git clone https://github.com/CogitoNTNU/TutorAI.git
+git clone https://github.com/The-TutorAI-project/tutor-service.git
 cd TutorAI
 ```
 
@@ -41,7 +41,6 @@ To setup the backend one can either automatically setup the backend using docker
 For ease of use and version management control, we use Docker to keep track of our containers and virtual environments.
 
 ```bash
-cd backend
 docker-compose build
 docker-compose up
 ```
@@ -90,11 +89,11 @@ With the virtual environment activated, install the project dependencies:
 pip install -r requirements.txt
 ```
 
-The requirements.txt file contains a list of packages necessary to run TutorAI. Installing them in an activated virtual environment ensures they are available to the project without affecting other Python projects or system settings.
+The requirements.txt file contains a list of packages necessary to run Tutor-Service. Installing them in an activated virtual environment ensures they are available to the project without affecting other Python projects or system settings.
 
 ### Create a .env file
 
-For secure and efficient management of environment-specific variables, TutorAI utilizes a `.env` file. This file is used to store sensitive information, such as API keys, which should not be hard-coded into the source code or shared publicly. The `.env` file is particularly crucial for maintaining the confidentiality of your API keys and other sensitive data.
+For secure and efficient management of environment-specific variables, Tutor-Service utilizes a `.env` file. This file is used to store sensitive information, such as API keys, which should not be hard-coded into the source code or shared publicly. The `.env` file is particularly crucial for maintaining the confidentiality of your API keys and other sensitive data.
 
 **Important:** The `.env` file should never be committed to version control (e.g., GitHub). Always include `.env` in your `.gitignore` file to prevent accidental upload of sensitive information.
 
@@ -121,11 +120,3 @@ For secure and efficient management of environment-specific variables, TutorAI u
 
    By following these steps, you'll ensure that your application has all the necessary environment-specific configurations, while keeping sensitive data secure and out of version control.
 
-### Setup the frontend
-
-The frontend is built using React and TypeScript. To install the dependencies, run the following command in the root directory of the project:
-
-```bash
-cd frontend
-npm install
-```
