@@ -142,6 +142,7 @@ class QuizGradingTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.url = f"{base}quiz/grade/"
+        self.valid_quiz_id = "Some ID"
 
     def test_invalid_request(self):
         invalid_payload = {}
@@ -150,9 +151,8 @@ class QuizGradingTest(TestCase):
 
     def test_valid_request(self):
         valid_response = {
-            "questions": ["question1", "question2"],
-            "correct_answers": ["correct1", "correct2"],
-            "student_answers": ["answer1", "answer2"],
+            "quiz_id": self.valid_quiz_id,
+            "student_answers": ["answer1"],
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
