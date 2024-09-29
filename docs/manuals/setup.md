@@ -28,8 +28,8 @@ To setup the project, one needs to have all the prerequisites installed. Then on
 ### Clone the repository
 
 ```bash
-git clone https://github.com/CogitoNTNU/TutorAI.git
-cd TutorAI
+git clone https://github.com/The-TutorAI-project/tutor-service.git
+cd tutor-service
 ```
 
 ## Setup the backend
@@ -101,31 +101,21 @@ For secure and efficient management of environment-specific variables, TutorAI u
 #### Steps to Create and Configure the .env File:
 
 1. **Create the .env File:**
-   In the root directory of the project, create a new file named `.env`. This file will be used to store environment variables.
+   In the root directory of the project, create a copy of the file `template.env` and renamed it `.env`. This file will be used to store environment variables.
 
    ```bash
-    touch .env
+    cp template.env
    ```
 
 2. **Add Environment Variables:**
-   You will need to add the following environment variables to the `.env` file:
+   You will need to fill in the following environment variables to the `.env` file:
 
    - OPENAI_API_KEY: Your OpenAI API key
 
-   ```bash
-   echo "OPENAI_API_KEY=YOUR_API_KEY" > .env # Remember to change YOUR_API_KEY to your actual API key
-   ```
 
 3. **Obtaining an API Key:**
    If you don't have an API key from OpenAI, you can obtain one by visiting [OpenAI API Keys](https://platform.openai.com/api-keys). Follow their instructions to generate a new API key.
 
    By following these steps, you'll ensure that your application has all the necessary environment-specific configurations, while keeping sensitive data secure and out of version control.
 
-### Setup the frontend
-
-The frontend is built using React and TypeScript. To install the dependencies, run the following command in the root directory of the project:
-
-```bash
-cd frontend
-npm install
 ```
