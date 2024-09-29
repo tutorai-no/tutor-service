@@ -1,4 +1,4 @@
-from learning_materials.knowledge_base.db_interface import Database, MongoDB
+from learning_materials.knowledge_base.db_interface import Database, MockDatabase, MongoDB
 from learning_materials.knowledge_base.embeddings import EmbeddingsModel, OpenAIEmbedding
 
 
@@ -6,6 +6,8 @@ def create_database(database_system: str = "mongodb") -> Database:
     match database_system.lower():
         case "mongodb":
             return MongoDB()
+        case "mock":
+            return MockDatabase()
         case _:
             raise ValueError(f"Database system {database_system} not supported")
 

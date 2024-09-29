@@ -20,6 +20,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - MONGODB_URI=${MONGODB_URI}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - RAG_DATABASE_SYSTEM=${RAG_DATABASE_SYSTEM}
 
   db:
     image: postgres:latest
