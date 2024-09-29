@@ -46,5 +46,5 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          docker build -t ghcr.io/the-tutorai-project/tutor-service:${{ steps.env_tag.outputs.tag }} .
+          docker build -t ghcr.io/the-tutorai-project/tutor-service:${{ steps.env_tag.outputs.tag }} ./src/
           docker push ghcr.io/the-tutorai-project/tutor-service:${{ steps.env_tag.outputs.tag }}
