@@ -125,7 +125,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-*.env
+.env
 .venv
 env/
 venv/
@@ -404,7 +404,6 @@ temp/
 *mies
 
 # Other names that would make sense
-*tests
 *testsdir
 *testsfile
 *testsfiles

@@ -17,6 +17,8 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          RAG_DATABASE_SYSTEM: ${{ secrets.RAG_DATABASE_SYSTEM }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
         run: |
           docker compose build backend
           docker compose run backend python manage.py makemigrations

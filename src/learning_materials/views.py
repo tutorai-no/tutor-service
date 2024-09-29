@@ -1,74 +1,26 @@
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from rest_framework.parsers import MultiPartParser
-from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 
-from flashcards.flashcard_service import (
-    generate_compendium,
-    generate_quiz,
-    grade_quiz,
+from learning_materials.learning_material_service import (
     process_flashcards,
-    store_curriculum,
     process_answer,
 )
-from flashcards.text_to_flashcards import parse_for_anki
-
-
-from flashcards.serializer import (
-    CurriculumSerializer,
+from learning_materials.learning_resources import QuestionAnswer, Quiz
+from learning_materials.quizzes.quiz_service import (
+    generate_quiz,
+    grade_quiz,
+)
+from learning_materials.flashcards.flashcards_service import parse_for_anki
+from learning_materials.compendiums.compendium_service import generate_compendium
+from learning_materials.serializer import (
     ChatSerializer,
     DocumentSerializer,
     QuizStudentAnswer,
 )
-
-
-class CurriculumUploadView(APIView):
-    serializer_class = CurriculumSerializer
-    parser_classes = [MultiPartParser]
-
-    file_param = openapi.Parameter(
-        "curriculum",
-        openapi.IN_FORM,
-        description="Curriculum files",
-        type=openapi.TYPE_FILE,
-        required=True,
-    )
-
-    @swagger_auto_schema(
-        operation_description="Upload curriculum files for processing",
-        manual_parameters=[file_param],
-        responses={
-            200: openapi.Response(description="Files processed successfully"),
-            400: openapi.Response(description="Invalid request data"),
-        },
-        tags=["Curriculum"],
-    )
-    def post(self, request, *args, **kwargs):
-        serializer = CurriculumSerializer(data=request.data)
-        if serializer.is_valid():
-            uploaded_files: list[InMemoryUploadedFile] = serializer.validated_data.get(
-                "curriculum"
-            )
-
-            for file in uploaded_files:
-                wasUploaded = store_curriculum(file)
-                if not wasUploaded:
-                    return Response(
-                        {"error": f"Failed to upload file: {file.name}"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
-
-            return Response(
-                {"message": "Files processed successfully"}, status=status.HTTP_200_OK
-            )
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FlashcardCreationView(GenericAPIView):
@@ -152,7 +104,7 @@ class RAGResponseView(GenericAPIView):
             chat_history = serializer.validated_data.get("chat_history", [])
 
             rag_answer = process_answer(document_names, user_question, chat_history)
-            response = rag_answer.to_dict()
+            response = rag_answer.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -189,7 +141,7 @@ class QuizCreationView(GenericAPIView):
             start = serializer.validated_data.get("start")
             end = serializer.validated_data.get("end")
             quiz = generate_quiz(document, start, end)
-            response = quiz.to_dict()
+            response = quiz.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -218,12 +170,15 @@ class QuizGradingView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            questions = serializer.validated_data.get("questions")
             student_answers = serializer.validated_data.get("student_answers")
-            correct_answers = serializer.validated_data.get("correct_answers")
+            quiz_id = serializer.validated_data.get("quiz_id")
+            # TODO: Retrieve quiz from database
+            quiz = Quiz(document="Sample.pdf", start=1, end=10, questions=[
+                QuestionAnswer(question="Sample question?", answer="Sample answer")
+            ])
 
-            graded_answer = grade_quiz(questions, correct_answers, student_answers)
-            response = graded_answer.to_dict()
+            graded_answer = grade_quiz(quiz, student_answers)
+            response = graded_answer.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -259,7 +214,7 @@ class CompendiumCreationView(GenericAPIView):
             start = serializer.validated_data.get("start")
             end = serializer.validated_data.get("end")
             compendium = generate_compendium(document, start, end)
-            response = compendium.to_dict()
+            response = compendium.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
