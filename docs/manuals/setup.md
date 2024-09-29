@@ -13,7 +13,7 @@
       - [Install dependencies](#install-dependencies)
     - [Create a .env file](#create-a-env-file)
       - [Steps to Create and Configure the .env File:](#steps-to-create-and-configure-the-env-file)
-    - [Setup the frontend](#setup-the-frontend)
+- [\`\`\`](#)
 
 </details>
 
@@ -29,7 +29,7 @@ To setup the project, one needs to have all the prerequisites installed. Then on
 
 ```bash
 git clone https://github.com/The-TutorAI-project/tutor-service.git
-cd TutorAI
+cd tutor-service
 ```
 
 ## Setup the backend
@@ -100,23 +100,24 @@ For secure and efficient management of environment-specific variables, Tutor-Ser
 #### Steps to Create and Configure the .env File:
 
 1. **Create the .env File:**
-   In the root directory of the project, create a new file named `.env`. This file will be used to store environment variables.
+   In the root directory of the project, create a copy of the file `template.env` and renamed it `.env`. This file will be used to store environment variables.
 
    ```bash
-    touch .env
+    cp template.env
    ```
 
 2. **Add Environment Variables:**
-   You will need to add the following environment variables to the `.env` file:
+   You will need to fill in the following environment variables to the `.env` file:
 
    - OPENAI_API_KEY: Your OpenAI API key
 
-   ```bash
-   echo "OPENAI_API_KEY=YOUR_API_KEY" > .env # Remember to change YOUR_API_KEY to your actual API key
-   ```
 
 3. **Obtaining an API Key:**
    If you don't have an API key from OpenAI, you can obtain one by visiting [OpenAI API Keys](https://platform.openai.com/api-keys). Follow their instructions to generate a new API key.
 
    By following these steps, you'll ensure that your application has all the necessary environment-specific configurations, while keeping sensitive data secure and out of version control.
 
+<<<<<<< HEAD
+```
+=======
+>>>>>>> 3deb5aaf715f9d5e34fe636bb48bea69ac8e23b5
