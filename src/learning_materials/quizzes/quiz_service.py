@@ -44,9 +44,14 @@ def generate_quiz(
         - "document": (string) The name of the document.
         - "start": (integer) The starting page number of the quiz.
         - "end": (integer) The ending page number of the quiz.
-        - "questions": (list) A list of questions, where each question is a dictionary with:
-            - "question": (string) The question text.
-            - "answer": (string) The answer text.
+        - "questions": (list) A list of questions, where each question is either:
+            - A QuestionAnswer object with:
+                - "question": (string) The question text.
+                - "answer": (string) The answer text.
+            - A MultipleChoiceQuestion object with:
+                - "question": (string) The question text.
+                - "options": (list of strings) The list of options to choose from.
+                - "answer": (string) The correct answer.
     """
     prompt = PromptTemplate(
         template=quiz_prompt_template,
@@ -60,6 +65,7 @@ def generate_quiz(
     pages: List[Page] = get_page_range(document, start, end)
 
     for page in pages:
+        # Chain to determine the quiz questions for each page
         quiz_data = chain.invoke(
             {
                 "page_content": page.text,
