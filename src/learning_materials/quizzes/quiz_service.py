@@ -117,11 +117,23 @@ def grade_quiz(
     """
 
     multiple_choice_grading_prompt_template = """
-        You are responsible for grading students' answers to quiz questions. You need to evaluate the student's answer to a specific {question}, provide whether it is {correct_answer}, along with constructive feedback, and explain why the {options} are wrong. Please evaluate the student's answer and provide whether it is correct along with constructive feedback. Also explain why the incorrect options are wrong.
+        You are a quiz grader responsible for evaluating students' answers to multiple-choice questions.
 
-        Respond with a JSON object matching the GradedQuiz model, containing:
-        - answers_was_correct: A list of booleans indicating correctness.
-        - feedback: A list of feedback strings for each question.
+        For the given question and its possible options, you need to assess the correctness of the student's answer and provide detailed feedback. Specifically:
+
+        - Question: "{question}"
+        - Options: {options}
+        - Correct Answer: "{correct_answer}"
+        - Student's Answer: "{student_answer}"
+
+        Your task is to:
+        1. Compare the student's answer with the correct answer.
+        2. Provide detailed feedback on why the student's answer is correct or incorrect.
+        3. Explain why each of the other options is incorrect to help the student understand.
+
+        Your response must be a JSON object that matches the `GradedQuiz` model structure. The JSON object should contain:
+        - `answers_was_correct`: A boolean list indicating if the student's answer is correct (e.g., `[true]` or `[false]`).
+        - `feedback`: A list of strings providing constructive feedback for the student's answer and explanations for all options.
     """
     
     short_answer_prompt = PromptTemplate(
