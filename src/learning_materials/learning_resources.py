@@ -1,5 +1,6 @@
 """ This module contains the Pydantic models for the learning resources. """
 
+from typing import Union
 from pydantic import BaseModel, Field, PrivateAttr
 
 class Page(BaseModel):
@@ -12,6 +13,11 @@ class QuestionAnswer(BaseModel):
     question: str = Field(description="The question part of a QA pair")
     answer: str = Field(description="The answer part of a QA pair")
 
+class MultipleChoiceQuestion(BaseModel):
+    question: str = Field(description="The question part of a multiple choice question")
+    options: list[str] = Field(description="The list of options to choose from")
+    answer: str = Field(description="The correct answer to the question")
+
 
 class Quiz(BaseModel):
     # Metadata
@@ -20,7 +26,7 @@ class Quiz(BaseModel):
     end: int = Field(description="The ending page of the quiz")
 
     # The list of questions
-    questions: list[QuestionAnswer] = Field(description="A list of question-answer pairs")
+    questions: list[Union[QuestionAnswer, MultipleChoiceQuestion]] = Field(description="A list of questions in the quiz")
 
 
 class Compendium(BaseModel):
