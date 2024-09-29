@@ -7,10 +7,12 @@ from drf_yasg import openapi
 
 from learning_materials.learning_material_service import (
     generate_compendium,
-    generate_quiz,
-    grade_quiz,
     process_flashcards,
     process_answer,
+)
+from learning_materials.quizzes.quiz_service import (
+    generate_quiz,
+    grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
 

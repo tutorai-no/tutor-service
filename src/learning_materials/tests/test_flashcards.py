@@ -5,8 +5,8 @@ from learning_materials.flashcards.flashcards_service import generate_flashcards
 
 
 class FlashcardGenerationTests(TestCase):
-    @patch('flashcards.flashcards.flashcards_service.ChatOpenAI')  
-    @patch('flashcards.flashcards.flashcards_service.PydanticOutputParser')
+    @patch('learning_materials.flashcards.flashcards_service.ChatOpenAI')  
+    @patch('learning_materials.flashcards.flashcards_service.PydanticOutputParser')
     def test_generate_flashcards(self, MockParser, MockModel):
         # Mocking page data
         page = Page(
