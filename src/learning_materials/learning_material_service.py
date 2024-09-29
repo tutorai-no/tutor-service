@@ -3,8 +3,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from learning_materials.knowledge_base.response_formulation import (
-    create_question_answer_pair,
-    grade_question_answer_pair,
     response_formulation,
 )
 from learning_materials.knowledge_base.rag_service import (
@@ -14,11 +12,8 @@ from learning_materials.knowledge_base.rag_service import (
 from learning_materials.flashcards.flashcards_service import generate_flashcards
 from learning_materials.learning_resources import (
     Compendium,
-    GradedQuiz,
     Page,
     Flashcard,
-    QuestionAnswer,
-    Quiz,
     RagAnswer,
 )
 
@@ -60,49 +55,6 @@ def process_answer(
     answer = RagAnswer(answer_GPT, curriculum)
     return answer
 
-
-def generate_quiz(
-    document: str, start: int, end: int, learning_goals: str = []
-) -> Quiz:
-    """
-    Generates a quiz for the document
-    """
-    print(f"[INFO] Generating quiz for document {document}", flush=True)
-    if start > end:
-        raise ValueError(
-            "The start index of the document can not be after then the end index!"
-        )
-
-    # Generate the quiz
-    questions: list[QuestionAnswer] = []
-
-    pages: list[Page] = get_page_range(document, start, end)
-    for page in pages:
-        new_questions = create_question_answer_pair(page.text, learning_goals)
-        questions.extend(new_questions)
-
-    return Quiz(document, start, end, questions)
-
-
-def grade_quiz(
-    questions: list[str], correct_answers: list[str], student_answers: list[str]
-) -> GradedQuiz:
-    """
-    Grade the quiz based on the student answers
-    """
-    questionAnswerPairs = [
-        QuestionAnswer(question, correct_answer)
-        for question, correct_answer in zip(questions, correct_answers)
-    ]
-
-    graded_quiz = GradedQuiz([], [])
-    for questionAnswerPair, student_answer in zip(questionAnswerPairs, student_answers):
-        isCorrect, feedback = grade_question_answer_pair(
-            questionAnswerPair, student_answer
-        )
-        graded_quiz.feedback.append(feedback)
-        graded_quiz.answers_was_correct.append(isCorrect)
-    return graded_quiz
 
 
 def generate_compendium(document_name: str, start: int, end: int) -> Compendium:
