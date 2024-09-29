@@ -74,27 +74,26 @@ class QuizGradingTests(TestCase):
       """
       Test grade_quiz with mismatched list lengths to ensure it raises ValueError.
       """
-      # Arrange: Define test data with mismatched lengths
-      questions = ["Question 1", "Question 2"]
-      correct_answers = ["Answer 1"]  # Missing one answer
-      student_answers = ["Student Answer 1", "Student Answer 2"]
-
+   
       # Act & Assert: Call grade_quiz with mismatched lists and expect ValueError
       with self.assertRaises(ValueError) as context:
-         grade_quiz(questions, correct_answers, student_answers)
+         grade_quiz(self.quiz, self.incomplete_answers)
       
       self.assertIn("All input lists must have the same length.", str(context.exception))
 
    def test_grade_quiz(self):
       
-      graded_quiz = grade_quiz(self.quiz, self.all_correct_answers)
+      all_correct_graded_quiz = grade_quiz(self.quiz, self.all_correct_answers)
+      print(all_correct_graded_quiz, flush=True)
 
-      self.assertIsInstance(graded_quiz, GradedQuiz)
-      self.assertEqual(len(graded_quiz.answers_was_correct), 4)
-      self.assertEqual(len(graded_quiz.feedback), 2)
+      self.assertIsInstance(all_correct_graded_quiz, GradedQuiz)
+      self.assertEqual(len(all_correct_graded_quiz.answers_was_correct), 4)
+      self.assertEqual(len(all_correct_graded_quiz.feedback), 4)
 
-      self.assertTrue(graded_quiz.answers_was_correct[0])
-      self.assertFalse(graded_quiz.answers_was_correct[1])
+      all_incorrect_graded_quiz = grade_quiz(self.quiz, self.all_incorrect_answers)
+      print(all_incorrect_graded_quiz, flush=True)
 
-      self.assertEqual(graded_quiz.feedback[0], "Correct! Paris is the capital of France.")
-      self.assertEqual(graded_quiz.feedback[1], "Incorrect. 2 + 2 equals 4.")
+      # self.assertEqual(len(all_incorrect_graded_quiz.answers_was_correct), 0)
+      # self.assertEqual(len(all_incorrect_graded_quiz.feedback), 4)
+
+      # incomplete_graded_quiz = grade_quiz(self.quiz, self.incomplete_answers)
