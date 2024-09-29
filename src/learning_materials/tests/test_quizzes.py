@@ -60,40 +60,132 @@ class QuizGenerationTests(TestCase):
       for question in quiz.questions:
          self.assertTrue(isinstance(question, QuestionAnswer) or isinstance(question, MultipleChoiceQuestion))
 
-     
+
 class QuizGradingTests(TestCase):
 
    def setUp(self):
+      # Set up sample data for the test cases
       self.options = ["Paris", "London", "New York", "Tokyo"]
       self.all_correct_answers = ["Paris", "4", "Jupiter", "100°C"]
       self.all_incorrect_answers = ["London", "5", "Mars", "50°C"]
+      self.partial_correct_answers = ["Paris", "5", "Jupiter", "100°C"]
       self.incomplete_answers = ["Paris", "4", "Jupiter"]
-      self.quiz = Quiz(document="test_document.pdf", start=1, end=2, questions=[MultipleChoiceQuestion(question="What is the capital of France?", options=self.options, answer="Paris"), QuestionAnswer(question="What is 2 + 2?", answer="4"), QuestionAnswer(question="What is the largest planet?", answer="Jupiter"), QuestionAnswer(question="What is the boiling point of water?", answer="100°C")])
-    
+      
+      # A diverse quiz with mixed types of questions
+      self.diverse_quiz = Quiz(
+         document="test_document.pdf",
+         start=1,
+         end=2,
+         questions=[
+               MultipleChoiceQuestion(question="What is the capital of France?", options=self.options, answer="Paris"),
+               QuestionAnswer(question="What is 2 + 2?", answer="4"),
+               QuestionAnswer(question="What is the largest planet?", answer="Jupiter"),
+               QuestionAnswer(question="What is the boiling point of water?", answer="100°C")
+         ]
+      )
+      
+      # A quiz with only multiple-choice questions
+      self.only_multiple_choice_quiz = Quiz(
+         document="test_document.pdf",
+         start=1,
+         end=2,
+         questions=[
+               MultipleChoiceQuestion(question="What is the capital of France?", options=self.options, answer="Paris"),
+               MultipleChoiceQuestion(question="What is the capital of Japan?", options=self.options, answer="Tokyo"),
+         ]
+      )
+      
+      # A quiz with only question-answer type questions
+      self.only_question_answer_quiz = Quiz(
+         document="test_document.pdf",
+         start=1,
+         end=2,
+         questions=[
+               QuestionAnswer(question="What is 2 + 2?", answer="4"),
+               QuestionAnswer(question="What is the boiling point of water?", answer="100°C")
+         ]
+      )
+
    def test_grade_quiz_mismatched_lengths(self):
       """
       Test grade_quiz with mismatched list lengths to ensure it raises ValueError.
       """
-   
       # Act & Assert: Call grade_quiz with mismatched lists and expect ValueError
       with self.assertRaises(ValueError) as context:
-         grade_quiz(self.quiz, self.incomplete_answers)
+         grade_quiz(self.diverse_quiz, self.incomplete_answers)
       
       self.assertIn("All input lists must have the same length.", str(context.exception))
 
-   def test_grade_quiz(self):
-      
-      all_correct_graded_quiz = grade_quiz(self.quiz, self.all_correct_answers)
-      print(all_correct_graded_quiz, flush=True)
 
+   def test_grade_diverse_quiz_all_correct(self):
+      """
+      Test grading a diverse quiz with a all correct answers
+      """
+      # Grade the quiz with all correct answers
+      all_correct_graded_quiz = grade_quiz(self.diverse_quiz, self.all_correct_answers)
+
+      # Assert the GradedQuiz type and the feedback length
       self.assertIsInstance(all_correct_graded_quiz, GradedQuiz)
-      self.assertEqual(len(all_correct_graded_quiz.answers_was_correct), 4)
-      self.assertEqual(len(all_correct_graded_quiz.feedback), 4)
+      amount_of_correct_answers = all_correct_graded_quiz.answers_was_correct.count(True)
+      self.assertEqual(amount_of_correct_answers, len(self.all_correct_answers))
+      self.assertEqual(len(all_correct_graded_quiz.feedback), len(self.all_correct_answers))
 
-      all_incorrect_graded_quiz = grade_quiz(self.quiz, self.all_incorrect_answers)
+   def test_grade_diverse_quiz_all_incorrect(self):
+      """
+      Test grading a diverse quiz with all incorrect answers.
+      """
+      # Grade the quiz with all incorrect answers
+      all_incorrect_graded_quiz = grade_quiz(self.diverse_quiz, self.all_incorrect_answers)
       print(all_incorrect_graded_quiz, flush=True)
+      # Assert that no answers were correct and feedback length matches input
+      self.assertIsInstance(all_incorrect_graded_quiz, GradedQuiz)
+      amount_of_correct_answers = all_incorrect_graded_quiz.answers_was_correct.count(True)
+      self.assertEqual(amount_of_correct_answers, 0)
+      self.assertEqual(len(all_incorrect_graded_quiz.feedback), len(self.all_incorrect_answers))
 
-      # self.assertEqual(len(all_incorrect_graded_quiz.answers_was_correct), 0)
-      # self.assertEqual(len(all_incorrect_graded_quiz.feedback), 4)
+   def test_grade_diverse_quiz_mix_correct_incorrect(self):
+      """
+      Test grading a diverse quiz with all incorrect answers.
+      """
+      # Grade the quiz with all incorrect answers
+      all_incorrect_graded_quiz = grade_quiz(self.diverse_quiz, self.partial_correct_answers)
 
-      # incomplete_graded_quiz = grade_quiz(self.quiz, self.incomplete_answers)
+      # Assert that no answers were correct and feedback length matches input
+      self.assertIsInstance(all_incorrect_graded_quiz, GradedQuiz)
+      amount_of_correct_answers = all_incorrect_graded_quiz.answers_was_correct.count(True)
+      self.assertEqual(amount_of_correct_answers, 3)
+
+
+   def test_grade_quiz_with_only_multiple_choice(self):
+      """
+      Test grade_quiz with only multiple-choice questions.
+      """
+      # Assume the correct answers are partially correct
+      partial_multiple_choice_answers = ["Paris", "London"]  # Only the first answer is correct
+
+      # Grade the multiple-choice quiz
+      graded_quiz = grade_quiz(self.only_multiple_choice_quiz, partial_multiple_choice_answers)
+
+      # Assert that the grading results match the expected output
+      self.assertIsInstance(graded_quiz, GradedQuiz)
+      self.assertEqual(len(graded_quiz.answers_was_correct), len(partial_multiple_choice_answers))
+      self.assertEqual(graded_quiz.answers_was_correct.count(True), 1)  # Only one correct
+      self.assertEqual(len(graded_quiz.feedback), len(partial_multiple_choice_answers))
+
+
+   def test_grade_quiz_with_only_question_answer(self):
+      """
+      Test grade_quiz with only question-answer type questions.
+      """
+      # Assume both answers are correct
+      qa_answers = ["4", "100°C"]
+
+      # Grade the question-answer quiz
+      graded_quiz = grade_quiz(self.only_question_answer_quiz, qa_answers)
+
+      # Assert that all answers were correct
+      self.assertIsInstance(graded_quiz, GradedQuiz)
+      amount_of_correct_answers = graded_quiz.answers_was_correct.count(True)
+      self.assertEqual(amount_of_correct_answers, len(qa_answers))
+      self.assertTrue(all(graded_quiz.answers_was_correct))  # All correct
+      self.assertEqual(len(graded_quiz.feedback), len(qa_answers))
