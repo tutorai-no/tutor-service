@@ -70,15 +70,8 @@ class DocumentSerializer(serializers.Serializer):
 
 
 class QuizStudentAnswer(serializers.Serializer):
-    # Questions: The list of questions
-    questions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="The list of questions",
-    )
-    # Answers: The list of answers
-    correct_answers = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="The list of correct answers",
+    quiz_id = serializers.CharField(
+        help_text="The ID of the quiz",
     )
     # Answers: The list of answers
     student_answers = serializers.ListField(

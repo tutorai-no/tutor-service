@@ -6,7 +6,6 @@ from drf_yasg import openapi
 
 
 from learning_materials.learning_material_service import (
-    generate_compendium,
     process_flashcards,
     process_answer,
 )
@@ -15,8 +14,7 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-
-
+from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
     ChatSerializer,
     DocumentSerializer,
