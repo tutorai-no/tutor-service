@@ -9,6 +9,7 @@ from learning_materials.learning_material_service import (
     process_flashcards,
     process_answer,
 )
+from learning_materials.learning_resources import QuestionAnswer, Quiz
 from learning_materials.quizzes.quiz_service import (
     generate_quiz,
     grade_quiz,
@@ -169,11 +170,14 @@ class QuizGradingView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            questions = serializer.validated_data.get("questions")
             student_answers = serializer.validated_data.get("student_answers")
-            correct_answers = serializer.validated_data.get("correct_answers")
+            quiz_id = serializer.validated_data.get("quiz_id")
+            # TODO: Retrieve quiz from database
+            quiz = Quiz(document="Sample.pdf", start=1, end=10, questions=[
+                QuestionAnswer(question="Sample question?", answer="Sample answer")
+            ])
 
-            graded_answer = grade_quiz(questions, correct_answers, student_answers)
+            graded_answer = grade_quiz(quiz, student_answers)
             response = graded_answer.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
