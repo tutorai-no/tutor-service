@@ -136,7 +136,7 @@ class QuizGradingTests(TestCase):
       """
       # Grade the quiz with all incorrect answers
       all_incorrect_graded_quiz = grade_quiz(self.diverse_quiz, self.all_incorrect_answers)
-      print(all_incorrect_graded_quiz, flush=True)
+      
       # Assert that no answers were correct and feedback length matches input
       self.assertIsInstance(all_incorrect_graded_quiz, GradedQuiz)
       amount_of_correct_answers = all_incorrect_graded_quiz.answers_was_correct.count(True)

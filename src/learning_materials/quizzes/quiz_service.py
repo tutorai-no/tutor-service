@@ -1,3 +1,4 @@
+import logging
 from typing import List, Union
 
 from langchain.output_parsers import PydanticOutputParser
@@ -9,7 +10,7 @@ from learning_materials.learning_resources import Quiz, GradedQuiz
 from learning_materials.knowledge_base.rag_service import get_page_range
 from learning_materials.learning_resources import GradedQuiz, Page, QuestionAnswer, Quiz, MultipleChoiceQuestion
 
-
+logger = logging.getLogger(__name__)
 
 llm = ChatOpenAI(temperature=0.0)
 
@@ -19,7 +20,8 @@ def generate_quiz(
     """
     Generates a quiz for the specified document and page range based on learning goals.
     """
-    print(f"[INFO] Generating quiz for document {document}", flush=True)
+
+    logger.info(f"Generating quiz for document {document}")
     if start > end:
         raise ValueError(
             "The start index of the document cannot be after the end index!"
@@ -91,7 +93,7 @@ def grade_quiz(
     if not (len(quiz.questions) == len(student_answers)):
         raise ValueError("All input lists must have the same length.")
 
-    print(f"[INFO] Grading quiz", flush=True)
+    logger.info(f"Grading quiz")
 
     # Initialize the parser for GradedQuiz
     parser = PydanticOutputParser(pydantic_object=GradedQuiz)

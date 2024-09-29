@@ -1,5 +1,7 @@
 """ The service module contains the business logic of the application. """
 
+import logging
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from learning_materials.knowledge_base.response_formulation import (
@@ -16,15 +18,16 @@ from learning_materials.learning_resources import (
     RagAnswer,
 )
 
+logger = logging.getLogger(__name__)
 
 def process_flashcards(document_name: str, start: int, end: int) -> list[Flashcard]:
     """
     Generate flashcards for a specific page range and file
     """
-    print("[INFO] Trying to find relevant document", flush=True)
+    logger.info("Trying to find relevant document")
     pages = get_page_range(document_name, start, end)
     flashcards: list[Flashcard] = []
-    print("[INFO] Generating flashcards", flush=True)
+    logger.info(f"Generating flashcards for {document_name} from page {start} to {end}")
 
     # Use ThreadPoolExecutor to parallelize the API calls
     with ThreadPoolExecutor() as executor:

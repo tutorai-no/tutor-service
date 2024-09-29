@@ -1,17 +1,19 @@
+import logging
 import openai
-from config import Config
 
 from learning_materials.learning_resources import QuestionAnswer
+from config import Config
 
 # The api_key:
 api_key = Config().API_KEY
 openai.api_key = api_key
 
+logger = logging.getLogger(__name__)
 
 def response_formulation(
     user_input: str, context: list[str], chat_history: list[dict[str, str]]
 ) -> str:
-    print("[INFO] Generating response", flush=True)
+    logger.info("Generating response")
 
     if len(context) == 0 and len(chat_history) == 0 or user_input == "":
         return "No context matching the user input was found. Please try again or upload additional documents."
@@ -21,8 +23,7 @@ def response_formulation(
     Query: '''{user_input}'''
     Context: '''{context}'''
     """
-
-    print(f"template: {template}", flush=True)
+    logger.info(f"template: {template}")
 
     response: str = _request_chat_completion(
         template,
