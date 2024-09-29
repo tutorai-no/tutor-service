@@ -32,7 +32,7 @@ def generate_compendium(document_name: str, start: int, end: int) -> Compendium:
         key_concepts.extend(concept.split("|"))
         summaries += summary
 
-    compendium = Compendium(document_name, start, end, key_concepts, summaries)
+    compendium = Compendium(document_name=document_name, start=start, end=end, key_concepts=key_concepts, summary=summaries)
     return compendium
 
 
