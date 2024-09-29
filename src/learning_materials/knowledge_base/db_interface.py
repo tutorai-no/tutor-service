@@ -184,3 +184,64 @@ class MongoDB(Database):
             return True
         except:
             return False
+
+
+class MockDatabase(Database):
+    """
+    A mock database for testing purposes, storing data in memory.
+    """
+    def __init__(self):
+        # In-memory storage for mock data
+        self.data = []
+        self.similarity_threshold = 0.7
+
+    def get_curriculum(self, pdf_name: str, embedding: list[float]) -> list[Page]:
+        if not embedding:
+            raise ValueError("Embedding cannot be None")
+
+        results = []
+
+        # Filter documents based on similarity and pdf_name
+        for document in self.data:
+            if document["pdf_name"] == pdf_name:
+                similarity = cosine_similarity(embedding, document["embedding"])
+                if similarity > self.similarity_threshold:
+                    results.append(
+                        Page(
+                            text=document["text"],
+                            page_num=document["page_num"],
+                            pdf_name=document["pdf_name"]
+                        )
+                    )
+        return results
+
+    def get_page_range(self, pdf_name: str, page_num_start: int, page_num_end: int) -> list[Page]:
+        results = []
+
+        # Filter documents based on pdf_name and page range
+        for document in self.data:
+            if (
+                document["pdf_name"] == pdf_name and 
+                page_num_start <= document["page_num"] <= page_num_end
+            ):
+                results.append(
+                    Page(
+                        text=document["text"],
+                        page_num=document["page_num"],
+                        pdf_name=document["pdf_name"]
+                    )
+                )
+        return results
+
+    def post_curriculum(self, curriculum: str, page_num: int, pdf_name: str, embedding: list[float]) -> bool:
+        if not curriculum or not pdf_name or page_num is None or not embedding:
+            raise ValueError("All parameters are required and must be valid")
+
+        # Append a new document to the in-memory storage
+        self.data.append({
+            "text": curriculum,
+            "page_num": page_num,
+            "pdf_name": pdf_name,
+            "embedding": embedding
+        })
+        return True

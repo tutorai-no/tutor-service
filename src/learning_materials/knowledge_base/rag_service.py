@@ -5,9 +5,10 @@ from learning_materials.knowledge_base.db_interface import Database
 from learning_materials.knowledge_base.embeddings import EmbeddingsModel
 from learning_materials.knowledge_base.factory import create_database
 from learning_materials.knowledge_base.factory import create_embeddings_model
+from config import Config
 
-
-db: Database = create_database()
+db_system = Config().RAG_DATABASE_SYSTEM
+db: Database = create_database(db_system)
 embeddings: EmbeddingsModel = create_embeddings_model()
 
 
