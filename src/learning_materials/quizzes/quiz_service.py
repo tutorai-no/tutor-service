@@ -77,12 +77,12 @@ def generate_quiz(
     )
 
 def grade_quiz(
-    questions: list[str], correct_answers: list[str], student_answers: list[str]
+    quiz: Quiz, student_answers: list[str]
 ) -> GradedQuiz:
     """
     Grades the quiz based on the student answers.
     """
-    if not (len(questions) == len(correct_answers) == len(student_answers)):
+    if not (len(quiz.questions) == len(student_answers)):
         raise ValueError("All input lists must have the same length.")
 
     print(f"[INFO] Grading quiz", flush=True)
@@ -91,7 +91,7 @@ def grade_quiz(
     parser = PydanticOutputParser(pydantic_object=GradedQuiz)
 
     # Define the prompt template for grading answers
-    grading_prompt_template = """
+    short_text_grading_prompt_template = """
         You are a teacher AI tasked with grading student answers to quiz questions.
 
         Question:
@@ -109,23 +109,63 @@ def grade_quiz(
         - answers_was_correct: A list of booleans indicating correctness.
         - feedback: A list of feedback strings for each question.
     """
-    prompt = PromptTemplate(
-        template=grading_prompt_template,
+
+    multiple_choice_grading_prompt_template = """
+        You are a teacher AI tasked with grading student answers to quiz questions.
+
+        Question:
+        {question}
+
+        Correct Answer:
+        {correct_answer}
+
+        Options:
+        {options}
+
+        Student's Answer:
+        {student_answer}
+
+        Please evaluate the student's answer and provide whether it is correct along with constructive feedback. Also 
+        explain why the incorrect options are wrong.
+
+        Respond with a JSON object matching the GradedQuiz model, containing:
+        - answers_was_correct: A list of booleans indicating correctness.
+        - feedback: A list of feedback strings for each question.
+    """
+    
+    short_answer_prompt = PromptTemplate(
+        template=short_text_grading_prompt_template,
         input_variables=["question", "correct_answer", "student_answer"],
     )
 
-    chain = prompt | llm | parser
+    multiple_choice_prompt = PromptTemplate(
+        template=multiple_choice_grading_prompt_template,
+        input_variables=["question", "correct_answer", "options", "student_answer"],
+    )
+
+
+    short_answer_chain = short_answer_prompt | llm | parser
 
     graded_quiz = GradedQuiz(answers_was_correct=[], feedback=[])
 
-    for question, correct_answer, student_answer in zip(questions, correct_answers, student_answers):
-        grade_data = chain.invoke(
-            {
-                "question": question,
-                "correct_answer": correct_answer,
+    for question, student_answer in zip(quiz.questions, student_answers):
+        if isinstance(question, QuestionAnswer):
+            data = {
+                "question": question.question,
+                "correct_answer": question.answer,
                 "student_answer": student_answer,
             }
-        )
+            grade_data = short_answer_chain.invoke(data)
+
+        elif isinstance(question, MultipleChoiceQuestion):
+            data = {
+                "question": question.question,
+                "correct_answer": question.answer,
+                "options": question.options,
+                "student_answer": student_answer,
+            }
+            grade_data = multiple_choice_prompt | llm | parser
+
         graded_quiz.answers_was_correct.append(grade_data.answers_was_correct[0])
         graded_quiz.feedback.append(grade_data.feedback[0])
 

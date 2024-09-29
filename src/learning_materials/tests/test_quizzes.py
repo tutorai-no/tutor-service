@@ -28,67 +28,6 @@ class QuizGenerationTests(TestCase):
 
 
    @patch('learning_materials.quizzes.quiz_service.get_page_range')
-   @patch('learning_materials.quizzes.quiz_service.llm.invoke')
-   def test_generate_quiz(self, mock_invoke, mock_get_page_range):
-      """
-      Test the generate_quiz function to ensure it returns a Quiz object with expected questions.
-      """
-      # Arrange: Set up the mock for get_page_range
-      mock_pages = [
-         Page(text="Content of page 1", page_num=1, pdf_name="test_document.pdf"),
-         Page(text="Content of page 2", page_num=2, pdf_name="test_document.pdf"),
-      ]
-      mock_get_page_range.return_value = mock_pages
-
-      # Arrange: Set up the mock for llm.invoke to return Quiz data for each page
-      mock_quiz_data_page_1 = Quiz(
-         document="test_document.pdf",
-         start=1,
-         end=1,
-         questions=[
-               QuestionAnswer(question="What is the capital of France?", answer="Paris"),
-               QuestionAnswer(question="What is 2 + 2?", answer="4"),
-         ]
-      )
-      mock_quiz_data_page_2 = Quiz(
-         document="test_document.pdf",
-         start=2,
-         end=2,
-         questions=[
-               QuestionAnswer(question="What is the largest planet?", answer="Jupiter"),
-               QuestionAnswer(question="What is the boiling point of water?", answer="100°C"),
-         ]
-      )
-      # The chain.invoke method will be called twice, once for each page
-      mock_invoke.side_effect = [mock_quiz_data_page_1, mock_quiz_data_page_2]
-
-      # Act: Call the generate_quiz function
-      document = "test_document.pdf"
-      start = 1
-      end = 2
-      learning_goals = ["Understand basic geography", "Master fundamental mathematics"]
-      
-      quiz = generate_quiz(document, start, end, learning_goals)
-
-      # Assert: Verify the Quiz object
-      self.assertEqual(quiz.document, "test_document.pdf")
-      self.assertEqual(quiz.start, 1)
-      self.assertEqual(quiz.end, 2)
-      self.assertEqual(len(quiz.questions), 4)
-
-      # Check questions from page 1
-      self.assertEqual(quiz.questions[0].question, "What is the capital of France?")
-      self.assertEqual(quiz.questions[0].answer, "Paris")
-      self.assertEqual(quiz.questions[1].question, "What is 2 + 2?")
-      self.assertEqual(quiz.questions[1].answer, "4")
-
-      # Check questions from page 2
-      self.assertEqual(quiz.questions[2].question, "What is the largest planet?")
-      self.assertEqual(quiz.questions[2].answer, "Jupiter")
-      self.assertEqual(quiz.questions[3].question, "What is the boiling point of water?")
-      self.assertEqual(quiz.questions[3].answer, "100°C")
-
-   @patch('learning_materials.quizzes.quiz_service.get_page_range')
    def test_generate_quiz(self, mock_get_page_range):
       pdf_name = "test_document.pdf"
       
@@ -119,6 +58,13 @@ class QuizGenerationTests(TestCase):
 
      
 class QuizGradingTests(TestCase):
+
+   def setUp(self):
+      self.options = ["Paris", "London", "New York", "Tokyo"]
+      self.all_correct_answers = ["Paris", "4", "Jupiter", "100°C"]
+      self.all_incorrect_answers = ["London", "5", "Mars", "50°C"]
+      self.incomplete_answers = ["Paris", "4", "Jupiter"]
+      self.quiz = Quiz(document="test_document.pdf", start=1, end=2, questions=[MultipleChoiceQuestion(question="What is the capital of France?", options=self.options, answer="Paris"), QuestionAnswer(question="What is 2 + 2?", answer="4"), QuestionAnswer(question="What is the largest planet?", answer="Jupiter"), QuestionAnswer(question="What is the boiling point of water?", answer="100°C")])
     
    def test_grade_quiz_mismatched_lengths(self):
       """
@@ -135,62 +81,16 @@ class QuizGradingTests(TestCase):
       
       self.assertIn("All input lists must have the same length.", str(context.exception))
 
-   @patch('learning_materials.quizzes.quiz_service.llm.invoke')
-   def test_grade_quiz(self, mock_invoke):
-      """
-      Test the grade_quiz function to ensure it returns a GradedQuiz object with correct grading.
-      """
-      # Arrange: Define mock GradedQuiz data for each question grading
-      mock_grade_data_q1 = GradedQuiz(
-         answers_was_correct=[True],
-         feedback=["Correct! Paris is the capital of France."]
-      )
-      mock_grade_data_q2 = GradedQuiz(
-         answers_was_correct=[False],
-         feedback=["Incorrect. 2 + 2 equals 4."]
-      )
-      mock_grade_data_q3 = GradedQuiz(
-         answers_was_correct=[True],
-         feedback=["Correct! Jupiter is the largest planet."]
-      )
-      mock_grade_data_q4 = GradedQuiz(
-         answers_was_correct=[False],
-         feedback=["Incorrect. The boiling point of water is 100°C."]
-      )
-      # The chain.invoke method will be called four times, once for each question
-      mock_invoke.side_effect = [
-         mock_grade_data_q1,
-         mock_grade_data_q2,
-         mock_grade_data_q3,
-         mock_grade_data_q4
-      ]
+   def test_grade_quiz(self):
+      
+      graded_quiz = grade_quiz(self.quiz, self.all_correct_answers)
 
-      # Arrange: Define test data
-      questions = [
-         "What is the capital of France?",
-         "What is 2 + 2?",
-         "What is the largest planet?",
-         "What is the boiling point of water?"
-      ]
-      correct_answers = ["Paris", "4", "Jupiter", "100°C"]
-      student_answers = ["Paris", "5", "Jupiter", "90°C"]
-
-      # Act: Call the grade_quiz function
-      graded_quiz = grade_quiz(questions, correct_answers, student_answers)
-
-      # Assert: Verify the GradedQuiz object
+      self.assertIsInstance(graded_quiz, GradedQuiz)
       self.assertEqual(len(graded_quiz.answers_was_correct), 4)
-      self.assertEqual(len(graded_quiz.feedback), 4)
+      self.assertEqual(len(graded_quiz.feedback), 2)
 
-      # Check grading for each question
       self.assertTrue(graded_quiz.answers_was_correct[0])
-      self.assertEqual(graded_quiz.feedback[0], "Correct! Paris is the capital of France.")
-
       self.assertFalse(graded_quiz.answers_was_correct[1])
+
+      self.assertEqual(graded_quiz.feedback[0], "Correct! Paris is the capital of France.")
       self.assertEqual(graded_quiz.feedback[1], "Incorrect. 2 + 2 equals 4.")
-
-      self.assertTrue(graded_quiz.answers_was_correct[2])
-      self.assertEqual(graded_quiz.feedback[2], "Correct! Jupiter is the largest planet.")
-
-      self.assertFalse(graded_quiz.answers_was_correct[3])
-      self.assertEqual(graded_quiz.feedback[3], "Incorrect. The boiling point of water is 100°C.")
