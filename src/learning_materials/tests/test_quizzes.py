@@ -55,6 +55,10 @@ class QuizGenerationTests(TestCase):
       self.assertEqual(quiz.end, end)
 
       self.assertGreaterEqual(len(quiz.questions), 2)
+      
+      # Check that there are QuestionAnswer or MultipleChoiceQuestion objects
+      for question in quiz.questions:
+         self.assertTrue(isinstance(question, QuestionAnswer) or isinstance(question, MultipleChoiceQuestion))
 
      
 class QuizGradingTests(TestCase):
