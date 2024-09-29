@@ -21,6 +21,7 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - RAG_DATABASE_SYSTEM=${RAG_DATABASE_SYSTEM}
+      - LOGGING_LEVEL=${LOGGING_LEVEL}
 
   db:
     image: postgres:latest
