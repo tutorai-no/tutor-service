@@ -144,7 +144,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 
-LOG_LEVEL = os.getenv("LOGGING_LEVEL", "INFO")
+LOG_LEVEL = os.getenv("LOGGING_LEVEL") or "INFO"
 
 LOGGING = {
     "version": 1,
