@@ -1,228 +1,132 @@
+from typing import List, Union
+
+from langchain.output_parsers import PydanticOutputParser
+from langchain.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+
+from learning_materials.learning_resources import Quiz, GradedQuiz
 from learning_materials.knowledge_base.rag_service import get_page_range
-from learning_materials.knowledge_base.response_formulation import _request_chat_completion
 from learning_materials.learning_resources import GradedQuiz, Page, QuestionAnswer, Quiz, MultipleChoiceQuestion
 
 
+
+llm = ChatOpenAI(temperature=0.0)
+
 def generate_quiz(
-    document: str, start: int, end: int, learning_goals: str = []
+    document: str, start: int, end: int, learning_goals: list[str] = []
 ) -> Quiz:
     """
-    Generates a quiz for the document
+    Generates a quiz for the specified document and page range based on learning goals.
     """
     print(f"[INFO] Generating quiz for document {document}", flush=True)
     if start > end:
         raise ValueError(
-            "The start index of the document can not be after then the end index!"
+            "The start index of the document cannot be after the end index!"
         )
 
-    # Generate the quiz
-    questions: list[QuestionAnswer] = []
+    # Initialize the parser for Quiz
+    parser = PydanticOutputParser(pydantic_object=Quiz)
 
-    pages: list[Page] = get_page_range(document, start, end)
-    for page in pages:
-        new_questions = _create_question_answer_pair(page.text, learning_goals)
-        questions.extend(new_questions)
+    # Define the prompt template for generating quiz questions
+    quiz_prompt_template = """
+        You are a teacher AI tasked with creating a quiz based on the following content and learning goals.
 
-    return Quiz(document, start, end, questions)
+        Content:
+        {page_content}
 
+        Learning Goals:
+        {learning_goals}
 
-def _create_question_answer_pair(
-    page_content: str, learning_goals: list[str]
-) -> list["QuestionAnswer"]:
+        Number of questions: {num_questions}
+
+        Please format your response as a JSON object matching the Quiz model with these exact keys:
+        - "document": (string) The name of the document.
+        - "start": (integer) The starting page number of the quiz.
+        - "end": (integer) The ending page number of the quiz.
+        - "questions": (list) A list of questions, where each question is a dictionary with:
+            - "question": (string) The question text.
+            - "answer": (string) The answer text.
     """
-    Create question-answer pairs from the context and learning goals
-    """
-
-    system_prompt = _quiz_question_answer_system_template(page_content, learning_goals)
-    raw_quiz = _request_chat_completion(
-        message=_quiz_question_answer_generation_template(5, page_content, learning_goals),
-        role="user",
-        system_prompt=system_prompt,
+    prompt = PromptTemplate(
+        template=quiz_prompt_template,
+        input_variables=["page_content", "learning_goals", "num_questions"],
     )
-    parsed_quiz = _parse_quiz_response(raw_quiz)
-    return parsed_quiz
 
+    chain = prompt | llm | parser
 
-def _quiz_question_answer_generation_template(
-    question_amount, page_content: str, learning_goals: list[str]
-) -> str:
-    return f"""
-        The number of questions needed: {question_amount}
-        The content of the page in the curriculum: '''{page_content}'''
-        The learning goals for curriculum: '''{learning_goals}'''
-    """
+    # Generate the quiz questions
+    questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
+    pages: List[Page] = get_page_range(document, start, end)
 
-
-def _quiz_question_answer_system_template(
-    page_content: str, learning_goals: list[str]
-) -> str:
-    """
-    Create a question-answer template for the quiz
-    """
-
-    template = f"""
-        # Role and Goal:
-        You are a teacher AI making a quiz for some students. You act professionally in the tasks that you give out. 
-        The user will be a fellow teacher wanting to construct questions for their students.
-        # Constraints:
-        The user will provide you with content. This content is a page from the book being used.
-        USE the learning goals to create questions.
-        Create as many questions as you are prompted to give. The number of questions needed will be given
-        DO NOT make questions that do not relate to a learning goal
-        Create questions based on the content being given.
-        The questions have to be based on facts that are given within this content.
-        If there are already questions within these content, try to make your tasks similar to the present ones.
-        Formulate questions and answers based on the content and learning goals.
-        
-        
-        Respond with the questions and answers in a list in this format:
-        [$Question 1$Answer 1$Question 2$Answer 2$ ...]
-        DO NOT return anything else.
-        
-        For example:
-
-        The number of questions needed: 3
-
-        The content of the pages in the curriculum: '''
-        
-        Antonio de Padua María Severino López de Santa Anna y Pérez de Lebrón, usually known as Antonio López de Santa Anna (Spanish pronunciation: [anˈtonjo ˈlopes ðe sanˈtana]; 21 February 1794 – 21 June 1876),[1] or just Santa Anna,[2] was a Mexican soldier, politician, and caudillo[3] who served as the 8th president of Mexico multiple times between 1833 and 1855. He also served as Vice President of Mexico from 1837 to 1839. He was a controversial and pivotal figure in Mexican politics during the 19th century, to the point that he has been called an "uncrowned monarch",[4] and historians often refer to the three decades after Mexican independence as the "Age of Santa Anna".[5]
-
-        Santa Anna was in charge of the garrison at Veracruz at the time Mexico won independence in 1821. He would go on to play a notable role in the fall of the First Mexican Empire, the fall of the First Mexican Republic, the promulgation of the Constitution of 1835, the establishment of the Centralist Republic of Mexico, the Texas Revolution, the Pastry War, the promulgation of the Constitution of 1843, and the Mexican–American War. He became well known in the United States due to his role in the Texas Revolution and in the Mexican–American War.
-
-        Throughout his political career, Santa Anna was known for switching sides in the recurring conflict between the Liberal Party and the Conservative Party. He managed to play a prominent role in both discarding the liberal Constitution of 1824 in 1835 and in restoring it in 1847. He came to power as a liberal twice in 1832 and in 1847 respectively, both times sharing power with the liberal statesman Valentín Gómez Farías, and both times Santa Anna overthrew Gómez Farías after switching sides to the conservatives. Santa Anna was also known for his ostentatious and dictatorial style of rule, making use of the military to dissolve Congress multiple times and referring to himself by the honorific title of His Most Serene Highness.
-        '''
-        The learning goals:'''
-        
-        The student should be able to describe the sides present during wars in the 19th century americas.
-        The student should be able to describe the political career of Santa Anna.
-        '''
-        
-        Should return:
-        [What role did Santa Anna play in the conflict between the liberal party and the conservative party?$Santa Anna was renowned for his propensity to switch allegiances amidst the ongoing conflict between the Liberal Party and the Conservative Party. He wielded considerable influence, notably contributing to the abandonment of the liberal Constitution of 1824 in 1835, as well as its subsequent restoration in 1847.$ What american wars was Santa Anna involved in?$ He was famous for his role in the Texas Revolution and the Mexican-American war.$What was the honorific title Santa Anna gave himself?$His Most Serene Highness]
-
-        """
-
-    return template
-
-
-def _parse_quiz_response(quiz_response: str) -> list[QuestionAnswer]:
-    """
-    Parse the response from the user to create a list of QuestionAnswer objects
-    """
-    separator = "$"
-    if separator not in quiz_response:
-        return []
-
-    raw_response_list: str = quiz_response.lstrip("[")
-    raw_response_list = raw_response_list.rstrip("]")
-    # Split the response into questions and answers
-    raw_response_list = raw_response_list.split(separator)
-    response_list = [response.strip() for response in raw_response_list]
-
-    # Create a list of QuestionAnswer objects
-    question_answer_pairs = []
-
-    for i in range(0, len(response_list) - 1, 2):
-        question_answer_pairs.append(
-            QuestionAnswer(question=response_list[i], answer=response_list[i + 1])
+    for page in pages:
+        quiz_data = chain.invoke(
+            {
+                "page_content": page.text,
+                "learning_goals": learning_goals,
+                "num_questions": 5,
+            }
         )
+        questions.extend(quiz_data.questions)
 
-    return question_answer_pairs
-
-
+    return Quiz(
+        document=document,
+        start=start,
+        end=end,
+        questions=questions
+    )
 
 def grade_quiz(
     questions: list[str], correct_answers: list[str], student_answers: list[str]
 ) -> GradedQuiz:
     """
-    Grade the quiz based on the student answers
+    Grades the quiz based on the student answers.
     """
-    questionAnswerPairs = [
-        QuestionAnswer(question, correct_answer)
-        for question, correct_answer in zip(questions, correct_answers)
-    ]
+    if not (len(questions) == len(correct_answers) == len(student_answers)):
+        raise ValueError("All input lists must have the same length.")
 
-    graded_quiz = GradedQuiz([], [])
-    for questionAnswerPair, student_answer in zip(questionAnswerPairs, student_answers):
-        isCorrect, feedback = _grade_quiz(
-            questionAnswerPair, student_answer
-        )
-        graded_quiz.feedback.append(feedback)
-        graded_quiz.answers_was_correct.append(isCorrect)
-    return graded_quiz
+    print(f"[INFO] Grading quiz", flush=True)
 
+    # Initialize the parser for GradedQuiz
+    parser = PydanticOutputParser(pydantic_object=GradedQuiz)
 
+    # Define the prompt template for grading answers
+    grading_prompt_template = """
+        You are a teacher AI tasked with grading student answers to quiz questions.
 
-def _grade_quiz(
-    question_answer_pair: QuestionAnswer, user_response: str
-) -> tuple[str, str]:
+        Question:
+        {question}
+
+        Correct Answer:
+        {correct_answer}
+
+        Student's Answer:
+        {student_answer}
+
+        Please evaluate the student's answer and provide whether it is correct along with constructive feedback.
+
+        Respond with a JSON object matching the GradedQuiz model, containing:
+        - answers_was_correct: A list of booleans indicating correctness.
+        - feedback: A list of feedback strings for each question.
     """
-    Grade the user response to the question-answer pair
-    """
-    if user_response == "":
-        return False, "No response was provided"
-
-    system_prompt = _grade_question_answer_system_template()
-
-    raw_grade = _request_chat_completion(
-        message=_grade_question_answer_template(
-            question_answer_pair.question, question_answer_pair.answer, user_response
-        ),
-        role="user",
-        system_prompt=system_prompt,
+    prompt = PromptTemplate(
+        template=grading_prompt_template,
+        input_variables=["question", "correct_answer", "student_answer"],
     )
 
-    return _parse_grade_response(raw_grade)
+    chain = prompt | llm | parser
 
+    graded_quiz = GradedQuiz(answers_was_correct=[], feedback=[])
 
-def _grade_question_answer_system_template() -> str:
-    """
-    Create a question-answer template for the quiz
-    """
+    for question, correct_answer, student_answer in zip(questions, correct_answers, student_answers):
+        grade_data = chain.invoke(
+            {
+                "question": question,
+                "correct_answer": correct_answer,
+                "student_answer": student_answer,
+            }
+        )
+        graded_quiz.answers_was_correct.append(grade_data.answers_was_correct[0])
+        graded_quiz.feedback.append(grade_data.feedback[0])
 
-    template = f"""
-        # Role and Goal:
-        You are a teacher AI grading a student's answer to a question. You act professionally in the tasks that you give out.
-        The user will be a student who has answered a question and you will be grading their answer.
-        # Constraints:
-        The user will provide you with the question and the answer that they have given.
-        You will be given the solution to the question as was not provided by the student.
-        With this information, you will grade the student's answer.
-
-        Respond with the grade and feedback in this format:
-        IsCorrect | Feedback
-
-        For example:
-        False | The student did not provide the correct answer. The correct answer is 'The capital of India is New Delhi.'
-        """
-    return template
-
-
-def _grade_question_answer_template(
-    question: str, solution: str, user_response: str
-) -> str:
-    return f"""
-        The question: '''{question}'''
-        The solution: '''{solution}'''
-        The user response: '''{user_response}'''
-    """
-
-
-def _parse_grade_response(grade_response: str) -> tuple[bool, str]:
-    """
-    Parse the response from the user to create a tuple of the grade and feedback
-    """
-    separator = " | "
-    if separator not in grade_response:
-        return False, ""
-    # Split the response into grade and feedback
-    raw_response_list = grade_response.split(separator)
-    response_list = [response.strip() for response in raw_response_list]
-
-    # Parse the grade
-    is_correct = response_list[0].lower() == "true"
-
-    # Parse the feedback
-    feedback = response_list[1]
-
-    return is_correct, feedback
+    return graded_quiz
