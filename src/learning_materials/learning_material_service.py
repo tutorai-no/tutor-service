@@ -12,6 +12,7 @@ from learning_materials.knowledge_base.rag_service import (
 from learning_materials.flashcards.flashcards_service import generate_flashcards
 from learning_materials.learning_resources import (
     Flashcard,
+    Page,
     RagAnswer,
 )
 
@@ -43,13 +44,13 @@ def process_answer(
 ) -> RagAnswer:
 
     # Get a list of relevant contexts from the database
-    curriculum = []
+    curriculum: list[Page] = []
     for document_name in documents:
         curriculum.extend(get_context(document_name, user_question))
 
     # Use this list to generate a response
     answer_GPT = response_formulation(user_question, curriculum, chat_history)
 
-    answer = RagAnswer(answer_GPT, curriculum)
+    answer = RagAnswer(answer=answer_GPT, citations=curriculum)
     return answer
 
