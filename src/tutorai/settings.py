@@ -145,7 +145,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-LOGGING = {}
 
 LOGGING = {
     "version": 1,
@@ -155,8 +154,10 @@ LOGGING = {
             "format": "{levelname} {asctime} {module} {message}",
             "style": "{",
         },
-        # Style field is needed to use the new {} around variables instead of using %
-        "simple": {"format": "{levelname} {message}", "style": "{"},
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
     },
     "handlers": {
         "console": {
@@ -170,37 +171,37 @@ LOGGING = {
             "filename": f"{LOG_LEVEL}.log",
             "formatter": "verbose",
         },
-        "loggers": {
-            "django": {
-                "handlers": ["console", "file" ], 
-                "level": LOG_LEVEL,
-                "propagate": False,
-            },
-            "django.utils.autoreload": {
-                "handlers": ["console"],
-                "level": "WARNING",
-                "propagate": False,
-            },
-            "django.db.backends": {
-                "handlers": ["console"],
-                "level": "WARNING",  # Suppress SQL query logs below WARNING level
-                "propagate": False,
-            },
-            "api": {
-                "handlers": ["console", "file" ],
-                "level": LOG_LEVEL,
-                "propagate": False,
-            },
-            "tutorai": { 
-                "handlers": ["console", "file",],
-                "level": LOG_LEVEL,
-                "propagate": False,
-            },
-            "learning_materials": {  
-                "handlers": ["console", "file"],
-                "level": LOG_LEVEL,
-                "propagate": False,
-            },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.utils.autoreload": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "WARNING",  # Suppress SQL query logs below WARNING level
+            "propagate": False,
+        },
+        "api": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "tutorai": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "learning_materials": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
     },
 }
