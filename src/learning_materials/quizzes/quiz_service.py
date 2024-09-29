@@ -117,22 +117,7 @@ def grade_quiz(
     """
 
     multiple_choice_grading_prompt_template = """
-        You are a teacher AI tasked with grading student answers to quiz questions.
-
-        Question:
-        {question}
-
-        Correct Answer:
-        {correct_answer}
-
-        Options:
-        {options}
-
-        Student's Answer:
-        {student_answer}
-
-        Please evaluate the student's answer and provide whether it is correct along with constructive feedback. Also 
-        explain why the incorrect options are wrong.
+        You are responsible for grading students' answers to quiz questions. You need to evaluate the student's answer to a specific {question}, provide whether it is {correct_answer}, along with constructive feedback, and explain why the {options} are wrong. Please evaluate the student's answer and provide whether it is correct along with constructive feedback. Also explain why the incorrect options are wrong.
 
         Respond with a JSON object matching the GradedQuiz model, containing:
         - answers_was_correct: A list of booleans indicating correctness.
@@ -151,6 +136,7 @@ def grade_quiz(
 
 
     short_answer_chain = short_answer_prompt | llm | parser
+    multiple_choice_chain = multiple_choice_prompt | llm | parser
 
     graded_quiz = GradedQuiz(answers_was_correct=[], feedback=[])
 
@@ -170,7 +156,7 @@ def grade_quiz(
                 "options": question.options,
                 "student_answer": student_answer,
             }
-            grade_data = multiple_choice_prompt | llm | parser
+            grade_data = multiple_choice_chain.invoke(data)
 
         graded_quiz.answers_was_correct.append(grade_data.answers_was_correct[0])
         graded_quiz.feedback.append(grade_data.feedback[0])
