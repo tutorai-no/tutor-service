@@ -19,9 +19,10 @@ services:
       - DATABASE_PASSWORD=tutoraipassword
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - MONGODB_URI=${MONGODB_URI}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
 
   db:
-    image: postgres:13
+    image: postgres:latest
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
