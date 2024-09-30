@@ -1,3 +1,4 @@
+from datetime import timedelta, timezone
 from django.core import mail
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
@@ -29,6 +30,29 @@ class RegistrationTests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
         self.assertEqual(email.to, ['testuser@example.com'])
+
+    def test_user_registration_username_too_short(self):
+        data = {
+            'username': 'ab',  # Too short
+            'email': 'shortuser@example.com',
+            'password': 'StrongP@ssw0rd!',
+            'password_confirm': 'StrongP@ssw0rd!'
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.data)
+
+    def test_user_registration_duplicate_username_case_sensitive(self):
+        User.objects.create_user(username='TestUser', email='unique@example.com', password='StrongP@ss1')
+        data = {
+            'username': 'testuser',  # Different case
+            'email': 'newemail@example.com',
+            'password': 'StrongP@ssw0rd!',
+            'password_confirm': 'StrongP@ssw0rd!'
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        # Depending on implementation, this might be allowed or not
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)  # Or 400 if case-insensitive
 
     def test_user_registration_weak_password(self):
         data = {
@@ -87,6 +111,28 @@ class RegistrationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
 
+    def test_registration_with_very_long_username(self):
+        data = {
+            'username': 'a' * 150,  # Assuming max length is less
+            'email': 'longusername@example.com',
+            'password': 'StrongP@ssw0rd!',
+            'password_confirm': 'StrongP@ssw0rd!'
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.data)
+
+
+    def test_registration_with_non_ascii_username(self):
+        data = {
+            'username': '用户测试',  # Non-ASCII characters
+            'email': 'unicode@example.com',
+            'password': 'StrongP@ssw0rd!',
+            'password_confirm': 'StrongP@ssw0rd!'
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
 
 class LoginTests(APITestCase):
     def setUp(self):
@@ -131,13 +177,31 @@ class LoginTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
 
+    def test_login_username_case_insensitive(self):
+        data = {
+            'username': 'LoginUser',  # Different case
+            'password': 'StrongP@ss1'
+        }
+        response = self.client.post(self.login_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED) 
+
+
 # Token Refresh Tests
 class TokenRefreshTests(APITestCase):
     def setUp(self):
         self.token_refresh_url = reverse('token_refresh')
+        self.logout_url = reverse('logout')
         self.user = User.objects.create_user(username='refreshuser', email='refresh@example.com', password='StrongP@ss1')
         refresh = RefreshToken.for_user(self.user)
         self.refresh_token = str(refresh)
+        self.access_token = str(refresh.access_token)
+
+        self.password_reset_confirm_url = reverse('password_reset_confirm')
+        self.token = default_token_generator.make_token(self.user)
+
+    def authenticate(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.access_token)
+
 
     def test_token_refresh_success(self):
         data = {
@@ -166,6 +230,16 @@ class TokenRefreshTests(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
             self.assertIn('detail', response.data)
 
+    def test_token_refresh_after_logout(self):
+        # First logout to blacklist the token
+        self.authenticate()
+        data = {'refresh': self.refresh_token}
+        self.client.post(self.logout_url, data, format='json')
+        
+        # Attempt to refresh using the blacklisted token
+        response = self.client.post(self.token_refresh_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('detail', response.data)
 
 class LogoutTests(APITestCase):
     def setUp(self):
@@ -203,6 +277,17 @@ class LogoutTests(APITestCase):
         response = self.client.post(self.logout_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_logout_with_already_blacklisted_token(self):
+        self.authenticate()
+        data = {'refresh': self.refresh_token}
+        # First logout
+        response1 = self.client.post(self.logout_url, data, format='json')
+        self.assertEqual(response1.status_code, status.HTTP_205_RESET_CONTENT)
+        
+        # Attempt second logout with the same token
+        response2 = self.client.post(self.logout_url, data, format='json')
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class PasswordResetTests(APITestCase):
     def setUp(self):
@@ -237,6 +322,7 @@ class PasswordResetTests(APITestCase):
         response = self.client.post(self.password_reset_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
+
 
 class PasswordResetConfirmTests(APITestCase):
     def setUp(self):
@@ -292,6 +378,19 @@ class PasswordResetConfirmTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
 
+    def test_password_reset_confirm_with_expired_token(self):
+        with patch('django.contrib.auth.tokens.default_token_generator.check_token') as mock_check_token:
+            mock_check_token.return_value = False  # Simulate expired token
+            data = {
+                'token': self.token,
+                'uid': self.uid,
+                'password': 'NewStrongP@ssw0rd!',
+                'password_confirm': 'NewStrongP@ssw0rd!'
+            }
+            response = self.client.post(self.password_reset_confirm_url, data, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn('token', response.data)
+
 
 class UserProfileTests(APITestCase):
     def setUp(self):
@@ -323,6 +422,16 @@ class UserProfileTests(APITestCase):
         self.assertEqual(self.user.first_name, 'John')
         self.assertEqual(self.user.last_name, 'Doe')
 
+    def test_partial_update_profile_success(self):
+        self.authenticate()
+        data = {
+            'first_name': 'Jane'
+        }
+        response = self.client.patch(self.profile_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Jane')
+
     def test_access_profile_without_authentication(self):
         response = self.client.get(self.profile_url, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -335,3 +444,14 @@ class UserProfileTests(APITestCase):
         response = self.client.put(self.profile_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
+    def test_update_profile_email_to_existing_email(self):
+        User.objects.create_user(username='otheruser', email='existing@example.com', password='StrongP@ss1')
+        
+        self.authenticate()
+        data = {
+            'username': self.user.username,
+            'email': 'existing@example.com'
+        }
+        response = self.client.put(self.profile_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
