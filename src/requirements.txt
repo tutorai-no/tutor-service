@@ -65,7 +65,7 @@ pytesseract==0.3.13
 python-dateutil==2.9.0.post0
 python-docx==1.1.2
 python-dotenv==1.0.1
-pytz==2023.3.post1
+pytz==2023.4
 PyYAML==6.0.2
 regex==2024.9.11
 requests==2.32.3
