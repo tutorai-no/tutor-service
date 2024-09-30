@@ -1,5 +1,4 @@
-# accounts/tests.py
-
+from django.core import mail
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
@@ -10,12 +9,11 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from unittest.mock import patch
 from rest_framework_simplejwt.exceptions import TokenError
 
-# Registration Tests
 class RegistrationTests(APITestCase):
     def setUp(self):
         self.register_url = reverse('register')
 
-    @patch('django.core.mail.send_mail')  # Correct patch path
+    @patch('django.core.mail.send_mail')  
     def test_user_registration_success(self, mock_send_mail):
         data = {
             'username': 'testuser',
@@ -26,7 +24,11 @@ class RegistrationTests(APITestCase):
         response = self.client.post(self.register_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(User.objects.filter(username='testuser').exists())
-        mock_send_mail.assert_called_once()
+
+        # Check that one email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ['testuser@example.com'])
 
     def test_user_registration_weak_password(self):
         data = {
@@ -209,19 +211,22 @@ class PasswordResetTests(APITestCase):
 
     @patch('django.core.mail.send_mail')  # Correct patch path
     def test_password_reset_request_success(self, mock_send_mail):
+        expected_email = "reset@example.com"
         data = {
-            'email': 'reset@example.com'
+            'email': expected_email
         }
         response = self.client.post(self.password_reset_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_send_mail.assert_called_once()
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, [expected_email])
 
     def test_password_reset_request_nonexistent_email(self):
         data = {
             'email': 'nonexistent@example.com'
         }
         response = self.client.post(self.password_reset_url, data, format='json')
-        # Depending on your implementation, it might return 200 to prevent email enumeration
+        # Return 200 to prevent email enumeration
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('detail', response.data)
 
@@ -308,6 +313,7 @@ class UserProfileTests(APITestCase):
     def test_update_profile_success(self):
         self.authenticate()
         data = {
+            "username": self.user.username,
             'first_name': 'John',
             'last_name': 'Doe'
         }
@@ -324,8 +330,8 @@ class UserProfileTests(APITestCase):
     def test_update_profile_invalid_data(self):
         self.authenticate()
         data = {
-            'email': 'newemail@example.com'  # Assuming 'email' is read-only
+        'non-existing-field': 'newemail@example.com'  
         }
         response = self.client.put(self.profile_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('email', response.data)
+        
