@@ -1,6 +1,6 @@
 from datetime import timedelta, timezone
 from django.core import mail
-from django.contrib.auth.models import User
+
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
 from rest_framework import status
@@ -10,10 +10,39 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, Ou
 from unittest.mock import patch
 from rest_framework_simplejwt.exceptions import TokenError
 
+from django.contrib.auth import get_user_model
+
+from accounts.models import Subscription
+
+User = get_user_model()
+
 class RegistrationTests(APITestCase):
     def setUp(self):
         self.register_url = reverse('register')
+        self.subscription = Subscription.objects.create(
+            name='Premium',
+            description='Premium subscription',
+            price=19.99
+        )
 
+    @patch('django.core.mail.send_mail')  
+    def test_user_registration_with_subscription_success(self, mock_send_mail):
+        data = {
+            'username': 'testuser',
+            'email': 'testuser@example.com',
+            'password': 'StrongP@ssw0rd!',
+            'password_confirm': 'StrongP@ssw0rd!',
+            'subscription': self.subscription.id  # Include subscription if desired
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username='testuser').exists())
+
+        # Check that one email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ['testuser@example.com'])
+        
     @patch('django.core.mail.send_mail')  
     def test_user_registration_success(self, mock_send_mail):
         data = {
@@ -186,7 +215,7 @@ class LoginTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED) 
 
 
-# Token Refresh Tests
+
 class TokenRefreshTests(APITestCase):
     def setUp(self):
         self.token_refresh_url = reverse('token_refresh')
@@ -413,8 +442,9 @@ class UserProfileTests(APITestCase):
         self.authenticate()
         data = {
             "username": self.user.username,
-            'first_name': 'John',
-            'last_name': 'Doe'
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "newemail@example.com"
         }
         response = self.client.put(self.profile_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
