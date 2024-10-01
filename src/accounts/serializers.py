@@ -1,16 +1,15 @@
-# accounts/serializers.py
-
-from rest_framework import serializers
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework.validators import UniqueValidator
+from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.core.validators import RegexValidator
-from django.contrib.auth import get_user_model
-from .models import Subscription, SubscriptionHistory
-from django.core.validators import RegexValidator
+from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.validators import UniqueValidator
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+from accounts.models import Subscription, SubscriptionHistory
+
 
 User = get_user_model()
 
@@ -40,11 +39,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         style={'input_type': 'password'}
     )
 
-    email = serializers.EmailField(required=True, 
-                                   validators=[
-        UniqueValidator(queryset=User.objects.all())
-    ]
-)  
+    email = serializers.EmailField(
+        required=True, 
+        validators=[
+            UniqueValidator(queryset=User.objects.all()),
+        ]
+    )
 
     subscription = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
@@ -56,11 +56,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ('username', 'email', 'password', 'password_confirm', 'subscription')
 
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with that email already exists.")
-        return value
-
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError(
@@ -69,13 +64,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-            subscription=validated_data.get('subscription')
+        validated_data.pop('password_confirm')
+        subscription = validated_data.pop('subscription', None)
 
+        user = User.objects.create_user(
+            subscription=subscription,
+            **validated_data
         )
+
         # Send welcome email
         send_mail(
             subject='Welcome to Our Site',
@@ -95,10 +91,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = User.objects.filter(email=username_or_email).first() or User.objects.filter(username=username_or_email).first()
 
         if user and user.check_password(password):
+            if not user.is_active:
+                raise AuthenticationFailed('User is inactive.', code='authorization')
             data = super().validate({'username': user.username, 'password': password})
             return data
         else:
             raise AuthenticationFailed('Invalid credentials', code='authorization')
+
+
 
 class PasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -116,20 +116,25 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     password_confirm = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
+        uid = attrs.get('uid')
+        token = attrs.get('token')
+        password = attrs.get('password')
+        password_confirm = attrs.get('password_confirm')
+
+        if password != password_confirm:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+
         try:
-            uid = int(attrs['uid'])  # Assuming UID is the raw primary key
             user = User.objects.get(pk=uid)
         except (ValueError, User.DoesNotExist):
             raise serializers.ValidationError({'uid': 'Invalid UID'})
 
-        if not default_token_generator.check_token(user, attrs['token']):
+        if not default_token_generator.check_token(user, token):
             raise serializers.ValidationError({'token': 'Invalid or expired token'})
-
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
 
         attrs['user'] = user
         return attrs
+
 
     def save(self, **kwargs):
         user = self.validated_data['user']
@@ -154,14 +159,24 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    
+    username = serializers.CharField(
+        required=True,
+        min_length=3,
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+$',
+                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
+            ),
+            UniqueValidator(queryset=User.objects.all()),
+        ]
+    )
     email = serializers.EmailField(
         required=True,
         validators=[
-            UniqueValidator(queryset=User.objects.all())
+            UniqueValidator(queryset=User.objects.all()),
         ]
     )
-
 
     subscription = SubscriptionSerializer(read_only=True)
     subscription_id = serializers.PrimaryKeyRelatedField(
@@ -172,33 +187,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
         allow_null=True
     )
 
-    username = serializers.CharField(
-        required=True,
-        min_length=3,
-        max_length=30,
-        validators=[
-            RegexValidator(
-                regex=r'^[\w.@+-]+$',
-                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
-            )
-        ]
-    )
 
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name', 'subscription', 'subscription_id')
 
-    def validate_email(self, value):
-        user = self.context['request'].user
-        if User.objects.filter(email__iexact=value).exclude(pk=user.pk).exists():
-            raise serializers.ValidationError("A user with that email already exists.")
-        return value
-
-    def validate_username(self, value):
-        user = self.context['request'].user
-        if User.objects.filter(username__iexact=value).exclude(pk=user.pk).exists():
-            raise serializers.ValidationError("A user with that username already exists.")
-        return value
 
     def update(self, instance, validated_data):
         subscription = validated_data.pop('subscription', None)
