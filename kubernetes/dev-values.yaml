@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  tag: latest-dev
+
+service:
+  type: NodePort
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+hpa:
+  enabled: false
+
+env:
+  ENVIRONMENT: development
