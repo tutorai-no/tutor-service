@@ -20,6 +20,7 @@ jobs:
           RAG_DATABASE_SYSTEM: ${{ secrets.RAG_DATABASE_SYSTEM }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
         run: |
+          docker compose down -v
           docker compose build backend
           docker compose run backend python manage.py makemigrations
           docker compose run backend python manage.py migrate
