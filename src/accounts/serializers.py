@@ -1,14 +1,33 @@
 # accounts/serializers.py
 
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import validate_password
-from django.core.mail import send_mail
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.validators import UniqueValidator
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.core.validators import RegexValidator
+from django.contrib.auth import get_user_model
+from .models import Subscription, SubscriptionHistory
+from django.core.validators import RegexValidator
+
+User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        required=True,
+        min_length=3,
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+$',
+                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
+            ),
+            UniqueValidator(queryset=User.objects.all())
+        ]
+    )
+
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -20,11 +39,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         required=True,
         style={'input_type': 'password'}
     )
-    email = serializers.EmailField(required=True)  # Explicitly required
+
+    email = serializers.EmailField(required=True, 
+                                   validators=[
+        UniqueValidator(queryset=User.objects.all())
+    ]
+)  
+
+    subscription = serializers.PrimaryKeyRelatedField(
+        queryset=Subscription.objects.filter(active=True),
+        required=False,
+        allow_null=True
+    )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'password_confirm')
+        fields = ('username', 'email', 'password', 'password_confirm', 'subscription')
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -42,7 +72,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
-            password=validated_data['password']
+            password=validated_data['password'],
+            subscription=validated_data.get('subscription')
+
         )
         # Send welcome email
         send_mail(
@@ -105,8 +137,80 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user.save()
         return user
 
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscription
+        fields = ['id', 'name', 'description', 'price', 'active']
+
+
+class SubscriptionHistorySerializer(serializers.ModelSerializer):
+    subscription = SubscriptionSerializer(read_only=True)
+
+    class Meta:
+        model = SubscriptionHistory
+        fields = ['id', 'subscription', 'start_date', 'end_date']
+        read_only_fields = ['id', 'subscription', 'start_date', 'end_date']
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
+    
+    email = serializers.EmailField(
+        required=True,
+        validators=[
+            UniqueValidator(queryset=User.objects.all())
+        ]
+    )
+
+
+    subscription = SubscriptionSerializer(read_only=True)
+    subscription_id = serializers.PrimaryKeyRelatedField(
+        queryset=Subscription.objects.filter(active=True),
+        source='subscription',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    username = serializers.CharField(
+        required=True,
+        min_length=3,
+        max_length=30,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+$',
+                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
+            )
+        ]
+    )
+
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name')
-        read_only_fields = ('email',)
+        fields = ('username', 'email', 'first_name', 'last_name', 'subscription', 'subscription_id')
+
+    def validate_email(self, value):
+        user = self.context['request'].user
+        if User.objects.filter(email__iexact=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
+
+    def validate_username(self, value):
+        user = self.context['request'].user
+        if User.objects.filter(username__iexact=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError("A user with that username already exists.")
+        return value
+
+    def update(self, instance, validated_data):
+        subscription = validated_data.pop('subscription', None)
+        subscription_id = validated_data.pop('subscription_id', None)
+
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+
+        if subscription_id is not None:
+            instance.subscription = subscription_id
+
+        instance.save()
+        return instance
