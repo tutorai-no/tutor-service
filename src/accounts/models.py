@@ -18,7 +18,7 @@ class CustomUser(AbstractUser):
     """
     Custom user model extending AbstractUser to include subscription.
     """
-    email = models.EmailField(unique=True)  # Enforce unique emails
+    email = models.EmailField(unique=True)
     subscription = models.ForeignKey(
         Subscription,
         on_delete=models.SET_NULL,
