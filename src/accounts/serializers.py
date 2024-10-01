@@ -194,16 +194,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
     def update(self, instance, validated_data):
-        subscription = validated_data.pop('subscription', None)
+        # Extract subscription_id from validated_data
         subscription_id = validated_data.pop('subscription_id', None)
 
-        instance.username = validated_data.get('username', instance.username)
-        instance.email = validated_data.get('email', instance.email)
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        instance.last_name = validated_data.get('last_name', instance.last_name)
+        # Update other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
 
+        # Update subscription if provided
         if subscription_id is not None:
             instance.subscription = subscription_id
 
+        # Save the instance
         instance.save()
         return instance
