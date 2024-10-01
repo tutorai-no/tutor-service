@@ -162,6 +162,20 @@ class RegistrationTests(APITestCase):
         response = self.client.post(self.register_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_registration_with_invalid_email(self):
+        """
+        Ensure that registration fails with an invalid email format.
+        """
+        data = {
+            'username': 'invalidemailuser',
+            'email': 'invalidemail',  # Invalid email format
+            'password': 'StrongP@ssw0rd!',
+            'password_confirm': 'StrongP@ssw0rd!'
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+
 
 class LoginTests(APITestCase):
     def setUp(self):
@@ -214,6 +228,29 @@ class LoginTests(APITestCase):
         response = self.client.post(self.login_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED) 
 
+    def test_login_with_correct_email_wrong_password(self):
+        """
+        Ensure that logging in with a correct email but wrong password fails.
+        """
+        data = {
+            'username': 'login@example.com',  # Assuming email can be used as username
+            'password': 'WrongPassword!'     # Incorrect password
+        }
+        response = self.client.post(self.login_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('detail', response.data)
+
+    def test_login_with_one_users_username_and_another_users_password(self):
+        """
+        Ensure that logging in with one user's username and another user's password fails.
+        """
+        data = {
+            'username': 'user1',            # Valid username for user1
+            'password': 'Password2!'        # Valid password for user2, invalid for user1
+        }
+        response = self.client.post(self.login_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('detail', response.data)
 
 
 class TokenRefreshTests(APITestCase):
@@ -318,6 +355,17 @@ class LogoutTests(APITestCase):
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
 
 
+    def test_logout_without_logging_in(self):
+        """
+        Ensure that logging out without authentication fails.
+        """
+        data = {
+            'refresh': self.refresh_token
+        }
+        response = self.client.post(self.logout_url, data, format='json')
+        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+        # Depending on your implementation, it could be 401 or 403
+        
 class PasswordResetTests(APITestCase):
     def setUp(self):
         self.password_reset_url = reverse('password_reset')
