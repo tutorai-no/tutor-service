@@ -592,3 +592,26 @@ class UserProfileTests(APITestCase):
         response = self.client.put(self.profile_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
+
+    def test_subscription_upgrade(self):
+        # Create initial subscription
+        basic = Subscription.objects.create(name='Basic', description='Basic plan', price=9.99, active=True)
+        premium = Subscription.objects.create(name='Premium', description='Premium plan', price=19.99, active=True)
+        
+        # Register user with Basic subscription
+        user = User.objects.create_user(username='upgradeuser', email='upgrade@example.com', password='StrongP@ss1', subscription=basic)
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + str(refresh.access_token))
+        
+        # Upgrade to Premium
+        profile_url = reverse('profile')
+        data = {
+            'username': 'upgradeuser',
+            'email': 'upgrade@example.com',
+            'subscription_id': premium.id
+        }
+        response = self.client.put(profile_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user.refresh_from_db()
+        self.assertEqual(user.subscription, premium)
+
