@@ -1,16 +1,14 @@
-from datetime import timedelta, timezone
 from django.core import mail
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase, APIClient
+from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-from unittest.mock import patch
 from rest_framework_simplejwt.exceptions import TokenError
-
-from django.contrib.auth import get_user_model
+from unittest.mock import patch
 
 from accounts.models import Subscription
 
@@ -371,7 +369,7 @@ class PasswordResetTests(APITestCase):
         self.password_reset_url = reverse('password_reset')
         self.user = User.objects.create_user(username='resetuser', email='reset@example.com', password='StrongP@ss1')
 
-    @patch('django.core.mail.send_mail')  # Correct patch path
+    @patch('django.core.mail.send_mail')
     def test_password_reset_request_success(self, mock_send_mail):
         expected_email = "reset@example.com"
         data = {
