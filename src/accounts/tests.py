@@ -174,6 +174,18 @@ class RegistrationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
 
+    def test_password_storage_is_hashed(self):
+        data = {
+            'username': 'hashuser',
+            'email': 'hashuser@example.com',
+            'password': 'StrongP@ssw0rd!',
+            'password_confirm': 'StrongP@ssw0rd!'
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(username='hashuser')
+        self.assertNotEqual(user.password, 'StrongP@ssw0rd!')
+        self.assertTrue(user.check_password('StrongP@ssw0rd!'))
 
 class LoginTests(APITestCase):
     def setUp(self):
@@ -250,6 +262,28 @@ class LoginTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn('detail', response.data)
 
+    def test_login_superuser_success(self):
+        superuser = User.objects.create_superuser(username='admin', email='admin@example.com', password='AdminP@ssw0rd!')
+        data = {
+            'username': 'admin',
+            'password': 'AdminP@ssw0rd!'
+        }
+        response = self.client.post(self.login_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+
+    def test_login_staff_user_success(self):
+        staff_user = User.objects.create_user(username='staffuser', email='staff@example.com', password='StaffP@ssw0rd!', is_staff=True)
+        data = {
+            'username': 'staffuser',
+            'password': 'StaffP@ssw0rd!'
+        }
+        response = self.client.post(self.login_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+
 
 class TokenRefreshTests(APITestCase):
     def setUp(self):
@@ -304,6 +338,20 @@ class TokenRefreshTests(APITestCase):
         response = self.client.post(self.token_refresh_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn('detail', response.data)
+
+    def test_token_refresh_with_blacklisted_token(self):
+        # Blacklist the refresh token
+        refresh = RefreshToken.for_user(self.user)
+        refresh.blacklist()
+        
+        data = {
+            'refresh': str(refresh)
+        }
+        response = self.client.post(self.token_refresh_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('detail', response.data)
+        self.assertEqual(response.data['detail'], 'Token is blacklisted')
+
 
 class LogoutTests(APITestCase):
     def setUp(self):
@@ -362,6 +410,14 @@ class LogoutTests(APITestCase):
         }
         response = self.client.post(self.logout_url, data, format='json')
         self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+    @patch('rest_framework_simplejwt.tokens.RefreshToken.verify')
+    def test_logout_with_expired_token(self, mock_verify):
+        mock_verify.side_effect = TokenError('Token has expired')
+        data = {'refresh': self.refresh_token}
+        response = self.client.post(self.logout_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('detail', response.data)
 
 
 class PasswordResetTests(APITestCase):
