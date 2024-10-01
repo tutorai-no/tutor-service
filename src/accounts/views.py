@@ -1,22 +1,28 @@
 # accounts/views.py
 
 from rest_framework import generics, status
-from .serializers import (
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from rest_framework.views import APIView
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
+
+from accounts.serializers import (
     RegisterSerializer,
     CustomTokenObtainPairSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
+    SubscriptionHistorySerializer,
+    SubscriptionSerializer,
     UserProfileSerializer
 )
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from django.core.mail import send_mail
-from django.contrib.auth.models import User
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from django.contrib.auth.tokens import default_token_generator
+from accounts.models import Subscription
+
+User = get_user_model()
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -82,3 +88,18 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+class SubscriptionListView(generics.ListAPIView):
+    """
+    View to list available subscriptions.
+    """
+    queryset = Subscription.objects.filter(active=True)
+    serializer_class = SubscriptionSerializer
+    permission_classes = [AllowAny]
+
+class SubscriptionHistoryView(generics.ListAPIView):
+    serializer_class = SubscriptionHistorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.request.user.subscription_history.all()
