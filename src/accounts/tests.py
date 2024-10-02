@@ -152,7 +152,7 @@ class RegistrationTests(APITestCase):
 
     def test_registration_with_non_ascii_username(self):
         data = {
-            'username': '用户测试',  # Non-ASCII characters
+            'username': '用户测试测用',  # Non-ASCII characters
             'email': 'unicode@example.com',
             'password': 'StrongP@ssw0rd!',
             'password_confirm': 'StrongP@ssw0rd!'
