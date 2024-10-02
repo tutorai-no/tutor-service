@@ -78,8 +78,7 @@ class RegistrationTests(APITestCase):
             'password_confirm': 'StrongP@ssw0rd!'
         }
         response = self.client.post(self.register_url, data, format='json')
-        # Depending on implementation, this might be allowed or not
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)  # Or 400 if case-insensitive
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)  
 
     def test_user_registration_weak_password(self):
         data = {
@@ -91,6 +90,16 @@ class RegistrationTests(APITestCase):
         response = self.client.post(self.register_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
+
+    def test_user_registration_all_special_characters_password(self):
+        data = {
+            "username": "testuser2",
+            "email": "testuser2@example.com",
+            "password": """!"#$%&'()*+,-./0123456789:;<=>? @abcdefghijklmnopqrstuvwxyz[]^_`abcdefghijklmnopqrstuvwxyz{|}~""",
+            "password_confirm": """!"#$%&'()*+,-./0123456789:;<=>? @abcdefghijklmnopqrstuvwxyz[]^_`abcdefghijklmnopqrstuvwxyz{|}~""",
+        }
+        response = self.client.post(self.register_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_user_registration_password_mismatch(self):
         data = {
