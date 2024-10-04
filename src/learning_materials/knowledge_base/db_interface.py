@@ -129,7 +129,6 @@ class MongoDB(Database):
         self, pdf_name: str, page_num_start: int, page_num_end: int
     ) -> list[Page]:
         # Get the curriculum from the database
-        print("Using MongoDB", flush=True)
         cursor = self.collection.find(
             {
                 "pdfName": pdf_name,

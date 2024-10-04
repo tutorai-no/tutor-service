@@ -8,7 +8,7 @@ ifthe configuration is loaded from a test environment file.
 """
 
 #a class for defining the config variables
-load_dotenv()
+load_dotenv("../.env")
 
 class Config():
     def __init__(self, path='.env', gpt_model="gpt-3.5-turbo"):
@@ -17,6 +17,7 @@ class Config():
         self.API_KEY = os.getenv('OPENAI_API_KEY')
         self.MONGODB_URI = os.getenv('MONGODB_URI')
         self.RAG_DATABASE_SYSTEM = os.getenv('RAG_DATABASE_SYSTEM', 'mongodb')
-        print(f"Using {self.RAG_DATABASE_SYSTEM} as the database system", flush=True)
+      
+    
     
         
