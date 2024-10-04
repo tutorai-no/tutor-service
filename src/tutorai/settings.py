@@ -29,7 +29,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["46.101.107.247", "backend.tutorai.no"]
 
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://backend.tutorai.no",
+    "https://46.101.107.247",  # Include IP if you're accessing via IP as well
+]
 # Application definition
 
 INSTALLED_APPS = [
