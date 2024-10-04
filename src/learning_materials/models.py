@@ -13,7 +13,7 @@ class FlashcardModel(models.Model):
     def __str__(self):
         return self.front
 
-class CardsetModel(models.Model):
+class Cardset(models.Model):
     """Model to store cardsets"""
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, help_text="The name of the cardset")
