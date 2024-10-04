@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-f=vaz!(p7-=5(ufwm+*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["46.101.107.247", "backend.tutorai.no"]
 
 
 # Application definition
