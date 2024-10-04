@@ -4,6 +4,7 @@ from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
     parse_for_anki,
 )
+from learning_materials.models import FlashcardModel, Cardset
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Page
 import re
@@ -47,6 +48,7 @@ class FlashcardGenerationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_valid_request(self):
+        self.assertFalse(Cardset.objects.exists())
         valid_response = {
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
@@ -55,6 +57,8 @@ class FlashcardGenerationTest(TestCase):
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data)
+        self.assertTrue(Cardset.objects.exists())
+        self.assertTrue(FlashcardModel.objects.exists())
 
     def test_invalid_end_start_index(self):
         invalid_response = {
