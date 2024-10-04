@@ -27,11 +27,12 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-f=vaz!(p7-=5(ufwm+*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["46.101.107.247", "backend.tutorai.no"]
+ALLOWED_HOSTS = ["46.101.107.247", "backend.tutorai.no", "localhost"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://backend.tutorai.no",
-    "https://46.101.107.247",  # Include IP if you're accessing via IP as well
+    "https://46.101.107.247",
+    "http://localhost:8000"
 ]
 # Application definition
 
