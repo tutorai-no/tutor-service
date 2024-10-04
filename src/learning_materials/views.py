@@ -15,7 +15,7 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import CardsetModel, FlashcardModel
+from learning_materials.models import Cardset, FlashcardModel
 from learning_materials.translator import translate_flashcard_to_orm_model
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
@@ -61,13 +61,13 @@ class FlashcardCreationView(GenericAPIView):
 
             flashcards = process_flashcards(file_name, start, end)
             cardset_name = f"{file_name}_{start}_{end}"
-            cardset_model = CardsetModel.objects.create(name=cardset_name)
+            cardset = Cardset.objects.create(name=cardset_name)
             flashcard_models = [
-                translate_flashcard_to_orm_model(flashcard, cardset_model)
+                translate_flashcard_to_orm_model(flashcard, cardset)
                 for flashcard in flashcards
             ]
-            
-            cardset_model.save()
+
+            cardset.save()
             for flashcard_model in flashcard_models:
                 flashcard_model.save()
 

@@ -26,6 +26,7 @@ def process_flashcards(document_name: str, start: int, end: int) -> list[Flashca
     """
     logger.info("Trying to find relevant document")
     pages = get_page_range(document_name, start, end)
+    logger.info(f"Found {len(pages)} pages in the document")
     flashcards: list[Flashcard] = []
     logger.info(f"Generating flashcards for {document_name} from page {start} to {end}")
 
