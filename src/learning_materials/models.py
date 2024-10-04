@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class Flashcard(models.Model):
+class FlashcardModel(models.Model):
     """Model to store flashcards"""
     id = models.AutoField(primary_key=True)
     front = models.TextField(help_text="The front of the flashcard")
@@ -13,7 +13,7 @@ class Flashcard(models.Model):
     def __str__(self):
         return self.front
 
-class Cardset(models.Model):
+class CardsetModel(models.Model):
     """Model to store cardsets"""
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, help_text="The name of the cardset")
