@@ -48,9 +48,11 @@ class FlashcardGenerationTest(TestCase):
 
 
     def test_invalid_request(self):
+        self.assertFalse(Cardset.objects.exists())
         invalid_payload = {}
         response = self.client.post(self.url, invalid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Cardset.objects.exists())
 
     def test_valid_request(self):
         self.assertFalse(Cardset.objects.exists())
@@ -69,6 +71,7 @@ class FlashcardGenerationTest(TestCase):
         self.assertGreater(flashcards.count(), 0)
 
     def test_invalid_end_start_index(self):
+        self.assertFalse(Cardset.objects.exists())
         invalid_response = {
             "document": self.valid_pdf_name,
             "start": 1,
@@ -76,6 +79,7 @@ class FlashcardGenerationTest(TestCase):
         }
         response = self.client.post(self.url, invalid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Cardset.objects.exists())
 
 class RagAPITest(TestCase):
     def setUp(self):
@@ -115,6 +119,11 @@ class QuizGenerationTest(TestCase):
         self.invalid_pdf_name = "invalid.pdf"
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
+        self.context = """
+            Artificial intelligence (AI), in its broadest sense, is intelligence exhibited by machines, particularly computer systems.
+            It is a field of research in computer science that develops and studies methods and software that enable machines to perceive their environment and use learning and intelligence to take actions that maximize their chances of achieving defined goals.
+            [1] Such machines may be called AIs.
+        """
         # Populate rag database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(self.context, i, self.valid_pdf_name)
