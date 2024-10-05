@@ -3,7 +3,7 @@ from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
     parse_for_anki,
 )
-from learning_materials.models import FlashcardModel, Cardset
+from learning_materials.models import FlashcardModel, Cardset, QuizModel
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Page
 import re
@@ -129,11 +129,14 @@ class QuizGenerationTest(TestCase):
             post_context(self.context, i, self.valid_pdf_name)
 
     def test_invalid_request(self):
+        self.assertFalse(QuizModel.objects.exists())
         invalid_payload = {}
         response = self.client.post(self.url, invalid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(QuizModel.objects.exists())
 
     def test_valid_request(self):
+        self.assertFalse(QuizModel.objects.exists())
         valid_response = {
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
@@ -142,8 +145,10 @@ class QuizGenerationTest(TestCase):
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data)
+        self.assertTrue(QuizModel.objects.exists())
 
     def test_valid_request_with_learning_goals(self):
+        self.assertFalse(QuizModel.objects.exists())
         valid_response = {
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
@@ -153,8 +158,10 @@ class QuizGenerationTest(TestCase):
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data)
+        self.assertTrue(QuizModel.objects.exists())
 
     def test_invalid_end_start_index(self):
+        self.assertFalse(QuizModel.objects.exists())
         invalid_response = {
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_end,
@@ -162,6 +169,7 @@ class QuizGenerationTest(TestCase):
         }
         response = self.client.post(self.url, invalid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(QuizModel.objects.exists())
 
 
 class QuizGradingTest(TestCase):
