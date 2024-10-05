@@ -16,7 +16,7 @@ from learning_materials.quizzes.quiz_service import (
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
 from learning_materials.models import Cardset, FlashcardModel
-from learning_materials.translator import translate_flashcard_to_orm_model
+from learning_materials.translator import translate_flashcard_to_orm_model, translate_quiz_to_orm_model
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
     ChatSerializer,
@@ -151,6 +151,9 @@ class QuizCreationView(GenericAPIView):
             start = serializer.validated_data.get("start")
             end = serializer.validated_data.get("end")
             quiz = generate_quiz(document, start, end)
+            
+            # Save the quiz to the database
+            translate_quiz_to_orm_model(quiz)
             response = quiz.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
