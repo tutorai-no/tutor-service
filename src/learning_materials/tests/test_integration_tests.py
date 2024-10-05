@@ -3,7 +3,7 @@ from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
     parse_for_anki,
 )
-from learning_materials.models import FlashcardModel, Cardset, QuizModel
+from learning_materials.models import FlashcardModel, Cardset, MultipleChoiceQuestionModel, QuestionAnswerModel, QuizModel
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Page
 import re
@@ -159,6 +159,11 @@ class QuizGenerationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data)
         self.assertTrue(QuizModel.objects.exists())
+        quiz = QuizModel.objects.first()
+        # Check that there are either QuestionAnswerModel or MultipleChoiceQuestionModel objects
+        self.assertTrue(
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
+        )
 
     def test_invalid_end_start_index(self):
         self.assertFalse(QuizModel.objects.exists())
