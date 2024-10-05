@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class Flashcard(models.Model):
+class FlashcardModel(models.Model):
     """Model to store flashcards"""
     id = models.AutoField(primary_key=True)
     front = models.TextField(help_text="The front of the flashcard")
