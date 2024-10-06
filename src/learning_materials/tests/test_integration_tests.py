@@ -185,7 +185,13 @@ class QuizGenerationTest(TestCase):
         self.assertIn('questions', response.data)
         self.assertIsInstance(response.data['questions'], list)
         # Ensure questions are present
-        self.assertGreater(len(response.data['questions']), 0)  
+        self.assertGreater(len(response.data['questions']), 0)
+        
+        # Check that questions are created and associated with the quiz
+        self.assertTrue(
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or 
+            MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
+        )
 
     def test_valid_request_with_learning_goals(self):
         """
