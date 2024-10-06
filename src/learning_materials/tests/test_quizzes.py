@@ -50,7 +50,7 @@ class QuizGenerationTests(TestCase):
 
       # Check the quiz object
       self.assertIsInstance(quiz, Quiz)
-      self.assertEqual(quiz.document, pdf_name)
+      self.assertEqual(quiz.document_name, pdf_name)
       self.assertEqual(quiz.start, start)
       self.assertEqual(quiz.end, end)
 
@@ -73,7 +73,7 @@ class QuizGradingTests(TestCase):
       
       # A diverse quiz with mixed types of questions
       self.diverse_quiz = Quiz(
-         document="test_document.pdf",
+         document_name="test_document.pdf",
          start=1,
          end=2,
          questions=[
@@ -86,7 +86,7 @@ class QuizGradingTests(TestCase):
       
       # A quiz with only multiple-choice questions
       self.only_multiple_choice_quiz = Quiz(
-         document="test_document.pdf",
+         document_name="test_document.pdf",
          start=1,
          end=2,
          questions=[
@@ -97,7 +97,7 @@ class QuizGradingTests(TestCase):
       
       # A quiz with only question-answer type questions
       self.only_question_answer_quiz = Quiz(
-         document="test_document.pdf",
+         document_name="test_document.pdf",
          start=1,
          end=2,
          questions=[

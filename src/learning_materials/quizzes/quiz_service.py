@@ -43,7 +43,7 @@ def generate_quiz(
         Number of questions: {num_questions}
 
         Please format your response as a JSON object matching the Quiz model with these exact keys:
-        - "document": (string) The name of the document.
+        - "document_name": (string) The name of the document.
         - "start": (integer) The starting page number of the quiz.
         - "end": (integer) The ending page number of the quiz.
         - "questions": (list) A list of questions, where each question is either:
@@ -78,7 +78,7 @@ def generate_quiz(
         questions.extend(quiz_data.questions)
 
     return Quiz(
-        document=document,
+        document_name=document,
         start=start,
         end=end,
         questions=questions
