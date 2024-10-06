@@ -62,17 +62,14 @@ class FlashcardCreationView(GenericAPIView):
 
             flashcards = process_flashcards(file_name, start, end)
             cardset_name = f"{file_name}_{start}_{end}"
-            cardset = Cardset.objects.create(name=cardset_name, subject=subject)    
-            flashcard_models = [
-                translate_flashcard_to_orm_model(flashcard, cardset)
+             
+            
+            # Create a cardset for the flashcards and save them to the database
+            cardset = Cardset.objects.create(name=cardset_name, subject=subject)  
+            [translate_flashcard_to_orm_model(flashcard, cardset)
                 for flashcard in flashcards
             ]
 
-            cardset.save()
-            for flashcard_model in flashcard_models:
-                flashcard_model.save()
-
-            
             exportable_flashcard = parse_for_anki(flashcards)
             flashcard_dicts = [flashcard.model_dump() for flashcard in flashcards]
 

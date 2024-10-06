@@ -218,8 +218,6 @@ class MockDatabase(Database):
     def get_page_range(self, pdf_name: str, page_num_start: int, page_num_end: int) -> list[Page]:
         results = []
 
-        print("Using mock database", flush=True)
-
         # Filter documents based on pdf_name and page range
         for document in self.data:
             if (
