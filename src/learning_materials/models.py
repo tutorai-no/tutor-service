@@ -18,6 +18,7 @@ class Cardset(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
+    subject = models.CharField(max_length=100, help_text="The subject of the cardset", default="Unknown")
    
 
     def __str__(self):

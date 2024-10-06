@@ -53,6 +53,7 @@ class FlashcardGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -65,6 +66,7 @@ class FlashcardGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": 1,
             "end": 0,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -116,6 +118,7 @@ class QuizGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": 0,
             "end": 1,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -126,6 +129,7 @@ class QuizGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": 0,
             "end": 1,
+            "subject": "Some subject",
             "learning_goals": ["goal1", "goal2"],
         }
         response = self.client.post(self.url, valid_response, format="json")
@@ -137,6 +141,7 @@ class QuizGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": 1,
             "end": 0,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -178,6 +183,7 @@ class CompendiumAPITest(TestCase):
             "document": self.valid_document,
             "start": self.start_page,
             "end": self.end_page,
+            "subject": "Some subject",
         }
         response = self.client.post(
             self.url, data=valid_payload, content_type="application/json"
@@ -191,6 +197,7 @@ class CompendiumAPITest(TestCase):
             "document": self.valid_document,
             "start": 10,
             "end": 1,
+            "subject": "Some subject",
         }
         response = self.client.post(
             self.url, data=invalid_payload, content_type="application/json"
