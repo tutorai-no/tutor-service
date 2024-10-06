@@ -53,6 +53,10 @@ class DocumentSerializer(serializers.Serializer):
         help_text="The end index",
     )
 
+    subject = serializers.CharField(
+        help_text="The subject of the quiz",
+    )
+
     # The learning goals
     learning_goals = serializers.ListField(
         child=serializers.CharField(),

@@ -58,10 +58,11 @@ class FlashcardCreationView(GenericAPIView):
             file_name = serializer.validated_data.get("document")
             start = serializer.validated_data.get("start")
             end = serializer.validated_data.get("end")
+            subject = serializer.validated_data.get("subject")
 
             flashcards = process_flashcards(file_name, start, end)
             cardset_name = f"{file_name}_{start}_{end}"
-            cardset = Cardset.objects.create(name=cardset_name)
+            cardset = Cardset.objects.create(name=cardset_name, subject=subject)    
             flashcard_models = [
                 translate_flashcard_to_orm_model(flashcard, cardset)
                 for flashcard in flashcards
