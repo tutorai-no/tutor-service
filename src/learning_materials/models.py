@@ -1,5 +1,7 @@
 from django.db import models
 
+from tutorai import settings
+
 
 class Cardset(models.Model):
     """Model to store cardsets"""
@@ -29,6 +31,13 @@ class QuizModel(models.Model):
     document_name = models.CharField(max_length=100, help_text="The name of the document", default="unknown")
     start = models.IntegerField(help_text="The starting page of the quiz", default=1)
     end = models.IntegerField(help_text="The ending page of the quiz", default=1)
+
+    users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='quizzes',
+        help_text="Users associated with this quiz"
+    )
+
 
     def __str__(self):
         return f"Quiz for {self.document_name} from page {self.start} to {self.end}"

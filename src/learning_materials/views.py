@@ -1,5 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -119,9 +120,9 @@ class RAGResponseView(GenericAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class QuizCreationView(GenericAPIView):
     serializer_class = DocumentSerializer
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
@@ -135,12 +136,21 @@ class QuizCreationView(GenericAPIView):
                         "start": 1,
                         "end": 10,
                         "questions": [
-                            {"question": "Sample question?", "answer": "Sample answer"}
+                            {
+                                "question": "Sample question?",
+                                "answer": "Sample answer",
+                            },
+                            {
+                                "question": "Another question?",
+                                "options": ["Option 1", "Option 2", "Option 3"],
+                                "answer": "Option 2",
+                            }
                         ],
                     }
                 },
             ),
             400: openapi.Response(description="Invalid request data"),
+            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
         },
         tags=["Quiz"],
     )
@@ -151,13 +161,17 @@ class QuizCreationView(GenericAPIView):
             start = serializer.validated_data.get("start")
             end = serializer.validated_data.get("end")
             quiz = generate_quiz(document, start, end)
-            
-            # Save the quiz to the database
-            translate_quiz_to_orm_model(quiz)
-            response = quiz.model_dump()
-            return Response(response, status=status.HTTP_200_OK)
+
+            # Retrieve the authenticated user
+            user = request.user
+
+            # Save the quiz to the database and associate with the user
+            translate_quiz_to_orm_model(quiz, [user])
+            response_data = quiz.model_dump()
+            return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class QuizGradingView(GenericAPIView):
@@ -186,7 +200,7 @@ class QuizGradingView(GenericAPIView):
             student_answers = serializer.validated_data.get("student_answers")
             quiz_id = serializer.validated_data.get("quiz_id")
             # TODO: Retrieve quiz from database
-            quiz = Quiz(document="Sample.pdf", start=1, end=10, questions=[
+            quiz = Quiz(document_name="Sample.pdf", start=1, end=10, questions=[
                 QuestionAnswer(question="Sample question?", answer="Sample answer")
             ])
 
