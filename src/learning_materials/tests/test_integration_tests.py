@@ -1,14 +1,16 @@
 from django.test import TestCase, Client
+from rest_framework.test import APIClient
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
     parse_for_anki,
 )
-from learning_materials.models import FlashcardModel, Cardset
+from learning_materials.models import FlashcardModel, Cardset, MultipleChoiceQuestionModel, QuestionAnswerModel, QuizModel
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Page
 import re
 from rest_framework import status
 from learning_materials.knowledge_base.rag_service import post_context
+from accounts.models import CustomUser
 
 base = "/api/"
 
@@ -115,8 +117,14 @@ class RagAPITest(TestCase):
 
 class QuizGenerationTest(TestCase):
     def setUp(self):
-        self.client = Client()
+        self.client = APIClient()
         self.url = f"{base}quiz/create/"
+
+        # Create and authenticate a user
+        self.user = CustomUser.objects.create_user(username='testuser', password='testpass')
+        self.client.force_authenticate(user=self.user)
+
+        # Define valid and invalid test data
         self.valid_pdf_name = "test.pdf"
         self.invalid_pdf_name = "invalid.pdf"
         self.valid_page_num_start = 0
@@ -126,47 +134,133 @@ class QuizGenerationTest(TestCase):
             It is a field of research in computer science that develops and studies methods and software that enable machines to perceive their environment and use learning and intelligence to take actions that maximize their chances of achieving defined goals.
             [1] Such machines may be called AIs.
         """
-        # Populate rag database
+
+        # Populate RAG (Retrieval-Augmented Generation) database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(self.context, i, self.valid_pdf_name)
 
+
     def test_invalid_request(self):
+        """
+        Test that an invalid request (empty payload) returns a 400 Bad Request
+        and does not create any QuizModel instances.
+        """
+        # Ensure no quizzes exist before the test
+        self.assertFalse(QuizModel.objects.exists())  
+
         invalid_payload = {}
         response = self.client.post(self.url, invalid_payload, format="json")
+        
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Ensure no quizzes are created
+        self.assertFalse(QuizModel.objects.exists())  
+
 
     def test_valid_request(self):
-        valid_response = {
+        """
+        Test that a valid request creates a QuizModel instance and returns a 200 OK.
+        """
+        # Ensure no quizzes exist before the test
+        self.assertFalse(QuizModel.objects.exists())
+
+        valid_payload = {
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
             "subject": "Some subject",
         }
-        response = self.client.post(self.url, valid_response, format="json")
+        response = self.client.post(self.url, valid_payload, format="json")
+        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data)
+        # Ensure a quiz is created
+        self.assertTrue(QuizModel.objects.exists())  
+
+        # Retrieve the created quiz
+        quiz = QuizModel.objects.first()
+        self.assertEqual(quiz.document_name, self.valid_pdf_name)
+        self.assertEqual(quiz.start, self.valid_page_num_start)
+        self.assertEqual(quiz.end, self.valid_page_num_end)
+        
+        # Verify the response data
+        self.assertIn('document_name', response.data)
+        self.assertEqual(response.data['start'], self.valid_page_num_start)
+        self.assertEqual(response.data['end'], self.valid_page_num_end)
+        self.assertIn('questions', response.data)
+        self.assertIsInstance(response.data['questions'], list)
+        # Ensure questions are present
+        self.assertGreater(len(response.data['questions']), 0)
+        
+        # Check that questions are created and associated with the quiz
+        self.assertTrue(
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or 
+            MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
+        )
 
     def test_valid_request_with_learning_goals(self):
-        valid_response = {
+        """
+        Test that a valid request with learning goals creates a QuizModel instance,
+        associates it with learning goals, and returns a 200 OK.
+        """
+        # Ensure no quizzes exist before the test
+        self.assertFalse(QuizModel.objects.exists())  
+
+        valid_payload = {
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
             "subject": "Some subject",
             "learning_goals": ["goal1", "goal2"],
         }
-        response = self.client.post(self.url, valid_response, format="json")
+        response = self.client.post(self.url, valid_payload, format="json")
+        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data)
+        # Ensure a quiz is created
+        self.assertTrue(QuizModel.objects.exists())  
+
+        # Retrieve the created quiz
+        quiz = QuizModel.objects.first()
+        self.assertEqual(quiz.document_name, self.valid_pdf_name)
+        self.assertEqual(quiz.start, self.valid_page_num_start)
+        self.assertEqual(quiz.end, self.valid_page_num_end)
+        
+        # Verify the response data
+        self.assertEqual(response.data['document_name'], self.valid_pdf_name)
+        self.assertEqual(response.data['start'], self.valid_page_num_start)
+        self.assertEqual(response.data['end'], self.valid_page_num_end)
+        
+        self.assertIn('questions', response.data)
+        self.assertIsInstance(response.data['questions'], list)
+        self.assertGreater(len(response.data['questions']), 0)
+
+        # Check that questions are created and associated with the quiz
+        self.assertTrue(
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or 
+            MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
+        )
+        
+
 
     def test_invalid_end_start_index(self):
-        invalid_response = {
+        """
+        Test that a request with invalid start and end indices returns a 400 Bad Request
+        and does not create any QuizModel instances.
+        """
+        # Ensure no quizzes exist before the test
+        self.assertFalse(QuizModel.objects.exists())  
+
+        invalid_payload = {
             "document": self.valid_pdf_name,
-            "start": self.valid_page_num_end,
+            "start": self.valid_page_num_end,  # start is greater than end
             "end": self.valid_page_num_start,
             "subject": "Some subject",
         }
-        response = self.client.post(self.url, invalid_response, format="json")
+        response = self.client.post(self.url, invalid_payload, format="json")
+        
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Ensure no quizzes are created
+        self.assertFalse(QuizModel.objects.exists())  
+
+ 
 
 
 class QuizGradingTest(TestCase):

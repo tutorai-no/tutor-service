@@ -21,7 +21,7 @@ class MultipleChoiceQuestion(BaseModel):
 
 class Quiz(BaseModel):
     # Metadata
-    document: str = Field(description="The name of the document")
+    document_name: str = Field(description="The name of the document")
     start: int = Field(description="The starting page of the quiz")
     end: int = Field(description="The ending page of the quiz")
 
