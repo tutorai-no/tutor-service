@@ -28,6 +28,7 @@ from learning_materials.serializer import (
 
 class FlashcardCreationView(GenericAPIView):
     serializer_class = DocumentSerializer
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Generate flashcards from a given document",
@@ -59,12 +60,15 @@ class FlashcardCreationView(GenericAPIView):
             file_name = serializer.validated_data.get("document")
             start = serializer.validated_data.get("start")
             end = serializer.validated_data.get("end")
+            subject = serializer.validated_data.get("subject")
+            user = request.user
 
             flashcards = process_flashcards(file_name, start, end)
             cardset_name = f"{file_name}_{start}_{end}"
+             
             
             # Create a cardset for the flashcards and save them to the database
-            cardset = Cardset.objects.create(name=cardset_name)
+            cardset = Cardset.objects.create(name=cardset_name, subject=subject, user=user)  
             [translate_flashcard_to_orm_model(flashcard, cardset)
                 for flashcard in flashcards
             ]

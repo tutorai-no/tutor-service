@@ -1,4 +1,5 @@
 from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
@@ -14,10 +15,13 @@ from accounts.models import CustomUser
 
 base = "/api/"
 
+User = get_user_model()
+
 
 class FlashcardGenerationTest(TestCase):
     def setUp(self) -> None:
-        self.client = Client()
+        self.client = APIClient()
+
         self.url = f"{base}flashcards/create/"
         self.valid_pdf_name = "test.pdf"
         self.invalid_pdf_name = "invalid.pdf"
@@ -25,10 +29,12 @@ class FlashcardGenerationTest(TestCase):
         self.valid_page_num_end = 1
         self.context = """Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. The Jedi are spread across the galaxy in a full-scale war against the Separatists. The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to defeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. Meanwhile, after having visions of his wife Padmé Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic and, secretly, a Sith Lord. Palpatine manipulates Anakin into turning to the dark side of the Force and becoming his apprentice, Darth Vader, with wide-ranging consequences for the galaxy."""
 
+        self.user = User.objects.create_user(username='flashcardsuser', email='flashcards@example.com', password='StrongP@ss1')
+        self.client.force_authenticate(user=self.user)
+        
         # Populate rag database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(self.context, i, self.valid_pdf_name)
-
 
     def test_generate_flashcards(self):
         page = Page(text=self.context, page_num=self.valid_page_num_start, pdf_name=self.valid_pdf_name)
@@ -62,6 +68,7 @@ class FlashcardGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -78,6 +85,7 @@ class FlashcardGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": 1,
             "end": 0,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -165,6 +173,7 @@ class QuizGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_payload, format="json")
         
@@ -205,6 +214,7 @@ class QuizGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
+            "subject": "Some subject",
             "learning_goals": ["goal1", "goal2"],
         }
         response = self.client.post(self.url, valid_payload, format="json")
@@ -248,6 +258,7 @@ class QuizGenerationTest(TestCase):
             "document": self.valid_pdf_name,
             "start": self.valid_page_num_end,  # start is greater than end
             "end": self.valid_page_num_start,
+            "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_payload, format="json")
         
@@ -294,6 +305,7 @@ class CompendiumAPITest(TestCase):
             "document": self.valid_document,
             "start": self.start_page,
             "end": self.end_page,
+            "subject": "Some subject",
         }
         response = self.client.post(
             self.url, data=valid_payload, content_type="application/json"
@@ -307,6 +319,7 @@ class CompendiumAPITest(TestCase):
             "document": self.valid_document,
             "start": 10,
             "end": 1,
+            "subject": "Some subject",
         }
         response = self.client.post(
             self.url, data=invalid_payload, content_type="application/json"
