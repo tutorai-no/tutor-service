@@ -1,6 +1,8 @@
 # serializers.py in your Django app
 from rest_framework import serializers
+from rest_framework import serializers
 
+from learning_materials.models import Cardset, FlashcardModel
 
 class ChatSerializer(serializers.Serializer):
     # The name of the pdf file
@@ -91,8 +93,6 @@ class CurriculumSerializer(serializers.Serializer):
         help_text="The list of files to be processed",
     )
 
-from rest_framework import serializers
-from learning_materials.models import Cardset, FlashcardModel
 
 class FlashcardSerializer(serializers.ModelSerializer):
     class Meta:
