@@ -29,28 +29,28 @@ class QuizGenerationTests(TestCase):
 
    @patch('learning_materials.quizzes.quiz_service.get_page_range')
    def test_generate_quiz(self, mock_get_page_range):
-      pdf_name = "test_document.pdf"
+      document_name = "test_document.pdf"
       
       start = 1
       end = 2
 
       pages = [
             Page(text="""Artiﬁcial Intelligence (AI) is the branch of computer science, which makesthe computers to mimic the human behavior to assist humans for better performance in the field of science and technology.""", 
-                 page_num=start, pdf_name=pdf_name),
+                 page_num=start, document_name=document_name),
             Page(text="""Replicating human intelligence, solving knowledge-intensive tasks, building machines, which can perform tasks, that requirehuman intelligence, creating some system which can learn by itself are the few speciﬁc goals of AI. 
                Machine learning and deep learning are two subsets of AI which are used to solve problems using high performance algorithms and multilayer neural networks, respectively. 
                With the help of machine learning process, structured datalike genetic data, electrophysical data, and imaging data are properly investigatedin medical diagnosis. 
                AI provides advanced devices, advanced drug designing tech-niques,
                tele-treatment, physician patient communication using Chatbots and intelligent machines used for analyzing the cause and the chances of occurrence of anydisease in the field of health care.""", 
-                page_num=end, pdf_name=pdf_name),
+                page_num=end, document_name=document_name),
       ]
       mock_get_page_range.return_value = pages
 
-      quiz = generate_quiz(pdf_name, start, end)
+      quiz = generate_quiz(document_name, start, end)
 
       # Check the quiz object
       self.assertIsInstance(quiz, Quiz)
-      self.assertEqual(quiz.document_name, pdf_name)
+      self.assertEqual(quiz.document_name, document_name)
       self.assertEqual(quiz.start, start)
       self.assertEqual(quiz.end, end)
 

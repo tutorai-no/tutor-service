@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 class Page(BaseModel):
     text: str = Field(description="The text content of the page")
     page_num: int = Field(description="The page number")
-    pdf_name: str = Field(description="The name of the PDF file from which the page is extracted")
+    document_name: str = Field(description="The name of the file from which the page is extracted")
 
 
 class QuestionAnswer(BaseModel):
@@ -53,16 +53,16 @@ class Flashcard(BaseModel):
     front: str = Field(description="The front content of the flashcard")
     back: str = Field(description="The back content of the flashcard")
        # Private attributes for post-instantiation modification
-    _pdf_name: str = PrivateAttr(default=None)
+    _document_name: str = PrivateAttr(default=None)
     _page_num: int = PrivateAttr(default=None)
 
     @property
-    def pdf_name(self):
-        return self._pdf_name
+    def document_name(self):
+        return self._document_name
 
-    @pdf_name.setter
-    def pdf_name(self, value: str):
-        self._pdf_name = value
+    @document_name.setter
+    def document_name(self, value: str):
+        self._document_name = value
 
     @property
     def page_num(self):

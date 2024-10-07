@@ -23,13 +23,13 @@ class Database(ABC):
         )
 
     @abstractmethod
-    def get_curriculum(self, pdf_name: str, embedding: list[float]) -> list[Page]:
+    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Page]:
         """
         Get the curriculum from the database
 
         Args:
             embedding (list[float]): The embedding of the question
-            pdf_name (str): The name of the pdf to use
+            document_name (str): The name of the document to use
 
         Returns:
             list[str]: The curriculum related to the question
@@ -38,7 +38,7 @@ class Database(ABC):
 
     @abstractmethod
     def get_page_range(
-        self, pdf_name: str, page_num_start: int, page_num_end: int
+        self, document_name: str, page_num_start: int, page_num_end: int
     ) -> list[Page]:
         """
         Retrieves a range of pages from the knowledge base.
@@ -54,7 +54,7 @@ class Database(ABC):
 
     @abstractmethod
     def post_curriculum(
-        self, curriculum: str, page_num: int, pdf_name: str, embedding: list[float]
+        self, curriculum: str, page_num: int, document_name: str, embedding: list[float]
     ) -> bool:
         """
         Post the curriculum to the database
@@ -77,7 +77,7 @@ class MongoDB(Database):
         self.similarity_threshold = 0.7
         self.embeddings = OpenAIEmbedding()
 
-    def get_curriculum(self, pdf_name: str, embedding: list[float]) -> list[Page]:
+    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Page]:
         # Checking if embedding consists of decimals or "none"
         if not embedding:
             raise ValueError("Embedding cannot be None")
@@ -108,7 +108,7 @@ class MongoDB(Database):
         # Filter out the documents with low similarity
         for document in documents:
             threshold = self.similarity_threshold
-            if document["pdfName"] != pdf_name:
+            if document["documentName"] != document_name:
                 continue
 
             if (
@@ -119,19 +119,19 @@ class MongoDB(Database):
                     Page(
                         text=document["text"],
                         page_num=document["pageNum"],
-                        pdf_name=document["pdfName"],
+                        document_name=document["documentName"],
                     )
                 )
 
         return results
 
     def get_page_range(
-        self, pdf_name: str, page_num_start: int, page_num_end: int
+        self, document_name: str, page_num_start: int, page_num_end: int
     ) -> list[Page]:
         # Get the curriculum from the database
         cursor = self.collection.find(
             {
-                "pdfName": pdf_name,
+                "documentName": document_name,
                 "pageNum": {"$gte": page_num_start, "$lte": page_num_end},
             }
         )
@@ -146,14 +146,14 @@ class MongoDB(Database):
                 Page(
                     text=document["text"],
                     page_num=document["pageNum"],
-                    pdf_name=document["pdfName"],
+                    document_name=document["documentName"],
                 )
             )
 
         return results
 
     def post_curriculum(
-        self, curriculum: str, page_num: int, pdf_name: str, embedding: list[float]
+        self, curriculum: str, page_num: int, document_name: str, embedding: list[float]
     ) -> bool:
         if not curriculum:
             raise ValueError("Curriculum cannot be None")
@@ -161,14 +161,14 @@ class MongoDB(Database):
         if page_num == None:
             raise ValueError("Page number cannot be None")
 
-        if pdf_name == None:
+        if document_name == None:
             raise ValueError("Paragraph number cannot be None")
 
         if not embedding:
             raise ValueError("Embedding cannot be None")
 
-        if not pdf_name:
-            raise ValueError("PDF name cannot be None")
+        if not document_name:
+            raise ValueError("Document name cannot be None")
 
         try:
             # Insert the curriculum into the database with metadata
@@ -176,9 +176,8 @@ class MongoDB(Database):
                 {
                     "text": curriculum,
                     "pageNum": page_num,
-                    "pdfName": pdf_name,
+                    "documentName": document_name,
                     "embedding": embedding,
-                    "pdfName": pdf_name,
                 }
             )
             return True
@@ -195,53 +194,53 @@ class MockDatabase(Database):
         self.data = []
         self.similarity_threshold = 0.7
 
-    def get_curriculum(self, pdf_name: str, embedding: list[float]) -> list[Page]:
+    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Page]:
         if not embedding:
             raise ValueError("Embedding cannot be None")
 
         results = []
 
-        # Filter documents based on similarity and pdf_name
+        # Filter documents based on similarity and document_name
         for document in self.data:
-            if document["pdf_name"] == pdf_name:
+            if document["document_name"] == document_name:
                 similarity = cosine_similarity(embedding, document["embedding"])
                 if similarity > self.similarity_threshold:
                     results.append(
                         Page(
                             text=document["text"],
                             page_num=document["page_num"],
-                            pdf_name=document["pdf_name"]
+                            document_name=document["document_name"]
                         )
                     )
         return results
 
-    def get_page_range(self, pdf_name: str, page_num_start: int, page_num_end: int) -> list[Page]:
+    def get_page_range(self, document_name: str, page_num_start: int, page_num_end: int) -> list[Page]:
         results = []
 
-        # Filter documents based on pdf_name and page range
+        # Filter documents based on document_name and page range
         for document in self.data:
             if (
-                document["pdf_name"] == pdf_name and 
+                document["document_name"] == document_name and 
                 page_num_start <= document["page_num"] <= page_num_end
             ):
                 results.append(
                     Page(
                         text=document["text"],
                         page_num=document["page_num"],
-                        pdf_name=document["pdf_name"]
+                        document_name=document["document_name"]
                     )
                 )
         return results
 
-    def post_curriculum(self, curriculum: str, page_num: int, pdf_name: str, embedding: list[float]) -> bool:
-        if not curriculum or not pdf_name or page_num is None or not embedding:
+    def post_curriculum(self, curriculum: str, page_num: int, document_name: str, embedding: list[float]) -> bool:
+        if not curriculum or not document_name or page_num is None or not embedding:
             raise ValueError("All parameters are required and must be valid")
 
         # Append a new document to the in-memory storage
         self.data.append({
             "text": curriculum,
             "page_num": page_num,
-            "pdf_name": pdf_name,
+            "document_name": document_name,
             "embedding": embedding
         })
         return True
