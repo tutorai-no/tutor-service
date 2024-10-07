@@ -316,6 +316,14 @@ class FlashcardCRUDTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_deleting_flashcard_removes_it_from_cardset(self):
+        flashcard = FlashcardModel.objects.create(front='Front', back='Back', cardset=self.cardset)
+        self.assertEqual(self.cardset.flashcardmodel_set.count(), 1)
+        url = f'/api/flashcards/{flashcard.id}/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.cardset.flashcardmodel_set.count(), 0)
 
 class RagAPITest(TestCase):
     def setUp(self):
