@@ -1,6 +1,5 @@
 # serializers.py in your Django app
 from rest_framework import serializers
-from rest_framework import serializers
 
 from learning_materials.models import Cardset, FlashcardModel
 
