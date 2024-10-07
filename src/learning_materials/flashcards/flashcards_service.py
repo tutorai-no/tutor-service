@@ -30,10 +30,10 @@ def generate_flashcards(page: Page) -> list[Flashcard]:
     wrapper = chain.invoke({"query": template})
     flashcards = wrapper.flashcards
 
-    # Ensuring page_num and pdf_name are set correctly
+    # Ensuring page_num and document_name are set correctly
     for flashcard in flashcards:
         flashcard.page_num = page.page_num
-        flashcard.pdf_name = page.pdf_name
+        flashcard.document_name = page.document_name
 
     return flashcards
 

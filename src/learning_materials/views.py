@@ -42,7 +42,7 @@ class FlashcardCreationView(GenericAPIView):
                             {
                                 "front": "Sample question?",
                                 "back": "Sample answer",
-                                "pdf_name": "Sample.pdf",
+                                "document_name": "Sample.pdf",
                                 "page_num": 1,
                             }
                         ],
@@ -101,7 +101,7 @@ class RAGResponseView(GenericAPIView):
                             {
                                 "text": "Sample text",
                                 "page_num": 1,
-                                "pdf_name": "Sample.pdf",
+                                "document_name": "Sample.pdf",
                             }
                         ],
                     }

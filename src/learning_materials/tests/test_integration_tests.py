@@ -23,8 +23,7 @@ class FlashcardGenerationTest(TestCase):
         self.client = APIClient()
 
         self.url = f"{base}flashcards/create/"
-        self.valid_pdf_name = "test.pdf"
-        self.invalid_pdf_name = "invalid.pdf"
+        self.valid_document_name = "test.pdf"
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
         self.context = """Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. The Jedi are spread across the galaxy in a full-scale war against the Separatists. The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to defeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. Meanwhile, after having visions of his wife Padmé Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic and, secretly, a Sith Lord. Palpatine manipulates Anakin into turning to the dark side of the Force and becoming his apprentice, Darth Vader, with wide-ranging consequences for the galaxy."""
@@ -34,21 +33,21 @@ class FlashcardGenerationTest(TestCase):
         
         # Populate rag database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
-            post_context(self.context, i, self.valid_pdf_name)
+            post_context(self.context, i, self.valid_document_name)
 
     def test_generate_flashcards(self):
-        page = Page(text=self.context, page_num=self.valid_page_num_start, pdf_name=self.valid_pdf_name)
+        page = Page(text=self.context, page_num=self.valid_page_num_start, document_name=self.valid_document_name)
         flashcards = generate_flashcards(page)
         self.assertIsInstance(flashcards, list)
         self.assertGreater(len(flashcards), 0)
         self.assertIsInstance(flashcards[0], Flashcard)
         self.assertGreater(len(flashcards[0].front), 0)
         self.assertGreater(len(flashcards[0].back), 0)
-        self.assertEqual(flashcards[0].pdf_name, self.valid_pdf_name)
+        self.assertEqual(flashcards[0].document_name, self.valid_document_name)
         self.assertEqual(flashcards[0].page_num, self.valid_page_num_start)
 
     def test_parse_for_anki(self):
-        page = Page(text=self.context, page_num=self.valid_page_num_start, pdf_name=self.valid_pdf_name)
+        page = Page(text=self.context, page_num=self.valid_page_num_start, document_name=self.valid_document_name)
         flashcards = generate_flashcards(page)
         anki_format = parse_for_anki(flashcards)
         self.assertIsInstance(anki_format, str)
@@ -65,7 +64,7 @@ class FlashcardGenerationTest(TestCase):
     def test_valid_request(self):
         self.assertFalse(Cardset.objects.exists())
         valid_response = {
-            "document": self.valid_pdf_name,
+            "document": self.valid_document_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
             "subject": "Some subject",
@@ -82,7 +81,7 @@ class FlashcardGenerationTest(TestCase):
     def test_invalid_end_start_index(self):
         self.assertFalse(Cardset.objects.exists())
         invalid_response = {
-            "document": self.valid_pdf_name,
+            "document": self.valid_document_name,
             "start": 1,
             "end": 0,
             "subject": "Some subject",
@@ -95,8 +94,8 @@ class RagAPITest(TestCase):
     def setUp(self):
         self.client = Client()
         self.url = f"{base}search/"
-        self.valid_pdf_name = "test.pdf"
-        self.invalid_pdf_name = "invalid.pdf"
+        self.valid_document_name = "test.pdf"
+        self.invalid_document_name = "invalid.pdf"
         self.valid_chat_history = [
             {"role": "user", "response": "What is the capital of India?"},
             {"role": "assistant", "response": "New Delhi"},
@@ -109,12 +108,12 @@ class RagAPITest(TestCase):
         response = self.client.post(self.url, invalid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def invalid_pdf_name(self):
+    def invalid_document_name(self):
         pass
 
     def test_valid_request_without_chat_history(self):
         valid_response = {
-            "documents": [self.valid_pdf_name],
+            "documents": [self.valid_document_name],
             "user_question": "What is the capital of India?",
         }
         response = self.client.post(self.url, valid_response, format="json")
@@ -131,8 +130,8 @@ class QuizGenerationTest(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Define valid and invalid test data
-        self.valid_pdf_name = "test.pdf"
-        self.invalid_pdf_name = "invalid.pdf"
+        self.valid_document_name = "test.pdf"
+        self.invalid_document_name = "invalid.pdf"
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
         self.context = """
@@ -143,7 +142,7 @@ class QuizGenerationTest(TestCase):
 
         # Populate RAG (Retrieval-Augmented Generation) database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
-            post_context(self.context, i, self.valid_pdf_name)
+            post_context(self.context, i, self.valid_document_name)
 
 
     def test_invalid_request(self):
@@ -170,7 +169,7 @@ class QuizGenerationTest(TestCase):
         self.assertFalse(QuizModel.objects.exists())
 
         valid_payload = {
-            "document": self.valid_pdf_name,
+            "document": self.valid_document_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
             "subject": "Some subject",
@@ -183,7 +182,7 @@ class QuizGenerationTest(TestCase):
 
         # Retrieve the created quiz
         quiz = QuizModel.objects.first()
-        self.assertEqual(quiz.document_name, self.valid_pdf_name)
+        self.assertEqual(quiz.document_name, self.valid_document_name)
         self.assertEqual(quiz.start, self.valid_page_num_start)
         self.assertEqual(quiz.end, self.valid_page_num_end)
         
@@ -211,7 +210,7 @@ class QuizGenerationTest(TestCase):
         self.assertFalse(QuizModel.objects.exists())  
 
         valid_payload = {
-            "document": self.valid_pdf_name,
+            "document": self.valid_document_name,
             "start": self.valid_page_num_start,
             "end": self.valid_page_num_end,
             "subject": "Some subject",
@@ -225,12 +224,12 @@ class QuizGenerationTest(TestCase):
 
         # Retrieve the created quiz
         quiz = QuizModel.objects.first()
-        self.assertEqual(quiz.document_name, self.valid_pdf_name)
+        self.assertEqual(quiz.document_name, self.valid_document_name)
         self.assertEqual(quiz.start, self.valid_page_num_start)
         self.assertEqual(quiz.end, self.valid_page_num_end)
         
         # Verify the response data
-        self.assertEqual(response.data['document_name'], self.valid_pdf_name)
+        self.assertEqual(response.data['document_name'], self.valid_document_name)
         self.assertEqual(response.data['start'], self.valid_page_num_start)
         self.assertEqual(response.data['end'], self.valid_page_num_end)
         
@@ -255,7 +254,7 @@ class QuizGenerationTest(TestCase):
         self.assertFalse(QuizModel.objects.exists())  
 
         invalid_payload = {
-            "document": self.valid_pdf_name,
+            "document": self.valid_document_name,
             "start": self.valid_page_num_end,  # start is greater than end
             "end": self.valid_page_num_start,
             "subject": "Some subject",

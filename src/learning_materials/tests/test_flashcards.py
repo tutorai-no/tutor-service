@@ -12,17 +12,17 @@ class FlashcardGenerationTests(TestCase):
         page = Page(
             text="Albert Einstein was born in 1879. Water boils at 100 degrees Celsius.",
             page_num=1,
-            pdf_name="sample.pdf"
+            document_name="sample.pdf"
         )
 
         # Mocking the model and parser
         mock_flashcard1 = Flashcard(front="Who was born in 1879?", back="Albert Einstein")
         mock_flashcard2 = Flashcard(front="At what temperature does water boil?", back="100 degrees Celsius")
 
-        # Setting pdf_name and page_num after instantiation
-        mock_flashcard1.pdf_name = page.pdf_name
+        # Setting document_name and page_num after instantiation
+        mock_flashcard1.document_name = page.document_name
         mock_flashcard1.page_num = page.page_num
-        mock_flashcard2.pdf_name = page.pdf_name
+        mock_flashcard2.document_name = page.document_name
         mock_flashcard2.page_num = page.page_num
 
         mock_parser = MockParser.return_value
@@ -40,7 +40,7 @@ class FlashcardGenerationTests(TestCase):
         self.assertEqual(flashcards[0].front, "Who was born in 1879?")
         self.assertEqual(flashcards[0].back, "Albert Einstein")
         self.assertEqual(flashcards[0].page_num, 1)
-        self.assertEqual(flashcards[0].pdf_name, "sample.pdf")
+        self.assertEqual(flashcards[0].document_name, "sample.pdf")
         self.assertEqual(flashcards[1].front, "At what temperature does water boil?")
         self.assertEqual(flashcards[1].back, "100 degrees Celsius")
 
@@ -49,7 +49,7 @@ class AnkiParsingTests(TestCase):
     def test_parse_for_anki(self):
         flashcards = [
             Flashcard(front="What is AI?", back="Artificial Intelligence"),
-            Flashcard(front="Who invented Python?", back="Guido van Rossum", page_num=1, pdf_name="sample.pdf")
+            Flashcard(front="Who invented Python?", back="Guido van Rossum", page_num=1, document_name="sample.pdf")
         ]
 
         anki_text = parse_for_anki(flashcards)
