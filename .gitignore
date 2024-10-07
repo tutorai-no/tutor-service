@@ -1,7 +1,5 @@
 ## Django ##
 src/test.py
-# Do not add migrations to git
-**/migrations/*.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
