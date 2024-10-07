@@ -186,6 +186,33 @@ class CardsetCRUDTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_delete_cardset_deletes_flashcards(self):
+        # Create a cardset and some flashcards
+        cardset = Cardset.objects.create(
+            name='Test Cardset',
+            description='This is a test cardset.',
+            subject='Test Subject',
+            user=self.user
+        )
+        flashcard1 = FlashcardModel.objects.create(
+            front='Front 1',
+            back='Back 1',
+            cardset=cardset
+        )
+        flashcard2 = FlashcardModel.objects.create(
+            front='Front 2',
+            back='Back 2',
+            cardset=cardset
+        )
+        # Ensure flashcards exist
+        self.assertEqual(FlashcardModel.objects.filter(cardset=cardset).count(), 2)
+        # Delete the cardset
+        url = f'/api/cardsets/{cardset.id}/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        # Ensure flashcards are deleted
+        self.assertFalse(FlashcardModel.objects.filter(cardset=cardset).exists())
 
 class FlashcardCRUDTest(TestCase):
     def setUp(self):
