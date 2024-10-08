@@ -15,7 +15,6 @@ from learning_materials.flashcards.flashcards_service import generate_flashcards
 from learning_materials.learning_resources import (
     Flashcard,
     Citation,
-    Citation,
     RagAnswer,
 )
 
@@ -61,16 +60,8 @@ def process_answer(
         answer_content = "I'm sorry, but I don't have enough information to answer your question."
         citations = []
     else:
-        # Generate the assistant's response using curriculum and chat history
         answer_content = response_formulation(user_question, curriculum, chat_history)
-        # Convert curriculum pages to citations
-        citations = [
-            Citation(
-                text=page.text,
-                page_num=page.page_num,
-                document_id=page.document_name
-            ) for page in curriculum
-        ]
+        
 
     answer = RagAnswer(content=answer_content, citations=citations)
     return answer
