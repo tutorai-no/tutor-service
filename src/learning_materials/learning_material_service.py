@@ -14,7 +14,8 @@ from learning_materials.knowledge_base.rag_service import (
 from learning_materials.flashcards.flashcards_service import generate_flashcards
 from learning_materials.learning_resources import (
     Flashcard,
-    Page,
+    Citation,
+    Citation,
     RagAnswer,
 )
 
@@ -43,18 +44,33 @@ def process_flashcards(document_name: str, start: int, end: int) -> list[Flashca
 
 
 
+
 def process_answer(
-    documents: list[str], user_question: str, chat_history: list[dict[str, str]]
+    documents: list[str],
+    user_question: str,
+    chat_history: list[dict[str, str]]
 ) -> RagAnswer:
 
     # Get a list of relevant contexts from the database
-    curriculum: list[Page] = []
+    curriculum: list[Citation] = []
     for document_name in documents:
         curriculum.extend(get_context(document_name, user_question))
 
-    # Use this list to generate a response
-    answer_GPT = response_formulation(user_question, curriculum, chat_history)
+    # Handle case when no context is available
+    if not curriculum:
+        answer_content = "I'm sorry, but I don't have enough information to answer your question."
+        citations = []
+    else:
+        # Generate the assistant's response using curriculum and chat history
+        answer_content = response_formulation(user_question, curriculum, chat_history)
+        # Convert curriculum pages to citations
+        citations = [
+            Citation(
+                text=page.text,
+                page_num=page.page_num,
+                document_id=page.document_name
+            ) for page in curriculum
+        ]
 
-    answer = RagAnswer(answer=answer_GPT, citations=curriculum)
+    answer = RagAnswer(content=answer_content, citations=citations)
     return answer
-

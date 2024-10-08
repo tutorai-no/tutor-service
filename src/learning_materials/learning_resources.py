@@ -3,10 +3,6 @@
 from typing import Union
 from pydantic import BaseModel, Field, PrivateAttr
 
-class Page(BaseModel):
-    text: str = Field(description="The text content of the page")
-    page_num: int = Field(description="The page number")
-    document_name: str = Field(description="The name of the file from which the page is extracted")
 
 
 class QuestionAnswer(BaseModel):
@@ -43,9 +39,17 @@ class GradedQuiz(BaseModel):
     feedback: list[str] = Field(description="Feedback for each question in the quiz")
 
 
+class Citation(BaseModel):
+    text: str = Field(description="The text content of the page")
+    page_num: int = Field(description="The page number")
+    document_name: str = Field(description="The name of the file from which the page is extracted", default=None)
+    document_id: str = Field(description="The unique identifier of the document", default=None)
+
+
 class RagAnswer(BaseModel):
-    answer: str = Field(description="The answer to the question")
-    citations: list[Page] = Field(description="A list of citations related to the answer")
+    role: str = Field(default='assistant', description="Role of the message")
+    content: str = Field(description="The answer to the question")
+    citations: list[Citation] = Field(description="A list of citations related to the answer")
 
 
 

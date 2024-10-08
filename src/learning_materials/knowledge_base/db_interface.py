@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from .embeddings import OpenAIEmbedding, cosine_similarity
 from config import Config
 from pymongo import MongoClient
-from learning_materials.learning_resources import Page
+from learning_materials.learning_resources import Citation
 
 
 class Database(ABC):
@@ -23,7 +23,7 @@ class Database(ABC):
         )
 
     @abstractmethod
-    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Page]:
+    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Citation]:
         """
         Get the curriculum from the database
 
@@ -39,7 +39,7 @@ class Database(ABC):
     @abstractmethod
     def get_page_range(
         self, document_name: str, page_num_start: int, page_num_end: int
-    ) -> list[Page]:
+    ) -> list[Citation]:
         """
         Retrieves a range of pages from the knowledge base.
 
@@ -77,7 +77,7 @@ class MongoDB(Database):
         self.similarity_threshold = 0.7
         self.embeddings = OpenAIEmbedding()
 
-    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Page]:
+    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Citation]:
         # Checking if embedding consists of decimals or "none"
         if not embedding:
             raise ValueError("Embedding cannot be None")
@@ -116,7 +116,7 @@ class MongoDB(Database):
                 > self.similarity_threshold
             ):
                 results.append(
-                    Page(
+                    Citation(
                         text=document["text"],
                         page_num=document["pageNum"],
                         document_name=document["documentName"],
@@ -127,7 +127,7 @@ class MongoDB(Database):
 
     def get_page_range(
         self, document_name: str, page_num_start: int, page_num_end: int
-    ) -> list[Page]:
+    ) -> list[Citation]:
         # Get the curriculum from the database
         cursor = self.collection.find(
             {
@@ -143,7 +143,7 @@ class MongoDB(Database):
 
         for document in cursor:
             results.append(
-                Page(
+                Citation(
                     text=document["text"],
                     page_num=document["pageNum"],
                     document_name=document["documentName"],
@@ -194,7 +194,7 @@ class MockDatabase(Database):
         self.data = []
         self.similarity_threshold = 0.7
 
-    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Page]:
+    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Citation]:
         if not embedding:
             raise ValueError("Embedding cannot be None")
 
@@ -206,7 +206,7 @@ class MockDatabase(Database):
                 similarity = cosine_similarity(embedding, document["embedding"])
                 if similarity > self.similarity_threshold:
                     results.append(
-                        Page(
+                        Citation(
                             text=document["text"],
                             page_num=document["page_num"],
                             document_name=document["document_name"]
@@ -214,7 +214,7 @@ class MockDatabase(Database):
                     )
         return results
 
-    def get_page_range(self, document_name: str, page_num_start: int, page_num_end: int) -> list[Page]:
+    def get_page_range(self, document_name: str, page_num_start: int, page_num_end: int) -> list[Citation]:
         results = []
 
         # Filter documents based on document_name and page range
@@ -224,7 +224,7 @@ class MockDatabase(Database):
                 page_num_start <= document["page_num"] <= page_num_end
             ):
                 results.append(
-                    Page(
+                    Citation(
                         text=document["text"],
                         page_num=document["page_num"],
                         document_name=document["document_name"]
