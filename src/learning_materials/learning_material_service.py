@@ -56,12 +56,11 @@ def process_answer(
         curriculum.extend(get_context(document_name, user_question))
 
     # Handle case when no context is available
-    if not curriculum:
+    if len(curriculum) == 0:
         answer_content = "I'm sorry, but I don't have enough information to answer your question."
-        citations = []
     else:
         answer_content = response_formulation(user_question, curriculum, chat_history)
         
 
-    answer = RagAnswer(content=answer_content, citations=citations)
+    answer = RagAnswer(content=answer_content, citations=curriculum)
     return answer
