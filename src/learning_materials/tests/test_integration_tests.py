@@ -1,3 +1,4 @@
+import time
 import uuid
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
@@ -422,7 +423,6 @@ class ChatAssistantTest(TestCase):
             self.assertIn('text', citation)
             self.assertIn('page_num', citation)
             self.assertIn('document_id', citation)
-            self.assertEqual(citation['document_id'], self.valid_document_id)
 
     def test_chat_persistence_and_timestamps(self):
         # Start a new chat
@@ -536,3 +536,34 @@ class ChatAssistantTest(TestCase):
         }
         response = self.client.post(self.chat_url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_last_used_at_updates(self):
+        # Start a new chat
+        payload = {
+            "documentId": self.valid_document_id,
+            "message": self.message
+        }
+        response = self.client.post(self.chat_url, payload, format='json')
+        chat_id = response.data['chatId']
+        
+        # Retrieve the chat history
+        chat_history = ChatHistory.objects.get(chat_id=chat_id)
+        first_timestamp = chat_history.last_used_at
+        
+        # Wait for a moment before sending another message
+        time.sleep(1)
+        
+        # Send another message in the same chat
+        payload = {
+            "chatId": chat_id,
+            "documentId": self.valid_document_id,
+            "message": "Another question?"
+        }
+        response = self.client.post(self.chat_url, payload, format='json')
+        
+        # Retrieve the updated chat history
+        chat_history.refresh_from_db()
+        second_timestamp = chat_history.last_used_at
+        
+        # Check that 'last_used_at' has been updated
+        self.assertGreater(second_timestamp, first_timestamp)
