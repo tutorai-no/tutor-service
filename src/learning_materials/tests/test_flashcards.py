@@ -1,6 +1,6 @@
 from django.test import TestCase
 from unittest.mock import patch
-from learning_materials.learning_resources import Flashcard, Page
+from learning_materials.learning_resources import Flashcard, Citation
 from learning_materials.flashcards.flashcards_service import generate_flashcards, parse_for_anki
 
 
@@ -9,7 +9,7 @@ class FlashcardGenerationTests(TestCase):
     @patch('learning_materials.flashcards.flashcards_service.PydanticOutputParser')
     def test_generate_flashcards(self, MockParser, MockModel):
         # Mocking page data
-        page = Page(
+        page = Citation(
             text="Albert Einstein was born in 1879. Water boils at 100 degrees Celsius.",
             page_num=1,
             document_name="sample.pdf"

@@ -4,7 +4,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
-from learning_materials.learning_resources import Flashcard, Page
+from learning_materials.learning_resources import Flashcard, Citation
 from config import Config
 
 
@@ -15,7 +15,7 @@ class FlashcardWrapper(BaseModel):
 model = ChatOpenAI(temperature=0, api_key=Config().API_KEY)
 flashcard_parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
 
-def generate_flashcards(page: Page) -> list[Flashcard]:
+def generate_flashcards(page: Citation) -> list[Flashcard]:
     template = _generate_template(page.text)
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n",

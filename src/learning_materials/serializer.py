@@ -1,40 +1,34 @@
-# serializers.py in your Django app
-from rest_framework import serializers
+import uuid
 
+from rest_framework import serializers
+from learning_materials.models import ChatHistory
 
 class ChatSerializer(serializers.Serializer):
-    # The name of the pdf file
-    documents = serializers.ListField(
-        child=serializers.CharField(
-            help_text="The name of the document file",
-        ),
-        help_text="The names of the documents",
+    chatId = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Unique identifier for the chat session."
+    )
+    documentId = serializers.CharField(
+        help_text="Identifier for the selected curriculum document."
+    )
+    message = serializers.CharField(
+        help_text="The user message."
     )
 
-    # The user question
-    user_question = serializers.CharField(
-        help_text="The user question",
-    )
+    def validate(self, data):
+        user = self.context['request'].user
+        chat_id = data.get('chatId')
 
-    # The chat history
-    chat_history = serializers.ListField(
-        child=serializers.DictField(),
-        help_text="The chat history",
-        required=False,  # Make the field optional
-    )
+        if chat_id:
+            # Check if chatId exists for the user
+            if not ChatHistory.objects.filter(chat_id=chat_id, user=user).exists():
+                raise serializers.ValidationError({"chatId": "Invalid chatId."})
+        else:
+            # Generate a new chatId
+            data['chatId'] = str(uuid.uuid4())
+        return data
 
-    # Validate the chat history
-    def validate_chat_history(self, value):
-        if len(value) % 2 != 0:
-            raise serializers.ValidationError(
-                "The chat history must have an even number of elements"
-            )
-        for message in value:
-            if "role" not in message or "content" not in message:
-                raise serializers.ValidationError(
-                    "Each message in the chat history must have a role and a content"
-                )
-        return value
 
 
 class DocumentSerializer(serializers.Serializer):
