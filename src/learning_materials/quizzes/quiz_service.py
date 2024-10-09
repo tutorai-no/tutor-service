@@ -8,7 +8,7 @@ from langchain_openai import ChatOpenAI
 
 from learning_materials.learning_resources import Quiz, GradedQuiz
 from learning_materials.knowledge_base.rag_service import get_page_range
-from learning_materials.learning_resources import GradedQuiz, Page, QuestionAnswer, Quiz, MultipleChoiceQuestion
+from learning_materials.learning_resources import GradedQuiz, Citation, QuestionAnswer, Quiz, MultipleChoiceQuestion
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def generate_quiz(
 
     # Generate the quiz questions
     questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
-    pages: List[Page] = get_page_range(document, start, end)
+    pages: List[Citation] = get_page_range(document, start, end)
 
     for page in pages:
         # Chain to determine the quiz questions for each page
