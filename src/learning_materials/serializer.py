@@ -16,7 +16,7 @@ class ChatSerializer(serializers.Serializer):
         help_text="The user message."
     )
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         user = self.context['request'].user
         chat_id = data.get('chatId')
 
@@ -59,7 +59,7 @@ class DocumentSerializer(serializers.Serializer):
     )
 
     # Check if the start index is less than the end index
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         if data["start"] > data["end"]:
             raise serializers.ValidationError(
                 "The start index must be less than the end index"
