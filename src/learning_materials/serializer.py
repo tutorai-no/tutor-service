@@ -25,7 +25,7 @@ class ChatSerializer(serializers.Serializer):
     )
 
     # Validate the chat history
-    def validate_chat_history(self, value):
+    def validate_chat_history(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
         if len(value) % 2 != 0:
             raise serializers.ValidationError(
                 "The chat history must have an even number of elements"
@@ -98,7 +98,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
         model = FlashcardModel
         fields = ['id', 'front', 'back', 'cardset']
 
-    def validate_cardset(self, value):
+    def validate_cardset(self, value: Cardset) -> Cardset:
         user = self.context['request'].user
         if value.user != user:
             raise serializers.ValidationError("You do not have permission to modify flashcards in this cardset.")
