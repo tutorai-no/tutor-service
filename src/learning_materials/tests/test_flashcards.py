@@ -44,6 +44,30 @@ class FlashcardGenerationTests(TestCase):
         self.assertEqual(flashcards[1].front, "At what temperature does water boil?")
         self.assertEqual(flashcards[1].back, "100 degrees Celsius")
 
+
+class FlashcardReviewTests(TestCase):
+    def test_flashcard_proficiency(self):
+        flashcard = Flashcard(front="What is AI?", back="Artificial Intelligence")
+
+        # Test the initial state
+        self.assertEqual(flashcard.proficiency, 0)
+
+        # First review
+        flashcard.review(True)
+        self.assertEqual(flashcard.proficiency, 1)
+
+        # Second review
+        flashcard.review(True)
+        self.assertEqual(flashcard.proficiency, 2)
+
+        # Third review
+        flashcard.review(False)
+        self.assertEqual(flashcard.proficiency, 0)
+
+        # Fourth review
+        flashcard.review(True)
+        self.assertEqual(flashcard.proficiency, 1)
+
 class AnkiParsingTests(TestCase):
 
     def test_parse_for_anki(self):

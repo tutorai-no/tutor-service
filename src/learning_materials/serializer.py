@@ -72,6 +72,16 @@ class DocumentSerializer(serializers.Serializer):
             )
         return data
 
+class FlashcardReviewSerializer(serializers.Serializer):
+    # The ID of the flashcard
+    flashcard_id = serializers.CharField(
+        help_text="The ID of the flashcard",
+    )
+
+    # The user answer
+    answar_was_correct = serializers.BooleanField(
+        help_text="The user answer",
+    )
 
 class QuizStudentAnswer(serializers.Serializer):
     quiz_id = serializers.CharField(

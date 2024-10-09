@@ -22,6 +22,7 @@ from learning_materials.compendiums.compendium_service import generate_compendiu
 from learning_materials.serializer import (
     ChatSerializer,
     DocumentSerializer,
+    FlashcardReviewSerializer,
     QuizStudentAnswer,
 )
 
@@ -81,6 +82,40 @@ class FlashcardCreationView(GenericAPIView):
                 "exportable_flashcards": exportable_flashcard,
             }
             return Response(data=response, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ReviewFlashcardView(GenericAPIView):
+    serializer_class = FlashcardReviewSerializer
+    authentication_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Review a individual flashcard",
+        request_body=dict,
+        responses={
+            200: openapi.Response(
+                description="Flashcard reviewed successfuly",
+                examples={
+                    "application/json": {
+                        "answers_was_correct": True,
+                        "flashcard_id": 1727717,
+                    }
+                },
+            ),
+            400: openapi.Response(description="Invalid request data"),
+        },
+        tags=["Flashcards"],
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            answer_was_correct = serializer.validated_data.get("answer_was_correct")
+            flashcard_id = serializer.validated_data.get("flashcard_id")
+            flashcard = FlashcardModel.objects.get(id=flashcard_id)
+
+            flashcard.review(answer_was_correct)
+            flashcard.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
