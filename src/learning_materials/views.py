@@ -1,6 +1,7 @@
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -20,6 +21,8 @@ from learning_materials.models import Cardset, FlashcardModel
 from learning_materials.translator import translate_flashcard_to_orm_model, translate_quiz_to_orm_model
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
+    CardsetSerializer,
+    FlashcardSerializer,
     ChatSerializer,
     DocumentSerializer,
     QuizStudentAnswer,
@@ -84,6 +87,25 @@ class FlashcardCreationView(GenericAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class CardsetViewSet(viewsets.ModelViewSet):
+    queryset = Cardset.objects.all()
+    serializer_class = CardsetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Cardset.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class FlashcardViewSet(viewsets.ModelViewSet):
+    queryset = FlashcardModel.objects.all()
+    serializer_class = FlashcardSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return FlashcardModel.objects.filter(cardset__user=self.request.user)
 
 class RAGResponseView(GenericAPIView):
     serializer_class = ChatSerializer
