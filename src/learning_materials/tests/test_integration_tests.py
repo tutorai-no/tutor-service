@@ -2,6 +2,7 @@ import time
 import uuid
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from rest_framework.test import APIClient
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
@@ -91,6 +92,342 @@ class FlashcardGenerationTest(TestCase):
         response = self.client.post(self.url, invalid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Cardset.objects.exists())
+
+
+
+class CardsetCRUDTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        # Create and authenticate a user
+        self.user = User.objects.create_user(username='testuser', email='test@example.com', password='testpassword')
+        self.client.force_authenticate(user=self.user)
+        # Create another user
+        self.other_user = User.objects.create_user(username='otheruser', email='other@example.com', password='otherpassword')
+
+    def test_create_cardset(self):
+        url = '/api/cardsets/'
+        data = {
+            'name': 'Test Cardset',
+            'description': 'This is a test cardset.',
+            'subject': 'Test Subject'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        cardset = Cardset.objects.get(id=response.data['id'])
+        self.assertEqual(cardset.name, data['name'])
+        self.assertEqual(cardset.description, data['description'])
+        self.assertEqual(cardset.subject, data['subject'])
+        self.assertEqual(cardset.user, self.user)
+
+
+    def test_retrieve_cardset(self):
+        cardset = Cardset.objects.create(name='Test Cardset', description='This is a test cardset.', subject='Test Subject', user=self.user)
+        url = f'/api/cardsets/{cardset.id}/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], cardset.name)
+
+
+    def test_update_cardset(self):
+        cardset = Cardset.objects.create(name='Test Cardset', description='This is a test cardset.', subject='Test Subject', user=self.user)
+        url = f'/api/cardsets/{cardset.id}/'
+        data = {
+            'name': 'Updated Cardset',
+            'description': 'This is an updated cardset.',
+            'subject': 'Updated Subject'
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        cardset.refresh_from_db()
+        self.assertEqual(cardset.name, data['name'])
+        self.assertEqual(cardset.description, data['description'])
+        self.assertEqual(cardset.subject, data['subject'])
+
+
+    def test_partial_update_cardset(self):
+        cardset = Cardset.objects.create(name='Test Cardset', description='This is a test cardset.', subject='Test Subject', user=self.user)
+        url = f'/api/cardsets/{cardset.id}/'
+        data = {
+            'name': 'Partially Updated Cardset'
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        cardset.refresh_from_db()
+        self.assertEqual(cardset.name, data['name'])
+        self.assertEqual(cardset.description, 'This is a test cardset.')  # Unchanged
+
+
+    def test_delete_cardset(self):
+        cardset = Cardset.objects.create(name='Test Cardset', description='This is a test cardset.', subject='Test Subject', user=self.user)
+        url = f'/api/cardsets/{cardset.id}/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Cardset.objects.filter(id=cardset.id).exists())
+
+
+    def test_list_cardsets(self):
+        Cardset.objects.create(name='Cardset 1', description='First cardset', subject='Subject 1', user=self.user)
+        Cardset.objects.create(name='Cardset 2', description='Second cardset', subject='Subject 2', user=self.user)
+        Cardset.objects.create(name='Other User Cardset', description='Other user cardset', subject='Other Subject', user=self.other_user)
+        url = '/api/cardsets/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)  # Should only return cardsets belonging to self.user
+        names = [cardset['name'] for cardset in response.data]
+        self.assertIn('Cardset 1', names)
+        self.assertIn('Cardset 2', names)
+        self.assertNotIn('Other User Cardset', names)
+
+
+    def test_cannot_access_other_users_cardset(self):
+        cardset = Cardset.objects.create(name='Other User Cardset', description='Other user cardset', subject='Other Subject', user=self.other_user)
+        url = f'/api/cardsets/{cardset.id}/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.put(url, {'name': 'Hacked'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_delete_cardset_deletes_flashcards(self):
+        # Create a cardset and some flashcards
+        cardset = Cardset.objects.create(
+            name='Test Cardset',
+            description='This is a test cardset.',
+            subject='Test Subject',
+            user=self.user
+        )
+        flashcard1 = FlashcardModel.objects.create(
+            front='Front 1',
+            back='Back 1',
+            cardset=cardset
+        )
+        flashcard2 = FlashcardModel.objects.create(
+            front='Front 2',
+            back='Back 2',
+            cardset=cardset
+        )
+        # Ensure flashcards exist
+        self.assertEqual(FlashcardModel.objects.filter(cardset=cardset).count(), 2)
+        # Delete the cardset
+        url = f'/api/cardsets/{cardset.id}/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        # Ensure flashcards are deleted
+        self.assertFalse(FlashcardModel.objects.filter(cardset=cardset).exists())
+
+class FlashcardCRUDTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        # Create and authenticate a user
+        self.user = User.objects.create_user(username='testuser', email='test@example.com', password='testpassword')
+        self.client.force_authenticate(user=self.user)
+        # Create another user
+        self.other_user = User.objects.create_user(username='otheruser', email='other@example.com', password='otherpassword')
+        # Create a cardset for the user
+        self.cardset = Cardset.objects.create(name='Test Cardset', description='Test', subject='Test Subject', user=self.user)
+        # Create a cardset for the other user
+        self.other_cardset = Cardset.objects.create(name='Other User Cardset', description='Other', subject='Other Subject', user=self.other_user)
+
+    def test_create_flashcard(self):
+        url = '/api/flashcards/'
+        data = {
+            'front': 'What is the capital of France?',
+            'back': 'Paris',
+            'cardset': self.cardset.id
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        flashcard = FlashcardModel.objects.get(id=response.data['id'])
+        self.assertEqual(flashcard.front, data['front'])
+        self.assertEqual(flashcard.back, data['back'])
+        self.assertEqual(flashcard.cardset, self.cardset)
+
+    def test_retrieve_flashcard(self):
+        flashcard = FlashcardModel.objects.create(front='Front', back='Back', cardset=self.cardset)
+        url = f'/api/flashcards/{flashcard.id}/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['front'], flashcard.front)
+
+    def test_update_flashcard(self):
+        flashcard = FlashcardModel.objects.create(front='Front', back='Back', cardset=self.cardset)
+        url = f'/api/flashcards/{flashcard.id}/'
+        data = {
+            'front': 'Updated Front',
+            'back': 'Updated Back',
+            'cardset': self.cardset.id
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        flashcard.refresh_from_db()
+        self.assertEqual(flashcard.front, data['front'])
+        self.assertEqual(flashcard.back, data['back'])
+
+    def test_partial_update_flashcard(self):
+        flashcard = FlashcardModel.objects.create(front='Front', back='Back', cardset=self.cardset)
+        url = f'/api/flashcards/{flashcard.id}/'
+        data = {
+            'front': 'Partially Updated Front'
+        }
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        flashcard.refresh_from_db()
+        self.assertEqual(flashcard.front, data['front'])
+        self.assertEqual(flashcard.back, 'Back')  # Unchanged
+
+    def test_delete_flashcard(self):
+        flashcard = FlashcardModel.objects.create(front='Front', back='Back', cardset=self.cardset)
+        url = f'/api/flashcards/{flashcard.id}/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(FlashcardModel.objects.filter(id=flashcard.id).exists())
+
+    def test_list_flashcards(self):
+        FlashcardModel.objects.create(front='Front 1', back='Back 1', cardset=self.cardset)
+        FlashcardModel.objects.create(front='Front 2', back='Back 2', cardset=self.cardset)
+        # Flashcard for other user
+        FlashcardModel.objects.create(front='Other Front', back='Other Back', cardset=self.other_cardset)
+        url = '/api/flashcards/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)  # Should only return flashcards belonging to self.user's cardsets
+        fronts = [flashcard['front'] for flashcard in response.data]
+        self.assertIn('Front 1', fronts)
+        self.assertIn('Front 2', fronts)
+        self.assertNotIn('Other Front', fronts)
+
+    def test_cannot_create_flashcard_in_other_users_cardset(self):
+        url = '/api/flashcards/'
+        data = {
+            'front': 'What is the capital of Germany?',
+            'back': 'Berlin',
+            'cardset': self.other_cardset.id
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('cardset', response.data)
+        self.assertEqual(FlashcardModel.objects.count(), 0)
+
+    def test_cannot_access_other_users_flashcard(self):
+        other_flashcard = FlashcardModel.objects.create(front='Other Front', back='Other Back', cardset=self.other_cardset)
+        url = f'/api/flashcards/{other_flashcard.id}/'
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.put(url, {'front': 'Hacked', 'back': 'Hacked', 'cardset': self.cardset.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_deleting_flashcard_removes_it_from_cardset(self):
+        flashcard = FlashcardModel.objects.create(front='Front', back='Back', cardset=self.cardset)
+        self.assertEqual(self.cardset.flashcardmodel_set.count(), 1)
+        url = f'/api/flashcards/{flashcard.id}/'
+        response = self.client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.cardset.flashcardmodel_set.count(), 0)
+
+class CardsetExportTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        # Create and authenticate a user
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpassword'
+        )
+        self.client.force_authenticate(user=self.user)
+        # Create another user
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpassword'
+        )
+        # Create a cardset for the user
+        self.cardset = Cardset.objects.create(
+            name='Test Cardset',
+            description='Test',
+            subject='Test Subject',
+            user=self.user
+        )
+        # Create some flashcards for the user's cardset
+        self.flashcard1 = FlashcardModel.objects.create(
+            front='What is the capital of France?',
+            back='Paris',
+            cardset=self.cardset
+        )
+        self.flashcard2 = FlashcardModel.objects.create(
+            front='What is the largest planet?',
+            back='Jupiter',
+            cardset=self.cardset
+        )
+        # Create a cardset for the other user
+        self.other_cardset = Cardset.objects.create(
+            name='Other User Cardset',
+            description='Other',
+            subject='Other Subject',
+            user=self.other_user
+        )
+
+    def test_export_flashcards_success(self):
+        url = f'/api/flashcards/export/{self.cardset.id}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('exportable_flashcards', response.data)
+        exportable_flashcards = response.data['exportable_flashcards']
+        # Verify that the exportable flashcards content is correct
+        expected_content = (
+            f"{self.flashcard1.front}:{self.flashcard1.back}\n"
+            f"{self.flashcard2.front}:{self.flashcard2.back}\n"
+        )
+        self.assertEqual(exportable_flashcards, expected_content)
+
+    def test_export_flashcards_not_authenticated(self):
+        self.client.force_authenticate(user=None)  # Log out
+        url = f'/api/flashcards/export/{self.cardset.id}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_export_flashcards_cardset_not_found(self):
+        url = f'/api/flashcards/export/9999/'  # Non-existent ID
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_export_flashcards_cardset_not_owned(self):
+        url = f'/api/flashcards/export/{self.other_cardset.id}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class RagAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = f"{base}search/"
+        self.valid_document_name = "test.pdf"
+        self.invalid_document_name = "invalid.pdf"
+        self.valid_chat_history = [
+            {"role": "user", "response": "What is the capital of India?"},
+            {"role": "assistant", "response": "New Delhi"},
+        ]
+        self.valid_user_input = "This is a user input."
+        self.valid_context = "The context."
+
+    def test_invalid_request(self):
+        invalid_payload = {}
+        response = self.client.post(self.url, invalid_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def invalid_document_name(self):
+        pass
+
+    def test_valid_request_without_chat_history(self):
+        valid_response = {
+            "documents": [self.valid_document_name],
+            "user_question": "What is the capital of India?",
+        }
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
 
 class QuizGenerationTest(TestCase):
     def setUp(self):

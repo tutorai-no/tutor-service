@@ -1,24 +1,40 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework import routers
 
-from accounts.views import CustomTokenObtainPairView, LogoutView, PasswordResetConfirmView, PasswordResetView, RegisterView, SubscriptionListView, UserProfileView, SubscriptionHistoryView
+from accounts.views import (
+    CustomTokenObtainPairView,
+    LogoutView,
+    PasswordResetConfirmView,
+    PasswordResetView,
+    RegisterView,
+    SubscriptionListView,
+    SubscriptionHistoryView,
+    UserProfileView,
+)
 from api.views import health_check
 from learning_materials.views import (
+    CardsetExportView,
+    CardsetViewSet,
+    CompendiumCreationView,
     FlashcardCreationView,
-    RAGResponseView,
+    FlashcardViewSet,
     QuizCreationView,
     QuizGradingView,
-    CompendiumCreationView,
     ChatHistoryListView,
     ChatHistoryView,
+    RAGResponseView,
 )
 
+# Initialize the router and register the viewsets
+router = routers.DefaultRouter()
+router.register(r'cardsets', CardsetViewSet, basename='cardset')
+router.register(r'flashcards', FlashcardViewSet, basename='flashcard')
 
 urlpatterns = [
     path("health-check/", health_check, name="health-check"),
-    path(
-        "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"
-    ),
+    path("flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"),
+    path("flashcards/export/<int:pk>/", CardsetExportView.as_view(), name="export-flashcards"),
     path("search/", RAGResponseView.as_view(), name="create-rag-response"),
     path("quiz/create/", QuizCreationView.as_view(), name="create-quiz"),
     path("quiz/grade/", QuizGradingView.as_view(), name="grade-quiz"),
@@ -39,6 +55,5 @@ urlpatterns = [
     path('subscriptions/', SubscriptionListView.as_view(), name='subscriptions'),
     path('subscription-history/', SubscriptionHistoryView.as_view(), name='subscription_history'),
 
-
- 
+    path("", include(router.urls)),
 ]

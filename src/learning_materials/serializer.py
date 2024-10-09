@@ -1,7 +1,7 @@
 import uuid
 
 from rest_framework import serializers
-from learning_materials.models import ChatHistory
+from learning_materials.models import ChatHistory, Cardset, FlashcardModel
 
 class ChatSerializer(serializers.Serializer):
     chatId = serializers.CharField(
@@ -28,7 +28,6 @@ class ChatSerializer(serializers.Serializer):
             # Generate a new chatId
             data['chatId'] = str(uuid.uuid4())
         return data
-
 
 
 class DocumentSerializer(serializers.Serializer):
@@ -84,3 +83,27 @@ class CurriculumSerializer(serializers.Serializer):
         child=serializers.FileField(allow_empty_file=False, use_url=False),
         help_text="The list of files to be processed",
     )
+
+
+class FlashcardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlashcardModel
+        fields = ['id', 'front', 'back', 'cardset']
+
+    def validate_cardset(self, value: Cardset) -> Cardset:
+        user = self.context['request'].user
+        if value.user != user:
+            raise serializers.ValidationError("You do not have permission to modify flashcards in this cardset.")
+        return value
+
+class CardsetSerializer(serializers.ModelSerializer):
+    flashcards = FlashcardSerializer(many=True, read_only=True, source='flashcardmodel_set')
+
+    class Meta:
+        model = Cardset
+        fields = ['id', 'name', 'description', 'subject', 'user', 'flashcards']
+        read_only_fields = ['user']
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
