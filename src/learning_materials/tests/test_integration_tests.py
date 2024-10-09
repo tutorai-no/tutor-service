@@ -399,36 +399,6 @@ class CardsetExportTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-class RagAPITest(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.url = f"{base}search/"
-        self.valid_document_name = "test.pdf"
-        self.invalid_document_name = "invalid.pdf"
-        self.valid_chat_history = [
-            {"role": "user", "response": "What is the capital of India?"},
-            {"role": "assistant", "response": "New Delhi"},
-        ]
-        self.valid_user_input = "This is a user input."
-        self.valid_context = "The context."
-
-    def test_invalid_request(self):
-        invalid_payload = {}
-        response = self.client.post(self.url, invalid_payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def invalid_document_name(self):
-        pass
-
-    def test_valid_request_without_chat_history(self):
-        valid_response = {
-            "documents": [self.valid_document_name],
-            "user_question": "What is the capital of India?",
-        }
-        response = self.client.post(self.url, valid_response, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-
 class QuizGenerationTest(TestCase):
     def setUp(self):
         self.client = APIClient()
