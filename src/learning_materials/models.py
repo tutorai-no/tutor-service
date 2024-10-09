@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from django.db import models
 
 from tutorai import settings
@@ -14,7 +15,10 @@ class Cardset(models.Model):
         on_delete=models.CASCADE,
         help_text="The user who created this cardset",
     )
-   
+
+    def get_cards_to_review(self):
+        """Get the flashcards that need to be reviewed"""
+        return FlashcardModel.objects.filter(cardset=self, time_of_next_review__lte=datetime.now()) 
 
     def __str__(self):
         return self.name
@@ -24,9 +28,35 @@ class FlashcardModel(models.Model):
     id = models.AutoField(primary_key=True)
     front = models.TextField(help_text="The front of the flashcard")
     back = models.TextField(help_text="The back of the flashcard")
+    proficiency = models.IntegerField(help_text="The profeciency of the flashcard", default=0)
+    time_of_next_review = models.DateTimeField(help_text="The time of the next review", auto_now=True)
     cardset = models.ForeignKey(
         Cardset, on_delete=models.CASCADE, help_text="The cardset to which the flashcard belongs"
     )
+
+    def review(self, answer):
+        """Update the profeciency of the flashcard based on the correctness of the answer"""
+        if answer:
+            self.proficiency += 1
+        else:
+            self.proficiency = 0
+        
+        delays = [
+            timedelta(minutes=1),
+            timedelta(minutes=10),
+            timedelta(hours=1),
+            timedelta(days=1),
+            timedelta(days=3),
+            timedelta(days=7),
+            timedelta(days=14),
+            timedelta(days=30),
+            timedelta(days=60),
+            timedelta(days=180),
+        ]
+        
+
+        self.time_of_next_review = datetime.now() + delays[self.proficiency]
+            
 
     def __str__(self):
         return self.front
