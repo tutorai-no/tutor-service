@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -18,9 +19,11 @@ from learning_materials.quizzes.quiz_service import (
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
 from learning_materials.models import Cardset, FlashcardModel, ChatHistory
-from learning_materials.translator import translate_flashcard_to_orm_model, translate_quiz_to_orm_model
+from learning_materials.translator import translate_flashcard_to_orm_model, translate_quiz_to_orm_model, translate_flashcards_to_pydantic_model
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
+    CardsetSerializer,
+    FlashcardSerializer,
     ChatSerializer,
     DocumentSerializer,
     QuizStudentAnswer,
@@ -86,6 +89,65 @@ class FlashcardCreationView(GenericAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class CardsetExportView(GenericAPIView):
+    """
+    Export flashcards from a cardset to anki format
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Export flashcards from a cardset to Anki format",
+        responses={
+            200: openapi.Response(
+                description="Flashcards exported successfully",
+                examples={
+                    "application/json": {
+                        "exportable_flashcards": "Sample question?: Sample answer\n",
+                    }
+                },
+            ),
+            400: openapi.Response(description="Invalid request data"),
+            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
+        },
+        tags=["Flashcards"],
+    )
+    def get(self, request, *args, **kwargs):
+        cardset_id = self.kwargs.get("pk")
+        try:
+            cardset = Cardset.objects.get(id=cardset_id, user=request.user)
+        except Cardset.DoesNotExist:
+            return Response(
+                {"detail": "Cardset not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        cardset = Cardset.objects.get(id=cardset_id)
+        flashcards_model = cardset.flashcardmodel_set.all()
+        flashcards = translate_flashcards_to_pydantic_model(flashcards_model)
+
+        exportable_flashcard = parse_for_anki(flashcards)
+        response = {"exportable_flashcards": exportable_flashcard}
+        return Response(data=response, status=status.HTTP_200_OK)
+    
+
+class CardsetViewSet(viewsets.ModelViewSet):
+    queryset = Cardset.objects.all()
+    serializer_class = CardsetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Cardset.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class FlashcardViewSet(viewsets.ModelViewSet):
+    queryset = FlashcardModel.objects.all()
+    serializer_class = FlashcardSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return FlashcardModel.objects.filter(cardset__user=self.request.user)
 
 class RAGResponseView(APIView):
     serializer_class = ChatSerializer

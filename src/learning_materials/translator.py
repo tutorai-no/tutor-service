@@ -52,3 +52,9 @@ def translate_quiz_to_orm_model(quiz: Quiz, users: list[CustomUser]) -> QuizMode
     MultipleChoiceQuestionModel.objects.bulk_create(mcq_models)
 
     return quiz_model
+
+def translate_flashcards_to_pydantic_model(flashcards: list[FlashcardModel]) -> Flashcard:
+    return [Flashcard(
+        front=flashcard.front,
+        back=flashcard.back
+    ) for flashcard in flashcards]
