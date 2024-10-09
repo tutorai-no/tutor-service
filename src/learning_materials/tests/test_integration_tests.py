@@ -1,5 +1,6 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from rest_framework.test import APIClient
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
@@ -324,6 +325,78 @@ class FlashcardCRUDTest(TestCase):
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.cardset.flashcardmodel_set.count(), 0)
+
+class CardsetExportTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        # Create and authenticate a user
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpassword'
+        )
+        self.client.force_authenticate(user=self.user)
+        # Create another user
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpassword'
+        )
+        # Create a cardset for the user
+        self.cardset = Cardset.objects.create(
+            name='Test Cardset',
+            description='Test',
+            subject='Test Subject',
+            user=self.user
+        )
+        # Create some flashcards for the user's cardset
+        self.flashcard1 = FlashcardModel.objects.create(
+            front='What is the capital of France?',
+            back='Paris',
+            cardset=self.cardset
+        )
+        self.flashcard2 = FlashcardModel.objects.create(
+            front='What is the largest planet?',
+            back='Jupiter',
+            cardset=self.cardset
+        )
+        # Create a cardset for the other user
+        self.other_cardset = Cardset.objects.create(
+            name='Other User Cardset',
+            description='Other',
+            subject='Other Subject',
+            user=self.other_user
+        )
+
+    def test_export_flashcards_success(self):
+        url = f'/api/flashcards/export/{self.cardset.id}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('exportable_flashcards', response.data)
+        exportable_flashcards = response.data['exportable_flashcards']
+        # Verify that the exportable flashcards content is correct
+        expected_content = (
+            f"{self.flashcard1.front}:{self.flashcard1.back}\n"
+            f"{self.flashcard2.front}:{self.flashcard2.back}\n"
+        )
+        self.assertEqual(exportable_flashcards, expected_content)
+
+    def test_export_flashcards_not_authenticated(self):
+        self.client.force_authenticate(user=None)  # Log out
+        url = f'/api/flashcards/export/{self.cardset.id}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_export_flashcards_cardset_not_found(self):
+        url = f'/api/flashcards/export/9999/'  # Non-existent ID
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_export_flashcards_cardset_not_owned(self):
+        url = f'/api/flashcards/export/{self.other_cardset.id}/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
 
 class RagAPITest(TestCase):
     def setUp(self):
