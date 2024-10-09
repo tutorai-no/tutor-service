@@ -1,6 +1,7 @@
 # serializers.py in your Django app
 from rest_framework import serializers
 
+from learning_materials.models import Cardset, FlashcardModel
 
 class ChatSerializer(serializers.Serializer):
     # The name of the pdf file
@@ -24,7 +25,7 @@ class ChatSerializer(serializers.Serializer):
     )
 
     # Validate the chat history
-    def validate_chat_history(self, value):
+    def validate_chat_history(self, value: list[dict[str, str]]) -> list[dict[str, str]]:
         if len(value) % 2 != 0:
             raise serializers.ValidationError(
                 "The chat history must have an even number of elements"
@@ -90,3 +91,27 @@ class CurriculumSerializer(serializers.Serializer):
         child=serializers.FileField(allow_empty_file=False, use_url=False),
         help_text="The list of files to be processed",
     )
+
+
+class FlashcardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlashcardModel
+        fields = ['id', 'front', 'back', 'cardset']
+
+    def validate_cardset(self, value: Cardset) -> Cardset:
+        user = self.context['request'].user
+        if value.user != user:
+            raise serializers.ValidationError("You do not have permission to modify flashcards in this cardset.")
+        return value
+
+class CardsetSerializer(serializers.ModelSerializer):
+    flashcards = FlashcardSerializer(many=True, read_only=True, source='flashcardmodel_set')
+
+    class Meta:
+        model = Cardset
+        fields = ['id', 'name', 'description', 'subject', 'user', 'flashcards']
+        read_only_fields = ['user']
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
