@@ -21,7 +21,7 @@ from learning_materials.views import (
     FlashcardViewSet,
     QuizCreationView,
     QuizGradingView,
-    ReviewFlashcardView
+    ReviewFlashcardView,
     ChatHistoryListView,
     ChatHistoryView,
     RAGResponseView,
