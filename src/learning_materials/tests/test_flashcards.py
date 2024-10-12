@@ -1,5 +1,6 @@
 from django.test import TestCase
 from unittest.mock import patch
+from learning_materials.models import FlashcardModel, Cardset
 from learning_materials.learning_resources import Flashcard, Page
 from learning_materials.flashcards.flashcards_service import generate_flashcards, parse_for_anki
 
@@ -46,8 +47,14 @@ class FlashcardGenerationTests(TestCase):
 
 
 class FlashcardReviewTests(TestCase):
+    def setUp(self):
+        self.cardset = Cardset(name="Test Cardset", description="Test Description", subject="Test Subject")
+        self.flashcard = FlashcardModel(front="What is AI?", back="Artificial Intelligence", cardset=self.cardset)
+        self.flashcard2 = FlashcardModel(front="Who invented Python?", back="Guido van Rossum", cardset=self.cardset)
+
     def test_flashcard_proficiency(self):
-        flashcard = Flashcard(front="What is AI?", back="Artificial Intelligence")
+        
+        flashcard = self.flashcard
 
         # Test the initial state
         self.assertEqual(flashcard.proficiency, 0)
@@ -67,6 +74,7 @@ class FlashcardReviewTests(TestCase):
         # Fourth review
         flashcard.review(True)
         self.assertEqual(flashcard.proficiency, 1)
+        
 
 class AnkiParsingTests(TestCase):
 
