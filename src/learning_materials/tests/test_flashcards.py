@@ -1,9 +1,12 @@
 from django.test import TestCase
 from unittest.mock import patch
+from django.contrib.auth import get_user_model
 from learning_materials.models import FlashcardModel, Cardset
 from learning_materials.learning_resources import Flashcard, Citation
 from learning_materials.flashcards.flashcards_service import generate_flashcards, parse_for_anki
 
+
+User = get_user_model()
 
 class FlashcardGenerationTests(TestCase):
     @patch('learning_materials.flashcards.flashcards_service.ChatOpenAI')  
