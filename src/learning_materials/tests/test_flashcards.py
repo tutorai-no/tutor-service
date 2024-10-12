@@ -48,7 +48,8 @@ class FlashcardGenerationTests(TestCase):
 
 class FlashcardReviewTests(TestCase):
     def setUp(self):
-        self.cardset = Cardset(name="Test Cardset", description="Test Description", subject="Test Subject")
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.cardset = Cardset(name="Test Cardset", description="Test Description", subject="Test Subject" user=self.user)
         self.flashcard = FlashcardModel(front="What is AI?", back="Artificial Intelligence", cardset=self.cardset)
         self.flashcard2 = FlashcardModel(front="Who invented Python?", back="Guido van Rossum", cardset=self.cardset)
 
@@ -60,19 +61,19 @@ class FlashcardReviewTests(TestCase):
         self.assertEqual(flashcard.proficiency, 0)
 
         # First review
-        flashcard.review(True)
+        flashcard.review(True, self.user)
         self.assertEqual(flashcard.proficiency, 1)
 
         # Second review
-        flashcard.review(True)
+        flashcard.review(True, self.user)
         self.assertEqual(flashcard.proficiency, 2)
 
         # Third review
-        flashcard.review(False)
+        flashcard.review(False, self.user)
         self.assertEqual(flashcard.proficiency, 0)
 
         # Fourth review
-        flashcard.review(True)
+        flashcard.review(True, self.user)
         self.assertEqual(flashcard.proficiency, 1)
         
 
