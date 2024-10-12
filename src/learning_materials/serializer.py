@@ -1,5 +1,6 @@
 # serializers.py in your Django app
 from rest_framework import serializers
+from learning_materials.models import FlashcardModel
 
 
 class ChatSerializer(serializers.Serializer):
@@ -72,16 +73,24 @@ class DocumentSerializer(serializers.Serializer):
             )
         return data
 
-class FlashcardReviewSerializer(serializers.Serializer):
-    # The ID of the flashcard
-    flashcard_id = serializers.CharField(
+
+class ReviewFlashcardSerializer(serializers.Serializer):
+    id = serializers.IntegerField(
         help_text="The ID of the flashcard",
     )
 
-    # The user answer
-    answar_was_correct = serializers.BooleanField(
-        help_text="The user answer",
+    answer_was_correct = serializers.BooleanField(
+        help_text="If the answer was correct",
     )
+
+
+class FlashcardSerializer(serializers.Serializer):
+
+    class Meta:
+        model = FlashcardModel
+        fields = ["id", "front", "back", "proficiency",
+                  "time_of_next_review", "cardset"]
+
 
 class QuizStudentAnswer(serializers.Serializer):
     quiz_id = serializers.CharField(

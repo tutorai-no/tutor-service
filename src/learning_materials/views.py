@@ -22,7 +22,8 @@ from learning_materials.compendiums.compendium_service import generate_compendiu
 from learning_materials.serializer import (
     ChatSerializer,
     DocumentSerializer,
-    FlashcardReviewSerializer,
+    FlashcardSerializer,
+    ReviewFlashcardSerializer,
     QuizStudentAnswer,
 )
 
@@ -66,16 +67,17 @@ class FlashcardCreationView(GenericAPIView):
 
             flashcards = process_flashcards(file_name, start, end)
             cardset_name = f"{file_name}_{start}_{end}"
-             
-            
+
             # Create a cardset for the flashcards and save them to the database
-            cardset = Cardset.objects.create(name=cardset_name, subject=subject, user=user)  
-            [translate_flashcard_to_orm_model(flashcard, cardset)
-                for flashcard in flashcards
-            ]
+            cardset = Cardset.objects.create(
+                name=cardset_name, subject=subject, user=user)
+            flashcard_models = [translate_flashcard_to_orm_model(flashcard, cardset)
+                                for flashcard in flashcards
+                                ]
 
             exportable_flashcard = parse_for_anki(flashcards)
-            flashcard_dicts = [flashcard.model_dump() for flashcard in flashcards]
+            flashcard_dicts = [flashcard.model_dump()
+                               for flashcard in flashcards]
 
             response = {
                 "flashcards": flashcard_dicts,
@@ -85,13 +87,14 @@ class FlashcardCreationView(GenericAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class ReviewFlashcardView(GenericAPIView):
-    serializer_class = FlashcardReviewSerializer
+    serializer_class = ReviewFlashcardSerializer
     authentication_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Review a individual flashcard",
-        request_body=dict,
+        request_body=FlashcardSerializer,
         responses={
             200: openapi.Response(
                 description="Flashcard reviewed successfuly",
@@ -109,13 +112,23 @@ class ReviewFlashcardView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            answer_was_correct = serializer.validated_data.get("answer_was_correct")
-            flashcard_id = serializer.validated_data.get("flashcard_id")
-            flashcard = FlashcardModel.objects.get(id=flashcard_id)
+            answer_was_correct = serializer.validated_data.get(
+                "answer_was_correct")
+            flashcard_id = serializer.validated_data.get("id")
+            try:
+                flashcard = FlashcardModel.objects.get(id=flashcard_id)
+            except FlashcardModel.DoesNotExist:
+                return Response("Flashcard not found", status=status.HTTP_404_NOT_FOUND)
 
-            flashcard.review(answer_was_correct)
+            valid_user = flashcard.review(
+                answer_was_correct, user=request.user)
             flashcard.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+
+            if valid_user:
+                return Response(data=FlashcardSerializer(flashcard).data, status=status.HTTP_200_OK)
+            else:
+                return Response("Invalid user", status=status.HTTP_400_BAD_REQUEST)
+
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -123,7 +136,7 @@ class ReviewFlashcardView(GenericAPIView):
 class RAGResponseView(GenericAPIView):
     serializer_class = ChatSerializer
 
-    @swagger_auto_schema(
+    @ swagger_auto_schema(
         operation_description="Generate RAG response from given documents and user question",
         request_body=ChatSerializer,
         responses={
@@ -153,17 +166,19 @@ class RAGResponseView(GenericAPIView):
             user_question = serializer.validated_data.get("user_question")
             chat_history = serializer.validated_data.get("chat_history", [])
 
-            rag_answer = process_answer(document_names, user_question, chat_history)
+            rag_answer = process_answer(
+                document_names, user_question, chat_history)
             response = rag_answer.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class QuizCreationView(GenericAPIView):
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
+    @ swagger_auto_schema(
         operation_description="Create a quiz from a given document",
         request_body=DocumentSerializer,
         responses={
@@ -212,11 +227,10 @@ class QuizCreationView(GenericAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class QuizGradingView(GenericAPIView):
     serializer_class = QuizStudentAnswer
 
-    @swagger_auto_schema(
+    @ swagger_auto_schema(
         operation_description="Grade the student's quiz answers",
         request_body=QuizStudentAnswer,
         responses={
@@ -240,7 +254,8 @@ class QuizGradingView(GenericAPIView):
             quiz_id = serializer.validated_data.get("quiz_id")
             # TODO: Retrieve quiz from database
             quiz = Quiz(document_name="Sample.pdf", start=1, end=10, questions=[
-                QuestionAnswer(question="Sample question?", answer="Sample answer")
+                QuestionAnswer(question="Sample question?",
+                               answer="Sample answer")
             ])
 
             graded_answer = grade_quiz(quiz, student_answers)
@@ -253,7 +268,7 @@ class QuizGradingView(GenericAPIView):
 class CompendiumCreationView(GenericAPIView):
     serializer_class = DocumentSerializer
 
-    @swagger_auto_schema(
+    @ swagger_auto_schema(
         operation_description="Create a compendium from a given document",
         request_body=DocumentSerializer,
         responses={
