@@ -53,6 +53,7 @@ class FlashcardCreationView(GenericAPIView):
                 },
             ),
             400: openapi.Response(description="Invalid request data"),
+            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
         },
         tags=["Flashcards"],
     )
