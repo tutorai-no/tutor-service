@@ -28,15 +28,17 @@ class FlashcardGenerationTest(TestCase):
         self.valid_page_num_end = 1
         self.context = """Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. The Jedi are spread across the galaxy in a full-scale war against the Separatists. The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to defeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. Meanwhile, after having visions of his wife Padmé Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic and, secretly, a Sith Lord. Palpatine manipulates Anakin into turning to the dark side of the Force and becoming his apprentice, Darth Vader, with wide-ranging consequences for the galaxy."""
 
-        self.user = User.objects.create_user(username='flashcardsuser', email='flashcards@example.com', password='StrongP@ss1')
+        self.user = User.objects.create_user(
+            username='flashcardsuser', email='flashcards@example.com', password='StrongP@ss1')
         self.client.force_authenticate(user=self.user)
-        
+
         # Populate rag database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(self.context, i, self.valid_document_name)
 
     def test_generate_flashcards(self):
-        page = Page(text=self.context, page_num=self.valid_page_num_start, document_name=self.valid_document_name)
+        page = Page(text=self.context, page_num=self.valid_page_num_start,
+                    document_name=self.valid_document_name)
         flashcards = generate_flashcards(page)
         self.assertIsInstance(flashcards, list)
         self.assertGreater(len(flashcards), 0)
@@ -47,12 +49,12 @@ class FlashcardGenerationTest(TestCase):
         self.assertEqual(flashcards[0].page_num, self.valid_page_num_start)
 
     def test_parse_for_anki(self):
-        page = Page(text=self.context, page_num=self.valid_page_num_start, document_name=self.valid_document_name)
+        page = Page(text=self.context, page_num=self.valid_page_num_start,
+                    document_name=self.valid_document_name)
         flashcards = generate_flashcards(page)
         anki_format = parse_for_anki(flashcards)
         self.assertIsInstance(anki_format, str)
         self.assertTrue(re.search("(.*:.*\n)*(.*:.*)", anki_format))
-
 
     def test_invalid_request(self):
         self.assertFalse(Cardset.objects.exists())
@@ -74,7 +76,7 @@ class FlashcardGenerationTest(TestCase):
         self.assertTrue(response.data)
 
         self.assertTrue(Cardset.objects.exists())
-        cardset = Cardset.objects.first() 
+        cardset = Cardset.objects.first()
         flashcards = FlashcardModel.objects.filter(cardset=cardset)
         self.assertGreater(flashcards.count(), 0)
 
@@ -89,6 +91,74 @@ class FlashcardGenerationTest(TestCase):
         response = self.client.post(self.url, invalid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Cardset.objects.exists())
+
+
+class FlashcardReviewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = f"{base}flashcards/review/"
+
+        self.user = User.objects.create_user(
+            username='flashcardsuser', email='flashcards@example.com', password='StrongP@ss1')
+        self.client.force_authenticate(user=self.user)
+
+        self.other_user = User.objects.create_user(
+            username='other_user', email='otheruser@example.com', password='StrongP@ss1')
+
+        self.cardset = Cardset.objects.create(
+            name="Test Cardset", user=self.user)
+        self.flashcard = FlashcardModel.objects.create(
+            front="Front", back="Back", cardset=self.cardset)
+
+    def test_review_flashcard_correct_answer(self):
+        self.assertEqual(self.flashcard.proficiency, 0)
+        response = self.client.post(
+            self.url, data={"id": self.flashcard.id, "answer_was_correct": True}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.flashcard.refresh_from_db()
+        self.assertEqual(self.flashcard.proficiency, 1)
+
+    def test_review_flashcard_incorrect_answer(self):
+        self.assertEqual(self.flashcard.proficiency, 0)
+        response = self.client.post(
+            self.url, data={"id": self.flashcard.id, "answer_was_correct": False}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.flashcard.refresh_from_db()
+        self.assertEqual(self.flashcard.proficiency, 0)
+
+    def test_review_other_user_flashcard(self):
+        self.assertEqual(self.flashcard.proficiency, 0)
+        self.client.force_authenticate(user=self.other_user)
+        response = self.client.post(
+            self.url, data={"id": self.flashcard.id, "answer_was_correct": True}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.flashcard.refresh_from_db()
+        self.assertEqual(self.flashcard.proficiency, 0)
+
+    def test_review_non_existent_flashcard(self):
+        self.assertEqual(self.flashcard.proficiency, 0)
+        response = self.client.post(
+            self.url, data={"id": 999, "answer_was_correct": True}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_review_max_proficiency_flashcard(self):
+        self.flashcard.proficiency = 9
+        self.flashcard.save()
+        response = self.client.post(
+            self.url, data={"id": self.flashcard.id, "answer_was_correct": True}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.flashcard.refresh_from_db()
+        self.assertEqual(self.flashcard.proficiency, 9)
+
+    def test_streak_reset_on_incorrect_answer(self):
+        self.flashcard.proficiency = 9
+        self.flashcard.save()
+        response = self.client.post(
+            self.url, data={"id": self.flashcard.id, "answer_was_correct": False}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.flashcard.refresh_from_db()
+        self.assertEqual(self.flashcard.proficiency, 0)
+
 
 class RagAPITest(TestCase):
     def setUp(self):
@@ -126,7 +196,8 @@ class QuizGenerationTest(TestCase):
         self.url = f"{base}quiz/create/"
 
         # Create and authenticate a user
-        self.user = CustomUser.objects.create_user(username='testuser', password='testpass')
+        self.user = CustomUser.objects.create_user(
+            username='testuser', password='testpass')
         self.client.force_authenticate(user=self.user)
 
         # Define valid and invalid test data
@@ -144,22 +215,20 @@ class QuizGenerationTest(TestCase):
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(self.context, i, self.valid_document_name)
 
-
     def test_invalid_request(self):
         """
         Test that an invalid request (empty payload) returns a 400 Bad Request
         and does not create any QuizModel instances.
         """
         # Ensure no quizzes exist before the test
-        self.assertFalse(QuizModel.objects.exists())  
+        self.assertFalse(QuizModel.objects.exists())
 
         invalid_payload = {}
         response = self.client.post(self.url, invalid_payload, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # Ensure no quizzes are created
-        self.assertFalse(QuizModel.objects.exists())  
-
+        self.assertFalse(QuizModel.objects.exists())
 
     def test_valid_request(self):
         """
@@ -175,17 +244,17 @@ class QuizGenerationTest(TestCase):
             "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_payload, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Ensure a quiz is created
-        self.assertTrue(QuizModel.objects.exists())  
+        self.assertTrue(QuizModel.objects.exists())
 
         # Retrieve the created quiz
         quiz = QuizModel.objects.first()
         self.assertEqual(quiz.document_name, self.valid_document_name)
         self.assertEqual(quiz.start, self.valid_page_num_start)
         self.assertEqual(quiz.end, self.valid_page_num_end)
-        
+
         # Verify the response data
         self.assertIn('document_name', response.data)
         self.assertEqual(response.data['start'], self.valid_page_num_start)
@@ -194,10 +263,10 @@ class QuizGenerationTest(TestCase):
         self.assertIsInstance(response.data['questions'], list)
         # Ensure questions are present
         self.assertGreater(len(response.data['questions']), 0)
-        
+
         # Check that questions are created and associated with the quiz
         self.assertTrue(
-            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or 
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or
             MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
         )
 
@@ -207,7 +276,7 @@ class QuizGenerationTest(TestCase):
         associates it with learning goals, and returns a 200 OK.
         """
         # Ensure no quizzes exist before the test
-        self.assertFalse(QuizModel.objects.exists())  
+        self.assertFalse(QuizModel.objects.exists())
 
         valid_payload = {
             "document": self.valid_document_name,
@@ -217,33 +286,32 @@ class QuizGenerationTest(TestCase):
             "learning_goals": ["goal1", "goal2"],
         }
         response = self.client.post(self.url, valid_payload, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Ensure a quiz is created
-        self.assertTrue(QuizModel.objects.exists())  
+        self.assertTrue(QuizModel.objects.exists())
 
         # Retrieve the created quiz
         quiz = QuizModel.objects.first()
         self.assertEqual(quiz.document_name, self.valid_document_name)
         self.assertEqual(quiz.start, self.valid_page_num_start)
         self.assertEqual(quiz.end, self.valid_page_num_end)
-        
+
         # Verify the response data
-        self.assertEqual(response.data['document_name'], self.valid_document_name)
+        self.assertEqual(
+            response.data['document_name'], self.valid_document_name)
         self.assertEqual(response.data['start'], self.valid_page_num_start)
         self.assertEqual(response.data['end'], self.valid_page_num_end)
-        
+
         self.assertIn('questions', response.data)
         self.assertIsInstance(response.data['questions'], list)
         self.assertGreater(len(response.data['questions']), 0)
 
         # Check that questions are created and associated with the quiz
         self.assertTrue(
-            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or 
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists() or
             MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
         )
-        
-
 
     def test_invalid_end_start_index(self):
         """
@@ -251,7 +319,7 @@ class QuizGenerationTest(TestCase):
         and does not create any QuizModel instances.
         """
         # Ensure no quizzes exist before the test
-        self.assertFalse(QuizModel.objects.exists())  
+        self.assertFalse(QuizModel.objects.exists())
 
         invalid_payload = {
             "document": self.valid_document_name,
@@ -260,12 +328,10 @@ class QuizGenerationTest(TestCase):
             "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_payload, format="json")
-        
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # Ensure no quizzes are created
-        self.assertFalse(QuizModel.objects.exists())  
-
- 
+        self.assertFalse(QuizModel.objects.exists())
 
 
 class QuizGradingTest(TestCase):
@@ -289,7 +355,6 @@ class QuizGradingTest(TestCase):
         self.assertTrue(response.data)
 
 
-
 class CompendiumAPITest(TestCase):
     def setUp(self):
         self.client = Client()
@@ -310,7 +375,8 @@ class CompendiumAPITest(TestCase):
             self.url, data=valid_payload, content_type="application/json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.json(), dict)  # Ensuring the response is JSON
+        # Ensuring the response is JSON
+        self.assertIsInstance(response.json(), dict)
 
     def test_invalid_page_range(self):
         """Test the create_compendium endpoint with an invalid page range (start > end)."""
@@ -332,7 +398,8 @@ class CompendiumAPITest(TestCase):
                 "document": self.valid_document,
                 "start": self.start_page,
             },  # missing 'end'
-            {"document": self.valid_document, "end": self.end_page},  # missing 'start'
+            {"document": self.valid_document,
+                "end": self.end_page},  # missing 'start'
             {"start": self.start_page, "end": self.end_page},  # missing 'document'
         ]
         for payload in invalid_payloads:
