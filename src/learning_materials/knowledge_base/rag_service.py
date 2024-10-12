@@ -1,6 +1,6 @@
 """ Retrieval Augmented Generation Service """
 
-from learning_materials.learning_resources import Page
+from learning_materials.learning_resources import Citation
 from learning_materials.knowledge_base.db_interface import Database
 from learning_materials.knowledge_base.embeddings import EmbeddingsModel
 from learning_materials.knowledge_base.factory import create_database
@@ -12,7 +12,7 @@ db: Database = create_database(db_system)
 embeddings: EmbeddingsModel = create_embeddings_model()
 
 
-def get_context(document_name: str, query: str) -> list[Page]:
+def get_context(document_name: str, query: str) -> list[Citation]:
     """
     Get the context of the query
 
@@ -31,7 +31,7 @@ def get_page_range(
     document_name: str,
     page_num_start: int,
     page_num_end: int,
-) -> list[Page]:
+) -> list[Citation]:
     """
     Get the context of the query
 

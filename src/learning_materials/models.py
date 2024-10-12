@@ -119,3 +119,14 @@ class MultipleChoiceQuestionModel(models.Model):
 
     def __str__(self):
         return self.question
+
+
+class ChatHistory(models.Model):
+    chat_id = models.CharField(max_length=255, unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_histories')
+    messages = models.JSONField(default=list, help_text="List of chat messages")
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ChatHistory {self.chat_id} for {self.user}"

@@ -2,7 +2,7 @@ import logging
 
 from learning_materials.knowledge_base.llm import OpenAI
 from learning_materials.knowledge_base.rag_service import get_page_range
-from learning_materials.learning_resources import Compendium, Page
+from learning_materials.learning_resources import Compendium, Citation
 
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ def generate_compendium(document_name: str, start: int, end: int) -> Compendium:
     """
 
     # Retrieve the pages from the database
-    context_pages: list[Page] = get_page_range(document_name, start, end)
+    context_pages: list[Citation] = get_page_range(document_name, start, end)
     logger.info(f"Generating compendium for document {document_name}")
     # Generate the compendium
     summaries = ""
