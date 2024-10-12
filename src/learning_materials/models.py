@@ -41,17 +41,8 @@ class FlashcardModel(models.Model):
 
     def review(self, answer: bool, user) -> bool:
         """Update the profeciency of the flashcard based on the correctness of the answer"""
-        if user.id != self.cardset.user.id:
-            return False
 
-        if answer:
-            self.proficiency += 1
-            if self.proficiency > 9:
-                self.proficiency = 9
-        else:
-            self.proficiency = 0
-
-        delays = [
+        DELAYS = [
             timedelta(minutes=1),
             timedelta(minutes=10),
             timedelta(hours=1),
@@ -63,8 +54,19 @@ class FlashcardModel(models.Model):
             timedelta(days=60),
             timedelta(days=180),
         ]
+        MAX_PROFICIENCY = len(DELAYS) - 1
 
-        self.time_of_next_review = datetime.now() + delays[self.proficiency]
+        if user.id != self.cardset.user.id:
+            return False
+
+        if answer:
+            self.proficiency += 1
+            if self.proficiency > MAX_PROFICIENCY:
+                self.proficiency = MAX_PROFICIENCY
+        else:
+            self.proficiency = 0
+
+        self.time_of_next_review = datetime.now() + DELAYS[self.proficiency]
         return True
 
     def __str__(self):
