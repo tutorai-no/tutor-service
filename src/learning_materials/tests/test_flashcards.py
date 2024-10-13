@@ -1,8 +1,12 @@
 from django.test import TestCase
 from unittest.mock import patch
+from django.contrib.auth import get_user_model
+from learning_materials.models import FlashcardModel, Cardset
 from learning_materials.learning_resources import Flashcard, Citation
 from learning_materials.flashcards.flashcards_service import generate_flashcards, parse_for_anki
 
+
+User = get_user_model()
 
 class FlashcardGenerationTests(TestCase):
     @patch('learning_materials.flashcards.flashcards_service.ChatOpenAI')  
@@ -43,6 +47,38 @@ class FlashcardGenerationTests(TestCase):
         self.assertEqual(flashcards[0].document_name, "sample.pdf")
         self.assertEqual(flashcards[1].front, "At what temperature does water boil?")
         self.assertEqual(flashcards[1].back, "100 degrees Celsius")
+
+
+class FlashcardReviewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpassword")
+        self.cardset = Cardset(name="Test Cardset", description="Test Description", subject="Test Subject", user=self.user)
+        self.flashcard = FlashcardModel(front="What is AI?", back="Artificial Intelligence", cardset=self.cardset)
+        self.flashcard2 = FlashcardModel(front="Who invented Python?", back="Guido van Rossum", cardset=self.cardset)
+
+    def test_flashcard_proficiency(self):
+        
+        flashcard = self.flashcard
+
+        # Test the initial state
+        self.assertEqual(flashcard.proficiency, 0)
+
+        # First review
+        flashcard.review(True, self.user)
+        self.assertEqual(flashcard.proficiency, 1)
+
+        # Second review
+        flashcard.review(True, self.user)
+        self.assertEqual(flashcard.proficiency, 2)
+
+        # Third review
+        flashcard.review(False, self.user)
+        self.assertEqual(flashcard.proficiency, 0)
+
+        # Fourth review
+        flashcard.review(True, self.user)
+        self.assertEqual(flashcard.proficiency, 1)
+        
 
 class AnkiParsingTests(TestCase):
 
