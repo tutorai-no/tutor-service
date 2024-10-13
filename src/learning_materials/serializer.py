@@ -1,6 +1,6 @@
 import uuid
-
 from rest_framework import serializers
+
 from learning_materials.models import ChatHistory, Cardset, FlashcardModel
 
 class ChatSerializer(serializers.Serializer):
@@ -64,6 +64,24 @@ class DocumentSerializer(serializers.Serializer):
                 "The start index must be less than the end index"
             )
         return data
+
+
+class ReviewFlashcardSerializer(serializers.Serializer):
+    id = serializers.IntegerField(
+        help_text="The ID of the flashcard",
+    )
+
+    answer_was_correct = serializers.BooleanField(
+        help_text="If the answer was correct",
+    )
+
+
+class FlashcardSerializer(serializers.Serializer):
+
+    class Meta:
+        model = FlashcardModel
+        fields = ["id", "front", "back", "proficiency",
+                  "time_of_next_review", "cardset"]
 
 
 class QuizStudentAnswer(serializers.Serializer):

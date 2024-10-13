@@ -21,6 +21,7 @@ from learning_materials.views import (
     FlashcardViewSet,
     QuizCreationView,
     QuizGradingView,
+    ReviewFlashcardView,
     ChatHistoryListView,
     ChatHistoryView,
     RAGResponseView,
@@ -33,7 +34,11 @@ router.register(r'flashcards', FlashcardViewSet, basename='flashcard')
 
 urlpatterns = [
     path("health-check/", health_check, name="health-check"),
-    path("flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"),
+    path(
+        "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"
+    ),
+    path("flashcards/review/", ReviewFlashcardView.as_view(),
+         name="review-flashcards"),
     path("flashcards/export/<int:pk>/", CardsetExportView.as_view(), name="export-flashcards"),
     path("search/", RAGResponseView.as_view(), name="create-rag-response"),
     path("quiz/create/", QuizCreationView.as_view(), name="create-quiz"),
@@ -49,11 +54,12 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('password-reset/', PasswordResetView.as_view(), name='password_reset'),
-    path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('password-reset-confirm/', PasswordResetConfirmView.as_view(),
+         name='password_reset_confirm'),
     path('profile/', UserProfileView.as_view(), name='profile'),
 
     path('subscriptions/', SubscriptionListView.as_view(), name='subscriptions'),
-    path('subscription-history/', SubscriptionHistoryView.as_view(), name='subscription_history'),
-
+    path('subscription-history/', SubscriptionHistoryView.as_view(),
+         name='subscription_history'),
     path("", include(router.urls)),
 ]
