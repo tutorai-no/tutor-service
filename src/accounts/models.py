@@ -41,3 +41,21 @@ class SubscriptionHistory(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.subscription.name}"
 
+class Document(models.Model):
+    """
+    Model representing documents.
+    """
+    id = models.AutoField(primary_key=True)
+    document_name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    start_page = models.IntegerField(default=1)
+    end_page = models.IntegerField(default=1)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='documents'  # This will allow reverse access from CustomUser to their documents
+    )
+
+    def __str__(self):
+        return self.title
