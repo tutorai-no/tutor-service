@@ -46,7 +46,7 @@ class Document(models.Model):
     Model representing documents.
     """
     id = models.AutoField(primary_key=True)
-    document_name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     start_page = models.IntegerField(default=1)
