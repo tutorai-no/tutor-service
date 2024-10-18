@@ -1,8 +1,15 @@
 from abc import ABC, abstractmethod
-from .embeddings import OpenAIEmbedding, cosine_similarity
 from config import Config
 from pymongo import MongoClient
+import logging
+
 from learning_materials.learning_resources import Citation
+from learning_materials.knowledge_base.embeddings import (
+    OpenAIEmbedding,
+    cosine_similarity,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class Database(ABC):
@@ -111,7 +118,6 @@ class MongoDB(Database):
 
         # Filter out the documents with low similarity
         for document in documents:
-            threshold = self.similarity_threshold
             if document["documentName"] != document_name:
                 continue
 
@@ -162,10 +168,10 @@ class MongoDB(Database):
         if not curriculum:
             raise ValueError("Curriculum cannot be None")
 
-        if page_num == None:
+        if page_num is None:
             raise ValueError("Page number cannot be None")
 
-        if document_name == None:
+        if document_name is None:
             raise ValueError("Paragraph number cannot be None")
 
         if not embedding:
@@ -185,7 +191,9 @@ class MongoDB(Database):
                 }
             )
             return True
-        except:
+        except Exception as e:
+            # Handle the specific exception
+            logger.error(f"Error posting curriculum: {e}")
             return False
 
 
