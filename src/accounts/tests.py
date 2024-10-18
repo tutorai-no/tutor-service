@@ -275,7 +275,8 @@ class LoginTests(APITestCase):
         self.assertIn("detail", response.data)
 
     def test_login_superuser_success(self):
-        superuser = User.objects.create_superuser(
+        # Create superuser
+        User.objects.create_superuser(
             username="admin", email="admin@example.com", password="AdminP@ssw0rd!"
         )
         data = {"username": "admin", "password": "AdminP@ssw0rd!"}
@@ -285,7 +286,8 @@ class LoginTests(APITestCase):
         self.assertIn("refresh", response.data)
 
     def test_login_staff_user_success(self):
-        staff_user = User.objects.create_user(
+        # Create staff user
+        User.objects.create_user(
             username="staffuser",
             email="staff@example.com",
             password="StaffP@ssw0rd!",
