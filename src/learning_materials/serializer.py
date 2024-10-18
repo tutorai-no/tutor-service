@@ -75,20 +75,6 @@ class ReviewFlashcardSerializer(serializers.Serializer):
     )
 
 
-class FlashcardSerializer(serializers.Serializer):
-
-    class Meta:
-        model = FlashcardModel
-        fields = [
-            "id",
-            "front",
-            "back",
-            "proficiency",
-            "time_of_next_review",
-            "cardset",
-        ]
-
-
 class QuizStudentAnswer(serializers.Serializer):
     quiz_id = serializers.CharField(
         help_text="The ID of the quiz",
@@ -111,7 +97,14 @@ class CurriculumSerializer(serializers.Serializer):
 class FlashcardSerializer(serializers.ModelSerializer):
     class Meta:
         model = FlashcardModel
-        fields = ["id", "front", "back", "cardset"]
+        fields = [
+            "id",
+            "front",
+            "back",
+            "cardset",
+            "proficiency",
+            "time_of_next_review",
+        ]
 
     def validate_cardset(self, value: Cardset) -> Cardset:
         user = self.context["request"].user
