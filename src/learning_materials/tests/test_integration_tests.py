@@ -718,23 +718,88 @@ class QuizGenerationTest(TestCase):
 
 class QuizGradingTest(TestCase):
     def setUp(self):
-        self.client = Client()
+        self.client = APIClient()
         self.url = f"{base}quiz/grade/"
-        self.valid_quiz_id = "Some ID"
+
+        self.user = User.objects.create_user(
+            username="testuser", email="grading@gmail.com", password="testpassword"
+        )
+        self.valid_document_name = "test.pdf"
+        # Add user to quiz
+        self.quiz = QuizModel.objects.create(
+            document_name=self.valid_document_name,
+            start=0,
+            end=1,
+        )
+
+        # Create questions for the quiz
+        self.question1 = QuestionAnswerModel.objects.create(
+            quiz=self.quiz,
+            question="What is artificial intelligence?",
+            answer="Intelligence exhibited by machines, particularly computer systems.",
+        )
+        self.question2 = QuestionAnswerModel.objects.create(
+            quiz=self.quiz,
+            question="What is the field of research in computer science that develops and studies methods and software that enable machines to perceive their environment and use learning and intelligence to take actions that maximize their chances of achieving defined goals?",
+            answer="Artificial intelligence",
+        )
+
+        self.amount_of_questions = 2
+
+    def authenticate(self):
+        self.client.force_authenticate(user=self.user)
+
+    def test_unauthenticated_request(self):
+        response = self.client.post(self.url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_invalid_request(self):
+        self.authenticate()
         invalid_payload = {}
         response = self.client.post(self.url, invalid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_valid_request(self):
+        self.authenticate()
+        answers = ["answer" for _ in range(self.amount_of_questions)]
         valid_response = {
-            "quiz_id": self.valid_quiz_id,
-            "student_answers": ["answer1"],
+            "quiz_id": self.quiz.id,
+            "student_answers": answers,
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data)
+
+    def test_all_correct_answers(self):
+        self.authenticate()
+        answers = [
+            self.question1.answer,
+            self.question2.answer,
+        ]
+        valid_response = {
+            "quiz_id": self.quiz.id,
+            "student_answers": answers,
+        }
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(response.data["answers_was_correct"]))
+
+    def test_all_incorrect_answers(self):
+        self.authenticate()
+        answers = [
+            "Incorrect answer",
+            "Incorrect answer",
+        ]
+        valid_response = {
+            "quiz_id": self.quiz.id,
+            "student_answers": answers,
+        }
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Ensure all answers in answers_was_correct are False
+        self.assertFalse(any(response.data["answers_was_correct"]))
+        # Ensure that all wrong answers have feedback
+        self.assertTrue(all(response.data["feedback"]))
 
 
 class CompendiumAPITest(TestCase):
