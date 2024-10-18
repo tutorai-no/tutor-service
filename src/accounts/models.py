@@ -54,8 +54,8 @@ class Document(models.Model):
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
-        related_name='documents'  # This will allow reverse access from CustomUser to their documents
+        related_name='documents'
     )
 
     def __str__(self):
-        return self.title
+        return f"{self.name} - {self.user.username} start: {self.start_page} end: {self.end_page}"
