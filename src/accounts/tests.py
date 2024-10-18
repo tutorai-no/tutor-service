@@ -630,7 +630,8 @@ class UserProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertEqual(self.user.documents.count(), 1)
-
+    
+        self.authenticate()
         # Update with new document
         data = {
             'documents': [
@@ -641,6 +642,7 @@ class UserProfileTests(APITestCase):
                 }
             ]
         }
+        response = self.client.patch(self.profile_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.user.refresh_from_db()
