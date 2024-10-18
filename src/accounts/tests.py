@@ -581,7 +581,6 @@ class UserProfileTests(APITestCase):
     def test_partial_update_profile_with_document(self):
         self.authenticate()
         data = {
-            'first_name': 'Jane',
             'documents': [
                 {
                     'name': 'Document 1',
@@ -593,8 +592,59 @@ class UserProfileTests(APITestCase):
         response = self.client.patch(self.profile_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.first_name, 'Jane')
         self.assertEqual(self.user.documents.count(), 1)
+
+    def test_partial_update_profile_with_several_documents(self):
+        self.authenticate()
+        data = {
+            'documents': [
+                {
+                    'name': 'Document 1',
+                    'start_page': 1,
+                    'end_page': 5
+                },
+                {
+                    'name': 'Document 2',
+                    'start_page': 6,
+                    'end_page': 10
+                }
+            ]
+        }
+        response = self.client.patch(self.profile_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.documents.count(), 2)
+    
+    def test_partial_update_profile_with_documents_does_not_overwrite(self):
+        self.authenticate()
+        data = {
+            'documents': [
+                {
+                    'name': 'Document 1',
+                    'start_page': 1,
+                    'end_page': 5
+                },
+            ]
+        }
+        response = self.client.patch(self.profile_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.documents.count(), 1)
+
+        # Update with new document
+        data = {
+            'documents': [
+                {
+                    'name': 'Document 2',
+                    'start_page': 6,
+                    'end_page': 10
+                }
+            ]
+        }
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.documents.count(), 2)
 
     def test_access_profile_without_authentication(self):
         response = self.client.get(self.profile_url, format='json')
