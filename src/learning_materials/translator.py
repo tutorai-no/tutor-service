@@ -62,6 +62,27 @@ def translate_quiz_to_orm_model(quiz: Quiz, users: list[CustomUser]) -> QuizMode
     return quiz_model
 
 
+def translate_quiz_to_pydantic_model(quiz: QuizModel) -> Quiz:
+    """Translate a Quiz ORM model to a Pydantic model."""
+    return Quiz(
+        document_name=quiz.document_name,
+        start=quiz.start,
+        end=quiz.end,
+        questions=[
+            QuestionAnswer(question=qa.question, answer=qa.answer)
+            for qa in quiz.questionanswermodel_set.all()
+        ]
+        + [
+            MultipleChoiceQuestion(
+                question=mcq.question,
+                options=mcq.options,
+                answer=mcq.answer,
+            )
+            for mcq in quiz.multiplechoicequestionmodel_set.all()
+        ],
+    )
+
+
 def translate_flashcards_to_pydantic_model(
     flashcards: list[FlashcardModel],
 ) -> Flashcard:
