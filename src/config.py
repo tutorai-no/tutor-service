@@ -12,7 +12,7 @@ load_dotenv("../.env")
 
 
 class Config:
-    def __init__(self, path=".env", gpt_model="gpt-3.5-turbo"):
+    def __init__(self, path=".env", gpt_model="gpt-4o-mini"):
         self.path = path
         self.GPT_MODEL = os.getenv(key="GPT_MODEL", default=gpt_model)
         self.API_KEY = os.getenv("OPENAI_API_KEY")
