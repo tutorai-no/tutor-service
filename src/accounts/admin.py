@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from accounts.models import CustomUser, Subscription, SubscriptionHistory
+from accounts.models import CustomUser, Document, Subscription, SubscriptionHistory
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
@@ -9,6 +9,8 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         (None, {'fields': ('subscription',)}),
     )
+
+admin.site.register(Document)
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
