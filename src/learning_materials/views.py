@@ -12,28 +12,26 @@ from learning_materials.learning_material_service import (
     process_flashcards,
     process_answer,
 )
-from learning_materials.learning_resources import QuestionAnswer, Quiz, RagAnswer
 from learning_materials.quizzes.quiz_service import (
     generate_quiz,
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import Cardset, FlashcardModel, ChatHistory
+from learning_materials.models import Cardset, FlashcardModel, ChatHistory, QuizModel
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
     translate_flashcards_to_pydantic_model,
+    translate_quiz_to_pydantic_model,
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
     CardsetSerializer,
-    FlashcardSerializer,
     ChatSerializer,
     DocumentSerializer,
     FlashcardSerializer,
     ReviewFlashcardSerializer,
     QuizStudentAnswer,
-    ChatSerializer,
 )
 
 
@@ -390,6 +388,7 @@ class QuizCreationView(GenericAPIView):
 
 class QuizGradingView(GenericAPIView):
     serializer_class = QuizStudentAnswer
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Grade the student's quiz answers",
@@ -414,14 +413,8 @@ class QuizGradingView(GenericAPIView):
             student_answers = serializer.validated_data.get("student_answers")
             quiz_id = serializer.validated_data.get("quiz_id")
             # TODO: Retrieve quiz from database
-            quiz = Quiz(
-                document_name="Sample.pdf",
-                start=1,
-                end=10,
-                questions=[
-                    QuestionAnswer(question="Sample question?", answer="Sample answer")
-                ],
-            )
+            quiz_model = QuizModel.objects.get(id=quiz_id)
+            quiz = translate_quiz_to_pydantic_model(quiz_model)
 
             graded_answer = grade_quiz(quiz, student_answers)
             response = graded_answer.model_dump()
