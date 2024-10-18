@@ -7,6 +7,7 @@ from learning_materials.learning_resources import Compendium, Citation
 
 logger = logging.getLogger(__name__)
 
+
 def generate_compendium(document_name: str, start: int, end: int) -> Compendium:
     """
     Generates a compendium for the document
@@ -25,16 +26,18 @@ def generate_compendium(document_name: str, start: int, end: int) -> Compendium:
         # Append the key concepts and summaries to the lists
 
         concept_template, summary_template = _generate_compendium_template(page.text)
-        concept = llm.generate_response(
-           "system", message=concept_template
-        )
-        summary = llm.generate_response(
-            "system", message=summary_template
-        )
+        concept = llm.generate_response("system", message=concept_template)
+        summary = llm.generate_response("system", message=summary_template)
         key_concepts.extend(concept.split("|"))
         summaries += summary
 
-    compendium = Compendium(document_name=document_name, start=start, end=end, key_concepts=key_concepts, summary=summaries)
+    compendium = Compendium(
+        document_name=document_name,
+        start=start,
+        end=end,
+        key_concepts=key_concepts,
+        summary=summaries,
+    )
     return compendium
 
 

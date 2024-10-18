@@ -6,18 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0001_initial'),
+        ("learning_materials", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='flashcardmodel',
-            name='proficiency',
-            field=models.IntegerField(default=0, help_text='The profeciency of the flashcard'),
+            model_name="flashcardmodel",
+            name="proficiency",
+            field=models.IntegerField(
+                default=0, help_text="The profeciency of the flashcard"
+            ),
         ),
         migrations.AddField(
-            model_name='flashcardmodel',
-            name='time_of_next_review',
-            field=models.DateTimeField(auto_now=True, help_text='The time of the next review'),
+            model_name="flashcardmodel",
+            name="time_of_next_review",
+            field=models.DateTimeField(
+                auto_now=True, help_text="The time of the next review"
+            ),
         ),
     ]

@@ -10,6 +10,7 @@ openai.api_key = api_key
 
 logger = logging.getLogger(__name__)
 
+
 def response_formulation(
     user_input: str, context: list[str], chat_history: list[dict[str, str]]
 ) -> str:
@@ -96,4 +97,3 @@ def _template_system_prompt(document_names: list[str] = []) -> str:
         conversation to a close and tell them you’re here to help if they have further questions.
     """
     return template
-

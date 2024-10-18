@@ -15,12 +15,15 @@ class FlashcardWrapper(BaseModel):
 model = ChatOpenAI(temperature=0, api_key=Config().API_KEY)
 flashcard_parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
 
+
 def generate_flashcards(page: Citation) -> list[Flashcard]:
     template = _generate_template(page.text)
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n",
         input_variables=["query"],
-        partial_variables={"format_instructions": flashcard_parser.get_format_instructions()},
+        partial_variables={
+            "format_instructions": flashcard_parser.get_format_instructions()
+        },
     )
 
     # Creating the LangChain with prompt, model, and parser
@@ -37,10 +40,11 @@ def generate_flashcards(page: Citation) -> list[Flashcard]:
 
     return flashcards
 
+
 def _generate_template(context: str) -> str:
     """
     Returns a template with the correct flashcard and prompt format which can be used to generate flashcards using the context.
-    
+
     Args:
         context (str): The sample text to be used
 
@@ -75,9 +79,8 @@ def _generate_template(context: str) -> str:
         """
         f"\n\nText:\n{context}"
     )
-    
-    return template
 
+    return template
 
 
 def parse_for_anki(flashcards: list[Flashcard]) -> str:

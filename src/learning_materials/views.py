@@ -19,7 +19,11 @@ from learning_materials.quizzes.quiz_service import (
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
 from learning_materials.models import Cardset, FlashcardModel, ChatHistory
-from learning_materials.translator import translate_flashcard_to_orm_model, translate_quiz_to_orm_model, translate_flashcards_to_pydantic_model
+from learning_materials.translator import (
+    translate_flashcard_to_orm_model,
+    translate_quiz_to_orm_model,
+    translate_flashcards_to_pydantic_model,
+)
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
     CardsetSerializer,
@@ -58,7 +62,9 @@ class FlashcardCreationView(GenericAPIView):
                 },
             ),
             400: openapi.Response(description="Invalid request data"),
-            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
+            401: openapi.Response(
+                description="Authentication credentials were not provided or invalid"
+            ),
         },
         tags=["Flashcards"],
     )
@@ -76,14 +82,15 @@ class FlashcardCreationView(GenericAPIView):
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
-                name=cardset_name, subject=subject, user=user)
-            flashcard_models = [translate_flashcard_to_orm_model(flashcard, cardset)
-                                for flashcard in flashcards
-                                ]
+                name=cardset_name, subject=subject, user=user
+            )
+            flashcard_models = [
+                translate_flashcard_to_orm_model(flashcard, cardset)
+                for flashcard in flashcards
+            ]
 
             exportable_flashcard = parse_for_anki(flashcards)
-            flashcard_dicts = [flashcard.model_dump()
-                               for flashcard in flashcards]
+            flashcard_dicts = [flashcard.model_dump() for flashcard in flashcards]
 
             response = {
                 "flashcards": flashcard_dicts,
@@ -93,10 +100,12 @@ class FlashcardCreationView(GenericAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class CardsetExportView(GenericAPIView):
     """
     Export flashcards from a cardset to anki format
     """
+
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -111,7 +120,9 @@ class CardsetExportView(GenericAPIView):
                 },
             ),
             400: openapi.Response(description="Invalid request data"),
-            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
+            401: openapi.Response(
+                description="Authentication credentials were not provided or invalid"
+            ),
         },
         tags=["Flashcards"],
     )
@@ -132,6 +143,7 @@ class CardsetExportView(GenericAPIView):
         response = {"exportable_flashcards": exportable_flashcard}
         return Response(data=response, status=status.HTTP_200_OK)
 
+
 class ReviewFlashcardView(GenericAPIView):
     serializer_class = ReviewFlashcardSerializer
     authentication_classes = [IsAuthenticated]
@@ -150,34 +162,35 @@ class ReviewFlashcardView(GenericAPIView):
                 },
             ),
             400: openapi.Response(description="Invalid request data"),
-            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
+            401: openapi.Response(
+                description="Authentication credentials were not provided or invalid"
+            ),
         },
         tags=["Flashcards"],
     )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            answer_was_correct = serializer.validated_data.get(
-                "answer_was_correct")
+            answer_was_correct = serializer.validated_data.get("answer_was_correct")
             flashcard_id = serializer.validated_data.get("id")
             try:
                 flashcard = FlashcardModel.objects.get(id=flashcard_id)
             except FlashcardModel.DoesNotExist:
                 return Response("Flashcard not found", status=status.HTTP_404_NOT_FOUND)
 
-            valid_user = flashcard.review(
-                answer_was_correct, user=request.user)
+            valid_user = flashcard.review(answer_was_correct, user=request.user)
             flashcard.save()
 
             if valid_user:
-                return Response(data=FlashcardSerializer(flashcard).data, status=status.HTTP_200_OK)
+                return Response(
+                    data=FlashcardSerializer(flashcard).data, status=status.HTTP_200_OK
+                )
             else:
                 return Response("Invalid user", status=status.HTTP_400_BAD_REQUEST)
 
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    
 
 class CardsetViewSet(viewsets.ModelViewSet):
     queryset = Cardset.objects.all()
@@ -190,6 +203,7 @@ class CardsetViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+
 class FlashcardViewSet(viewsets.ModelViewSet):
     queryset = FlashcardModel.objects.all()
     serializer_class = FlashcardSerializer
@@ -197,6 +211,7 @@ class FlashcardViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return FlashcardModel.objects.filter(cardset__user=self.request.user)
+
 
 class RAGResponseView(APIView):
     serializer_class = ChatSerializer
@@ -219,32 +234,34 @@ class RAGResponseView(APIView):
                                 "document_id": "Sample.pdf",
                             }
                         ],
-                        "chatId": "uuid-string"
+                        "chatId": "uuid-string",
                     }
                 },
             ),
             400: openapi.Response(description="Invalid request data"),
-            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
+            401: openapi.Response(
+                description="Authentication credentials were not provided or invalid"
+            ),
         },
         tags=["Chat"],
     )
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer = self.serializer_class(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
-            chat_id = serializer.validated_data['chatId']
-            document_id = serializer.validated_data['documentId']
-            message = serializer.validated_data['message']
+            chat_id = serializer.validated_data["chatId"]
+            document_id = serializer.validated_data["documentId"]
+            message = serializer.validated_data["message"]
             user = request.user
-      
+
             # Retrieve or create ChatHistory
             chat_history, created = ChatHistory.objects.get_or_create(
-                chat_id=chat_id,
-                user=user,
-                defaults={'messages': []}
+                chat_id=chat_id, user=user, defaults={"messages": []}
             )
 
             # Append the new message to chat history
-            chat_history.messages.append({'role': 'user', 'content': message})
+            chat_history.messages.append({"role": "user", "content": message})
             chat_history.save()
 
             # Generate assistant's response
@@ -252,24 +269,29 @@ class RAGResponseView(APIView):
             rag_answer = process_answer([document_id], message, chat_messages)
 
             # Append assistant's response to chat history
-            chat_history.messages.append({
-                'role': 'assistant',
-                'content': rag_answer.content,
-                'citations': [citation.model_dump() for citation in rag_answer.citations]
-            })
+            chat_history.messages.append(
+                {
+                    "role": "assistant",
+                    "content": rag_answer.content,
+                    "citations": [
+                        citation.model_dump() for citation in rag_answer.citations
+                    ],
+                }
+            )
             chat_history.save()
 
             # Prepare the response
             response_data = {
-                'role': 'assistant',
-                'content': rag_answer.content,
-                'citations': [citation.model_dump() for citation in rag_answer.citations],
-                'chatId': chat_id,
+                "role": "assistant",
+                "content": rag_answer.content,
+                "citations": [
+                    citation.model_dump() for citation in rag_answer.citations
+                ],
+                "chatId": chat_id,
             }
             return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 class ChatHistoryListView(APIView):
@@ -277,15 +299,18 @@ class ChatHistoryListView(APIView):
 
     def get(self, request):
         user = request.user
-        chat_histories = ChatHistory.objects.filter(user=user).order_by('-last_used_at')
+        chat_histories = ChatHistory.objects.filter(user=user).order_by("-last_used_at")
         data = []
         for chat in chat_histories:
-            data.append({
-                'chatId': chat.chat_id,
-                'created_at': chat.created_at,
-                'last_used_at': chat.last_used_at,
-            })
+            data.append(
+                {
+                    "chatId": chat.chat_id,
+                    "created_at": chat.created_at,
+                    "last_used_at": chat.last_used_at,
+                }
+            )
         return Response(data, status=status.HTTP_200_OK)
+
 
 class ChatHistoryView(APIView):
     permission_classes = [IsAuthenticated]
@@ -295,13 +320,15 @@ class ChatHistoryView(APIView):
         try:
             chat_history = ChatHistory.objects.get(chat_id=chatId, user=user)
         except ChatHistory.DoesNotExist:
-            return Response({'error': 'Chat not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         data = {
-            'chatId': chat_history.chat_id,
-            'messages': chat_history.messages,
-            'created_at': chat_history.created_at,
-            'last_used_at': chat_history.last_used_at,
+            "chatId": chat_history.chat_id,
+            "messages": chat_history.messages,
+            "created_at": chat_history.created_at,
+            "last_used_at": chat_history.last_used_at,
         }
         return Response(data, status=status.HTTP_200_OK)
 
@@ -310,7 +337,7 @@ class QuizCreationView(GenericAPIView):
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticated]
 
-    @ swagger_auto_schema(
+    @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
         request_body=DocumentSerializer,
         responses={
@@ -330,13 +357,15 @@ class QuizCreationView(GenericAPIView):
                                 "question": "Another question?",
                                 "options": ["Option 1", "Option 2", "Option 3"],
                                 "answer": "Option 2",
-                            }
+                            },
                         ],
                     }
                 },
             ),
             400: openapi.Response(description="Invalid request data"),
-            401: openapi.Response(description="Authentication credentials were not provided or invalid"),
+            401: openapi.Response(
+                description="Authentication credentials were not provided or invalid"
+            ),
         },
         tags=["Quiz"],
     )
@@ -362,7 +391,7 @@ class QuizCreationView(GenericAPIView):
 class QuizGradingView(GenericAPIView):
     serializer_class = QuizStudentAnswer
 
-    @ swagger_auto_schema(
+    @swagger_auto_schema(
         operation_description="Grade the student's quiz answers",
         request_body=QuizStudentAnswer,
         responses={
@@ -385,10 +414,14 @@ class QuizGradingView(GenericAPIView):
             student_answers = serializer.validated_data.get("student_answers")
             quiz_id = serializer.validated_data.get("quiz_id")
             # TODO: Retrieve quiz from database
-            quiz = Quiz(document_name="Sample.pdf", start=1, end=10, questions=[
-                QuestionAnswer(question="Sample question?",
-                               answer="Sample answer")
-            ])
+            quiz = Quiz(
+                document_name="Sample.pdf",
+                start=1,
+                end=10,
+                questions=[
+                    QuestionAnswer(question="Sample question?", answer="Sample answer")
+                ],
+            )
 
             graded_answer = grade_quiz(quiz, student_answers)
             response = graded_answer.model_dump()
@@ -400,7 +433,7 @@ class QuizGradingView(GenericAPIView):
 class CompendiumCreationView(GenericAPIView):
     serializer_class = DocumentSerializer
 
-    @ swagger_auto_schema(
+    @swagger_auto_schema(
         operation_description="Create a compendium from a given document",
         request_body=DocumentSerializer,
         responses={

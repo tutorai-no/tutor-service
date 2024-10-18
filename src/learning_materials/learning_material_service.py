@@ -20,6 +20,7 @@ from learning_materials.learning_resources import (
 
 logger = logging.getLogger(__name__)
 
+
 def process_flashcards(document_name: str, start: int, end: int) -> list[Flashcard]:
     """
     Generate flashcards for a specific page range and file
@@ -42,12 +43,8 @@ def process_flashcards(document_name: str, start: int, end: int) -> list[Flashca
     return flashcards
 
 
-
-
 def process_answer(
-    documents: list[str],
-    user_question: str,
-    chat_history: list[dict[str, str]]
+    documents: list[str], user_question: str, chat_history: list[dict[str, str]]
 ) -> RagAnswer:
 
     # Get a list of relevant contexts from the database
@@ -57,10 +54,11 @@ def process_answer(
 
     # Handle case when no context is available
     if len(curriculum) == 0:
-        answer_content = "I'm sorry, but I don't have enough information to answer your question."
+        answer_content = (
+            "I'm sorry, but I don't have enough information to answer your question."
+        )
     else:
         answer_content = response_formulation(user_question, curriculum, chat_history)
-        
 
     answer = RagAnswer(content=answer_content, citations=curriculum)
     return answer

@@ -13,6 +13,7 @@ from accounts.models import Document, Subscription, SubscriptionHistory
 
 User = get_user_model()
 
+
 class RegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,
@@ -20,84 +21,82 @@ class RegisterSerializer(serializers.ModelSerializer):
         max_length=30,
         validators=[
             RegexValidator(
-                regex=r'^[\w.@+-]+$',
-                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
+                regex=r"^[\w.@+-]+$",
+                message="Username may contain only letters, numbers, and @/./+/-/_ characters.",
             ),
-            UniqueValidator(queryset=User.objects.all())
-        ]
+            UniqueValidator(queryset=User.objects.all()),
+        ],
     )
 
     password = serializers.CharField(
         write_only=True,
         required=True,
         validators=[validate_password],
-        style={'input_type': 'password'}
+        style={"input_type": "password"},
     )
     password_confirm = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        write_only=True, required=True, style={"input_type": "password"}
     )
 
     email = serializers.EmailField(
-        required=True, 
+        required=True,
         validators=[
             UniqueValidator(queryset=User.objects.all()),
-        ]
+        ],
     )
 
     subscription = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
         required=False,
-        allow_null=True
+        allow_null=True,
     )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'password_confirm', 'subscription')
+        fields = ("username", "email", "password", "password_confirm", "subscription")
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError(
                 {"password": "Password fields didn't match."}
             )
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        subscription = validated_data.pop('subscription', None)
+        validated_data.pop("password_confirm")
+        subscription = validated_data.pop("subscription", None)
 
-        user = User.objects.create_user(
-            subscription=subscription,
-            **validated_data
-        )
+        user = User.objects.create_user(subscription=subscription, **validated_data)
 
         # Send welcome email
         send_mail(
-            subject='Welcome to Our Site',
-            message='Thank you for registering.',
-            from_email='no-reply@example.com',
+            subject="Welcome to Our Site",
+            message="Thank you for registering.",
+            from_email="no-reply@example.com",
             recipient_list=[user.email],
             fail_silently=False,
         )
         return user
 
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        username_or_email = attrs.get('username')
-        password = attrs.get('password')
+        username_or_email = attrs.get("username")
+        password = attrs.get("password")
 
         # Allow login with username or email
-        user = User.objects.filter(email=username_or_email).first() or User.objects.filter(username=username_or_email).first()
+        user = (
+            User.objects.filter(email=username_or_email).first()
+            or User.objects.filter(username=username_or_email).first()
+        )
 
         if user and user.check_password(password):
             if not user.is_active:
-                raise AuthenticationFailed('User is inactive.', code='authorization')
-            data = super().validate({'username': user.username, 'password': password})
+                raise AuthenticationFailed("User is inactive.", code="authorization")
+            data = super().validate({"username": user.username, "password": password})
             return data
         else:
-            raise AuthenticationFailed('Invalid credentials', code='authorization')
-
+            raise AuthenticationFailed("Invalid credentials", code="authorization")
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -106,6 +105,7 @@ class PasswordResetSerializer(serializers.Serializer):
     def validate_email(self, value):
         # Optionally, prevent email enumeration by not indicating whether the email exists
         return value
+
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
@@ -116,29 +116,30 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     password_confirm = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
-        uid = attrs.get('uid')
-        token = attrs.get('token')
-        password = attrs.get('password')
-        password_confirm = attrs.get('password_confirm')
+        uid = attrs.get("uid")
+        token = attrs.get("token")
+        password = attrs.get("password")
+        password_confirm = attrs.get("password_confirm")
 
         if password != password_confirm:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
+            raise serializers.ValidationError(
+                {"password": "Password fields didn't match."}
+            )
 
         try:
             user = User.objects.get(pk=uid)
         except (ValueError, User.DoesNotExist):
-            raise serializers.ValidationError({'uid': 'Invalid UID'})
+            raise serializers.ValidationError({"uid": "Invalid UID"})
 
         if not default_token_generator.check_token(user, token):
-            raise serializers.ValidationError({'token': 'Invalid or expired token'})
+            raise serializers.ValidationError({"token": "Invalid or expired token"})
 
-        attrs['user'] = user
+        attrs["user"] = user
         return attrs
 
-
     def save(self, **kwargs):
-        user = self.validated_data['user']
-        user.set_password(self.validated_data['password'])
+        user = self.validated_data["user"]
+        user.set_password(self.validated_data["password"])
         user.save()
         return user
 
@@ -146,7 +147,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
-        fields = ['id', 'name', 'description', 'price', 'active']
+        fields = ["id", "name", "description", "price", "active"]
 
 
 class SubscriptionHistorySerializer(serializers.ModelSerializer):
@@ -154,14 +155,16 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SubscriptionHistory
-        fields = ['id', 'subscription', 'start_date', 'end_date']
-        read_only_fields = ['id', 'subscription', 'start_date', 'end_date']
+        fields = ["id", "subscription", "start_date", "end_date"]
+        read_only_fields = ["id", "subscription", "start_date", "end_date"]
+
 
 class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
-        fields = ['id', 'name', 'start_page', 'end_page']
-        read_only_fields = ['id']
+        fields = ["id", "name", "start_page", "end_page"]
+        read_only_fields = ["id"]
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
@@ -170,37 +173,45 @@ class UserProfileSerializer(serializers.ModelSerializer):
         max_length=30,
         validators=[
             RegexValidator(
-                regex=r'^[\w.@+-]+$',
-                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
+                regex=r"^[\w.@+-]+$",
+                message="Username may contain only letters, numbers, and @/./+/-/_ characters.",
             ),
             UniqueValidator(queryset=User.objects.all()),
-        ]
+        ],
     )
     email = serializers.EmailField(
         required=True,
         validators=[
             UniqueValidator(queryset=User.objects.all()),
-        ]
+        ],
     )
 
     subscription = SubscriptionSerializer(read_only=True)
     subscription_id = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
-        source='subscription',
+        source="subscription",
         write_only=True,
         required=False,
-        allow_null=True
+        allow_null=True,
     )
     documents = DocumentSerializer(many=True, required=False)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'subscription', 'subscription_id', 'documents')
+        fields = (
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "subscription",
+            "subscription_id",
+            "documents",
+        )
 
     def update(self, instance, validated_data):
         # Extract subscription_id and documents from validated_data
-        subscription = validated_data.pop('subscription', None)
-        documents_data = validated_data.pop('documents', None)
+        subscription = validated_data.pop("subscription", None)
+        documents_data = validated_data.pop("documents", None)
 
         # Update user fields
         for attr, value in validated_data.items():

@@ -3,22 +3,21 @@ from rest_framework import serializers
 
 from learning_materials.models import ChatHistory, Cardset, FlashcardModel
 
+
 class ChatSerializer(serializers.Serializer):
     chatId = serializers.CharField(
         required=False,
         allow_blank=True,
-        help_text="Unique identifier for the chat session."
+        help_text="Unique identifier for the chat session.",
     )
     documentId = serializers.CharField(
         help_text="Identifier for the selected curriculum document."
     )
-    message = serializers.CharField(
-        help_text="The user message."
-    )
+    message = serializers.CharField(help_text="The user message.")
 
     def validate(self, data: dict) -> dict:
-        user = self.context['request'].user
-        chat_id = data.get('chatId')
+        user = self.context["request"].user
+        chat_id = data.get("chatId")
 
         if chat_id:
             # Check if chatId exists for the user
@@ -26,7 +25,7 @@ class ChatSerializer(serializers.Serializer):
                 raise serializers.ValidationError({"chatId": "Invalid chatId."})
         else:
             # Generate a new chatId
-            data['chatId'] = str(uuid.uuid4())
+            data["chatId"] = str(uuid.uuid4())
         return data
 
 
@@ -80,8 +79,14 @@ class FlashcardSerializer(serializers.Serializer):
 
     class Meta:
         model = FlashcardModel
-        fields = ["id", "front", "back", "proficiency",
-                  "time_of_next_review", "cardset"]
+        fields = [
+            "id",
+            "front",
+            "back",
+            "proficiency",
+            "time_of_next_review",
+            "cardset",
+        ]
 
 
 class QuizStudentAnswer(serializers.Serializer):
@@ -106,22 +111,27 @@ class CurriculumSerializer(serializers.Serializer):
 class FlashcardSerializer(serializers.ModelSerializer):
     class Meta:
         model = FlashcardModel
-        fields = ['id', 'front', 'back', 'cardset']
+        fields = ["id", "front", "back", "cardset"]
 
     def validate_cardset(self, value: Cardset) -> Cardset:
-        user = self.context['request'].user
+        user = self.context["request"].user
         if value.user != user:
-            raise serializers.ValidationError("You do not have permission to modify flashcards in this cardset.")
+            raise serializers.ValidationError(
+                "You do not have permission to modify flashcards in this cardset."
+            )
         return value
 
+
 class CardsetSerializer(serializers.ModelSerializer):
-    flashcards = FlashcardSerializer(many=True, read_only=True, source='flashcardmodel_set')
+    flashcards = FlashcardSerializer(
+        many=True, read_only=True, source="flashcardmodel_set"
+    )
 
     class Meta:
         model = Cardset
-        fields = ['id', 'name', 'description', 'subject', 'user', 'flashcards']
-        read_only_fields = ['user']
+        fields = ["id", "name", "description", "subject", "user", "flashcards"]
+        read_only_fields = ["user"]
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        validated_data["user"] = self.context["request"].user
         return super().create(validated_data)

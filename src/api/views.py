@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import permissions, serializers
 from rest_framework.response import Response
 
+
 @swagger_auto_schema(
     method="get",
     operation_description="Health check endpoint",
@@ -17,8 +18,8 @@ from rest_framework.response import Response
 def health_check(request) -> Response:
     try:
         # Check cache
-        cache.set('health_check', 'ok', timeout=30)
-        if cache.get('health_check') != 'ok':
+        cache.set("health_check", "ok", timeout=30)
+        if cache.get("health_check") != "ok":
             raise ValueError("Cache not working")
 
         return Response("OK", content_type="text/plain")
