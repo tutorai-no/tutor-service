@@ -8,7 +8,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from accounts.models import Subscription, SubscriptionHistory
+from accounts.models import Document, Subscription, SubscriptionHistory
 
 
 User = get_user_model()
@@ -157,6 +157,11 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
         fields = ['id', 'subscription', 'start_date', 'end_date']
         read_only_fields = ['id', 'subscription', 'start_date', 'end_date']
 
+class DocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = ['id', 'name', 'start_page', 'end_page']
+        read_only_fields = ['id']
 
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
@@ -186,25 +191,31 @@ class UserProfileSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-
+    documents = DocumentSerializer(many=True, required=False)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'subscription', 'subscription_id')
-
+        fields = ('username', 'email', 'first_name', 'last_name', 'subscription', 'subscription_id', 'documents')
 
     def update(self, instance, validated_data):
-        # Extract subscription_id from validated_data
-        subscription_id = validated_data.pop('subscription_id', None)
+        # Extract subscription_id and documents from validated_data
+        subscription = validated_data.pop('subscription', None)
+        documents_data = validated_data.pop('documents', None)
 
-        # Update other fields
+        # Update user fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         # Update subscription if provided
-        if subscription_id is not None:
-            instance.subscription = subscription_id
+        if subscription is not None:
+            instance.subscription = subscription
 
-        # Save the instance
+        # Save the user instance
         instance.save()
+
+        # Handle documents
+        if documents_data:
+            for doc_data in documents_data:
+                Document.objects.create(user=instance, **doc_data)
+
         return instance
