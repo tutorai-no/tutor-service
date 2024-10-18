@@ -1,5 +1,12 @@
-from learning_materials.knowledge_base.db_interface import Database, MockDatabase, MongoDB
-from learning_materials.knowledge_base.embeddings import EmbeddingsModel, OpenAIEmbedding
+from learning_materials.knowledge_base.db_interface import (
+    Database,
+    MockDatabase,
+    MongoDB,
+)
+from learning_materials.knowledge_base.embeddings import (
+    EmbeddingsModel,
+    OpenAIEmbedding,
+)
 
 
 def create_database(database_system: str = "mongodb") -> Database:

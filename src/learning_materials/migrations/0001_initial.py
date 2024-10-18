@@ -15,51 +15,135 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Cardset',
+            name="Cardset",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('name', models.CharField(help_text='The name of the cardset', max_length=100)),
-                ('description', models.TextField(help_text='The description of the cardset')),
-                ('subject', models.CharField(default='Unknown', help_text='The subject of the cardset', max_length=100)),
-                ('user', models.ForeignKey(help_text='The user who created this cardset', on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="The name of the cardset", max_length=100
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(help_text="The description of the cardset"),
+                ),
+                (
+                    "subject",
+                    models.CharField(
+                        default="Unknown",
+                        help_text="The subject of the cardset",
+                        max_length=100,
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        help_text="The user who created this cardset",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='FlashcardModel',
+            name="FlashcardModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('front', models.TextField(help_text='The front of the flashcard')),
-                ('back', models.TextField(help_text='The back of the flashcard')),
-                ('cardset', models.ForeignKey(help_text='The cardset to which the flashcard belongs', on_delete=django.db.models.deletion.CASCADE, to='learning_materials.cardset')),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                ("front", models.TextField(help_text="The front of the flashcard")),
+                ("back", models.TextField(help_text="The back of the flashcard")),
+                (
+                    "cardset",
+                    models.ForeignKey(
+                        help_text="The cardset to which the flashcard belongs",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="learning_materials.cardset",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='QuizModel',
+            name="QuizModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('document_name', models.CharField(default='unknown', help_text='The name of the document', max_length=100)),
-                ('start', models.IntegerField(default=1, help_text='The starting page of the quiz')),
-                ('end', models.IntegerField(default=1, help_text='The ending page of the quiz')),
-                ('users', models.ManyToManyField(help_text='Users associated with this quiz', related_name='quizzes', to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "document_name",
+                    models.CharField(
+                        default="unknown",
+                        help_text="The name of the document",
+                        max_length=100,
+                    ),
+                ),
+                (
+                    "start",
+                    models.IntegerField(
+                        default=1, help_text="The starting page of the quiz"
+                    ),
+                ),
+                (
+                    "end",
+                    models.IntegerField(
+                        default=1, help_text="The ending page of the quiz"
+                    ),
+                ),
+                (
+                    "users",
+                    models.ManyToManyField(
+                        help_text="Users associated with this quiz",
+                        related_name="quizzes",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='QuestionAnswerModel',
+            name="QuestionAnswerModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('question', models.TextField(help_text='The question part of the QA pair')),
-                ('answer', models.TextField(help_text='The answer part of the QA pair')),
-                ('quiz', models.ForeignKey(help_text='The quiz to which the question-answer pair belongs', on_delete=django.db.models.deletion.CASCADE, to='learning_materials.quizmodel')),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "question",
+                    models.TextField(help_text="The question part of the QA pair"),
+                ),
+                (
+                    "answer",
+                    models.TextField(help_text="The answer part of the QA pair"),
+                ),
+                (
+                    "quiz",
+                    models.ForeignKey(
+                        help_text="The quiz to which the question-answer pair belongs",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="learning_materials.quizmodel",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='MultipleChoiceQuestionModel',
+            name="MultipleChoiceQuestionModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('question', models.TextField(help_text='The question part of the multiple-choice question')),
-                ('options', models.JSONField(help_text='The list of options to choose from')),
-                ('answer', models.TextField(help_text='The correct answer to the question')),
-                ('quiz', models.ForeignKey(help_text='The quiz to which the multiple-choice question belongs', on_delete=django.db.models.deletion.CASCADE, to='learning_materials.quizmodel')),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "question",
+                    models.TextField(
+                        help_text="The question part of the multiple-choice question"
+                    ),
+                ),
+                (
+                    "options",
+                    models.JSONField(help_text="The list of options to choose from"),
+                ),
+                (
+                    "answer",
+                    models.TextField(help_text="The correct answer to the question"),
+                ),
+                (
+                    "quiz",
+                    models.ForeignKey(
+                        help_text="The quiz to which the multiple-choice question belongs",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="learning_materials.quizmodel",
+                    ),
+                ),
             ],
         ),
     ]

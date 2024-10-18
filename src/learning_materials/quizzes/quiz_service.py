@@ -8,11 +8,18 @@ from langchain_openai import ChatOpenAI
 
 from learning_materials.learning_resources import Quiz, GradedQuiz
 from learning_materials.knowledge_base.rag_service import get_page_range
-from learning_materials.learning_resources import GradedQuiz, Citation, QuestionAnswer, Quiz, MultipleChoiceQuestion
+from learning_materials.learning_resources import (
+    GradedQuiz,
+    Citation,
+    QuestionAnswer,
+    Quiz,
+    MultipleChoiceQuestion,
+)
 
 logger = logging.getLogger(__name__)
 
 llm = ChatOpenAI(temperature=0.0)
+
 
 def generate_quiz(
     document: str, start: int, end: int, learning_goals: list[str] = []
@@ -77,16 +84,10 @@ def generate_quiz(
         )
         questions.extend(quiz_data.questions)
 
-    return Quiz(
-        document_name=document,
-        start=start,
-        end=end,
-        questions=questions
-    )
+    return Quiz(document_name=document, start=start, end=end, questions=questions)
 
-def grade_quiz(
-    quiz: Quiz, student_answers: list[str]
-) -> GradedQuiz:
+
+def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
     """
     Grades the quiz based on the student answers.
     """
@@ -137,7 +138,7 @@ def grade_quiz(
         - `answers_was_correct`: A boolean list indicating if the student's answer is correct (e.g., `[true]` or `[false]`).
         - `feedback`: A list of strings providing constructive feedback for the student's answer and explanations for all options.
     """
-    
+
     short_answer_prompt = PromptTemplate(
         template=short_text_grading_prompt_template,
         input_variables=["question", "correct_answer", "student_answer"],
@@ -147,7 +148,6 @@ def grade_quiz(
         template=multiple_choice_grading_prompt_template,
         input_variables=["question", "correct_answer", "options", "student_answer"],
     )
-
 
     short_answer_chain = short_answer_prompt | llm | parser
     multiple_choice_chain = multiple_choice_prompt | llm | parser

@@ -23,7 +23,9 @@ class Database(ABC):
         )
 
     @abstractmethod
-    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Citation]:
+    def get_curriculum(
+        self, document_name: str, embedding: list[float]
+    ) -> list[Citation]:
         """
         Get the curriculum from the database
 
@@ -77,7 +79,9 @@ class MongoDB(Database):
         self.similarity_threshold = 0.7
         self.embeddings = OpenAIEmbedding()
 
-    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Citation]:
+    def get_curriculum(
+        self, document_name: str, embedding: list[float]
+    ) -> list[Citation]:
         # Checking if embedding consists of decimals or "none"
         if not embedding:
             raise ValueError("Embedding cannot be None")
@@ -189,12 +193,15 @@ class MockDatabase(Database):
     """
     A mock database for testing purposes, storing data in memory.
     """
+
     def __init__(self):
         # In-memory storage for mock data
         self.data = []
         self.similarity_threshold = 0.7
 
-    def get_curriculum(self, document_name: str, embedding: list[float]) -> list[Citation]:
+    def get_curriculum(
+        self, document_name: str, embedding: list[float]
+    ) -> list[Citation]:
         if not embedding:
             raise ValueError("Embedding cannot be None")
 
@@ -209,38 +216,44 @@ class MockDatabase(Database):
                         Citation(
                             text=document["text"],
                             page_num=document["page_num"],
-                            document_name=document["document_name"]
+                            document_name=document["document_name"],
                         )
                     )
         return results
 
-    def get_page_range(self, document_name: str, page_num_start: int, page_num_end: int) -> list[Citation]:
+    def get_page_range(
+        self, document_name: str, page_num_start: int, page_num_end: int
+    ) -> list[Citation]:
         results = []
 
         # Filter documents based on document_name and page range
         for document in self.data:
             if (
-                document["document_name"] == document_name and 
-                page_num_start <= document["page_num"] <= page_num_end
+                document["document_name"] == document_name
+                and page_num_start <= document["page_num"] <= page_num_end
             ):
                 results.append(
                     Citation(
                         text=document["text"],
                         page_num=document["page_num"],
-                        document_name=document["document_name"]
+                        document_name=document["document_name"],
                     )
                 )
         return results
 
-    def post_curriculum(self, curriculum: str, page_num: int, document_name: str, embedding: list[float]) -> bool:
+    def post_curriculum(
+        self, curriculum: str, page_num: int, document_name: str, embedding: list[float]
+    ) -> bool:
         if not curriculum or not document_name or page_num is None or not embedding:
             raise ValueError("All parameters are required and must be valid")
 
         # Append a new document to the in-memory storage
-        self.data.append({
-            "text": curriculum,
-            "page_num": page_num,
-            "document_name": document_name,
-            "embedding": embedding
-        })
+        self.data.append(
+            {
+                "text": curriculum,
+                "page_num": page_num,
+                "document_name": document_name,
+                "embedding": embedding,
+            }
+        )
         return True

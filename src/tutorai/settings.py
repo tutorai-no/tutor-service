@@ -22,7 +22,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-f=vaz!(p7-=5(ufwm+*dg18-7a^d_^gxmmmq=ovx2n=+vsv8=p")
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-f=vaz!(p7-=5(ufwm+*dg18-7a^d_^gxmmmq=ovx2n=+vsv8=p",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -32,33 +35,31 @@ ALLOWED_HOSTS = ["46.101.107.247", "backend.tutorai.no", "localhost"]
 CSRF_TRUSTED_ORIGINS = [
     "https://backend.tutorai.no",
     "https://46.101.107.247",
-    "http://localhost:8000"
+    "http://localhost:8000",
 ]
 
-CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_HTTPONLY = False  # Allows Swagger UI to access CSRF token
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
 SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'JWT': {
-            'type': 'http',
-            'scheme': 'Bearer',
-            'in': 'header',                  
+    "SECURITY_DEFINITIONS": {
+        "JWT": {
+            "type": "http",
+            "scheme": "Bearer",
+            "in": "header",
         }
     },
 }
 
-LOGIN_URL = '/admin/login/'
+LOGIN_URL = "/admin/login/"
 # Application definition
 
 INSTALLED_APPS = [
@@ -131,7 +132,7 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'accounts.CustomUser'
+AUTH_USER_MODEL = "accounts.CustomUser"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -179,22 +180,22 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "BLACKLIST_AFTER_ROTATION": True,
     "ROTATE_REFRESH_TOKENS": True,
-    "AUTH_HEADER_TYPES": ('Bearer',),
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'no-reply@example.com'
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "no-reply@example.com"
 
 
 LOG_LEVEL = os.getenv("LOGGING_LEVEL") or "INFO"

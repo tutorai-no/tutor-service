@@ -6,12 +6,13 @@ from tutorai import settings
 
 class Cardset(models.Model):
     """Model to store cardsets"""
+
     id = models.AutoField(primary_key=True)
-    name = models.CharField(
-        max_length=100, help_text="The name of the cardset")
+    name = models.CharField(max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
     subject = models.CharField(
-        max_length=100, help_text="The subject of the cardset", default="Unknown")
+        max_length=100, help_text="The subject of the cardset", default="Unknown"
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -20,7 +21,9 @@ class Cardset(models.Model):
 
     def get_flashcards_to_review(self):
         """Get the flashcards that need to be reviewed"""
-        return FlashcardModel.objects.filter(cardset=self, time_of_next_review__lte=datetime.now())
+        return FlashcardModel.objects.filter(
+            cardset=self, time_of_next_review__lte=datetime.now()
+        )
 
     def __str__(self):
         return self.name
@@ -28,15 +31,20 @@ class Cardset(models.Model):
 
 class FlashcardModel(models.Model):
     """Model to store flashcards"""
+
     id = models.AutoField(primary_key=True)
     front = models.TextField(help_text="The front of the flashcard")
     back = models.TextField(help_text="The back of the flashcard")
     proficiency = models.IntegerField(
-        help_text="The profeciency of the flashcard", default=0)
+        help_text="The profeciency of the flashcard", default=0
+    )
     time_of_next_review = models.DateTimeField(
-        help_text="The time of the next review", auto_now=True)
+        help_text="The time of the next review", auto_now=True
+    )
     cardset = models.ForeignKey(
-        Cardset, on_delete=models.CASCADE, help_text="The cardset to which the flashcard belongs"
+        Cardset,
+        on_delete=models.CASCADE,
+        help_text="The cardset to which the flashcard belongs",
     )
 
     def review(self, answer: bool, user) -> bool:
@@ -75,18 +83,18 @@ class FlashcardModel(models.Model):
 
 class QuizModel(models.Model):
     """Model to store quizzes"""
+
     id = models.AutoField(primary_key=True)
     document_name = models.CharField(
-        max_length=100, help_text="The name of the document", default="unknown")
-    start = models.IntegerField(
-        help_text="The starting page of the quiz", default=1)
-    end = models.IntegerField(
-        help_text="The ending page of the quiz", default=1)
+        max_length=100, help_text="The name of the document", default="unknown"
+    )
+    start = models.IntegerField(help_text="The starting page of the quiz", default=1)
+    end = models.IntegerField(help_text="The ending page of the quiz", default=1)
 
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name='quizzes',
-        help_text="Users associated with this quiz"
+        related_name="quizzes",
+        help_text="Users associated with this quiz",
     )
 
     def __str__(self):
@@ -95,11 +103,14 @@ class QuizModel(models.Model):
 
 class QuestionAnswerModel(models.Model):
     """Model to store question-answer pairs"""
+
     id = models.AutoField(primary_key=True)
     question = models.TextField(help_text="The question part of the QA pair")
     answer = models.TextField(help_text="The answer part of the QA pair")
     quiz = models.ForeignKey(
-        QuizModel, on_delete=models.CASCADE, help_text="The quiz to which the question-answer pair belongs"
+        QuizModel,
+        on_delete=models.CASCADE,
+        help_text="The quiz to which the question-answer pair belongs",
     )
 
     def __str__(self):
@@ -108,13 +119,17 @@ class QuestionAnswerModel(models.Model):
 
 class MultipleChoiceQuestionModel(models.Model):
     """Model to store multiple-choice questions"""
+
     id = models.AutoField(primary_key=True)
     question = models.TextField(
-        help_text="The question part of the multiple-choice question")
+        help_text="The question part of the multiple-choice question"
+    )
     options = models.JSONField(help_text="The list of options to choose from")
     answer = models.TextField(help_text="The correct answer to the question")
     quiz = models.ForeignKey(
-        QuizModel, on_delete=models.CASCADE, help_text="The quiz to which the multiple-choice question belongs"
+        QuizModel,
+        on_delete=models.CASCADE,
+        help_text="The quiz to which the multiple-choice question belongs",
     )
 
     def __str__(self):
@@ -123,7 +138,11 @@ class MultipleChoiceQuestionModel(models.Model):
 
 class ChatHistory(models.Model):
     chat_id = models.CharField(max_length=255, unique=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_histories')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="chat_histories",
+    )
     messages = models.JSONField(default=list, help_text="List of chat messages")
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(auto_now=True)
