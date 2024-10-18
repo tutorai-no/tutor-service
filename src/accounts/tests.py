@@ -578,6 +578,24 @@ class UserProfileTests(APITestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, 'Jane')
 
+    def test_partial_update_profile_with_document(self):
+        self.authenticate()
+        data = {
+            'first_name': 'Jane',
+            'documents': [
+                {
+                    'name': 'Document 1',
+                    'start_page': 1,
+                    'end_page': 5
+                }
+            ]
+        }
+        response = self.client.patch(self.profile_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Jane')
+        self.assertEqual(self.user.documents.count(), 1)
+
     def test_access_profile_without_authentication(self):
         response = self.client.get(self.profile_url, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
