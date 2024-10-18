@@ -553,6 +553,16 @@ class UserProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], 'profileuser')
         self.assertEqual(response.data['email'], 'profile@example.com')
+    
+    def test_retrieve_profile_with_documents(self):
+        self.authenticate()
+        self.client.patch(self.profile_url, {'documents': [{'name': 'Document 1', 'start_page': 1, 'end_page': 5}]}, format='json')
+        self.user.refresh_from_db()
+        response = self.client.get(self.profile_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], self.user.username)
+        self.assertEqual(response.data['email'], self.user.email)
+        self.assertEqual(len(response.data['documents']), 1)
 
     def test_update_profile_success(self):
         self.authenticate()
