@@ -564,6 +564,10 @@ class UserProfileTests(APITestCase):
         self.assertEqual(response.data['email'], self.user.email)
         self.assertEqual(len(response.data['documents']), 1)
 
+    def test_retrieve_profile_without_authentication(self):
+        response = self.client.get(self.profile_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_update_profile_success(self):
         self.authenticate()
         data = {
