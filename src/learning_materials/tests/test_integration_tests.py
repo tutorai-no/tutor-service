@@ -1,9 +1,12 @@
 import time
 import uuid
+import re
+
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
-from django.urls import reverse
+from rest_framework import status
 from rest_framework.test import APIClient
+
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
     parse_for_anki,
@@ -18,8 +21,6 @@ from learning_materials.models import (
 )
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Citation
-import re
-from rest_framework import status
 from learning_materials.knowledge_base.rag_service import post_context
 from accounts.models import CustomUser
 
@@ -36,7 +37,12 @@ class FlashcardGenerationTest(TestCase):
         self.valid_document_name = "test.pdf"
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
-        self.context = """Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. The Jedi are spread across the galaxy in a full-scale war against the Separatists. The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to defeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. Meanwhile, after having visions of his wife Padmé Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic and, secretly, a Sith Lord. Palpatine manipulates Anakin into turning to the dark side of the Force and becoming his apprentice, Darth Vader, with wide-ranging consequences for the galaxy."""
+        self.context = """
+            Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. 
+            The Jedi are spread across the galaxy in a full-scale war against the Separatists. 
+            The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to defeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. 
+            Meanwhile, after having visions of his wife Padmé Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic and, secretly, a Sith Lord.
+            Palpatine manipulates Anakin into turning to the dark side of the Force and becoming his apprentice, Darth Vader, with wide-ranging consequences for the galaxy."""
 
         self.user = User.objects.create_user(
             username="flashcardsuser",
@@ -339,12 +345,9 @@ class CardsetCRUDTest(TestCase):
             subject="Test Subject",
             user=self.user,
         )
-        flashcard1 = FlashcardModel.objects.create(
-            front="Front 1", back="Back 1", cardset=cardset
-        )
-        flashcard2 = FlashcardModel.objects.create(
-            front="Front 2", back="Back 2", cardset=cardset
-        )
+        # Create some flashcards
+        FlashcardModel.objects.create(front="Front 1", back="Back 1", cardset=cardset)
+        FlashcardModel.objects.create(front="Front 2", back="Back 2", cardset=cardset)
         # Ensure flashcards exist
         self.assertEqual(FlashcardModel.objects.filter(cardset=cardset).count(), 2)
         # Delete the cardset
@@ -537,6 +540,8 @@ class CardsetExportTest(TestCase):
             user=self.other_user,
         )
 
+        self.non_existent_cardset_id = 9999
+
     def test_export_flashcards_success(self):
         url = f"/api/flashcards/export/{self.cardset.id}/"
         response = self.client.get(url)
@@ -557,7 +562,7 @@ class CardsetExportTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_export_flashcards_cardset_not_found(self):
-        url = f"/api/flashcards/export/9999/"  # Non-existent ID
+        url = f"/api/flashcards/export/{self.non_existent_cardset_id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
