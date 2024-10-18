@@ -1,7 +1,6 @@
 import logging
 import openai
 
-from learning_materials.learning_resources import QuestionAnswer
 from config import Config
 
 # The api_key:
