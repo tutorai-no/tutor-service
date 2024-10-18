@@ -2,17 +2,15 @@ import logging
 from typing import List, Union
 
 from langchain.output_parsers import PydanticOutputParser
-from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
-from learning_materials.learning_resources import Quiz, GradedQuiz
+from learning_materials.learning_resources import Quiz
+from learning_materials.learning_resources import GradedQuiz
 from learning_materials.knowledge_base.rag_service import get_page_range
 from learning_materials.learning_resources import (
-    GradedQuiz,
     Citation,
     QuestionAnswer,
-    Quiz,
     MultipleChoiceQuestion,
 )
 
@@ -94,7 +92,7 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
     if not (len(quiz.questions) == len(student_answers)):
         raise ValueError("All input lists must have the same length.")
 
-    logger.info(f"Grading quiz")
+    logger.info("Grading quiz")
 
     # Initialize the parser for GradedQuiz
     parser = PydanticOutputParser(pydantic_object=GradedQuiz)
