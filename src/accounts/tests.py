@@ -707,3 +707,33 @@ class UserProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user.refresh_from_db()
         self.assertEqual(user.subscription, premium)
+
+class UserFeedbackTests(APITestCase):
+    def setUp(self):
+        self.feedback_url = reverse("feedback")
+        self.user = User.objects.create_user(
+            username="feedbackuser", email="feedback@gmail.com", password="StrongP@ss1"
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        
+    def authenticate(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+
+    def test_feedback_success(self):
+        self.authenticate()
+        data = {
+            "feedbackType": "Bug Report",
+            "feedbackText": "Test Feedback",
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_unauthenticated_feedback(self):
+        data = {
+            "feedbackType": "Bug Report",
+            "feedbackText": "Test Feedback",
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+

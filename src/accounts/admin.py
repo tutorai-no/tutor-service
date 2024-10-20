@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from accounts.models import CustomUser, Document, Subscription, SubscriptionHistory
+from accounts.models import CustomUser, Document, Feedback, Subscription, SubscriptionHistory
 
 
 @admin.register(CustomUser)
@@ -11,6 +11,8 @@ class CustomUserAdmin(UserAdmin):
 
 
 admin.site.register(Document)
+admin.site.register(Feedback)
+
 
 
 @admin.register(Subscription)

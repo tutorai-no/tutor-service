@@ -10,6 +10,7 @@ from accounts.views import (
     RegisterView,
     SubscriptionListView,
     SubscriptionHistoryView,
+    UserFeedback,
     UserProfileView,
 )
 from api.views import health_check
@@ -69,5 +70,6 @@ urlpatterns = [
         SubscriptionHistoryView.as_view(),
         name="subscription_history",
     ),
+    path("feedback/", UserFeedback.as_view(), name="feedback"),
     path("", include(router.urls)),
 ]
