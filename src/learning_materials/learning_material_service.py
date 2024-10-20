@@ -3,6 +3,7 @@
 import logging
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import uuid
 
 from learning_materials.knowledge_base.response_formulation import (
     response_formulation,
@@ -21,15 +22,15 @@ from learning_materials.learning_resources import (
 logger = logging.getLogger(__name__)
 
 
-def process_flashcards(document_name: str, start: int, end: int) -> list[Flashcard]:
+def process_flashcards(document_id: uuid.UUID, start: int, end: int) -> list[Flashcard]:
     """
     Generate flashcards for a specific page range and file
     """
     logger.info("Trying to find relevant document")
-    pages = get_page_range(document_name, start, end)
+    pages = get_page_range(document_id, start, end)
     logger.info(f"Found {len(pages)} pages in the document")
     flashcards: list[Flashcard] = []
-    logger.info(f"Generating flashcards for {document_name} from page {start} to {end}")
+    logger.info(f"Generating flashcards for {document_id} from page {start} to {end}")
 
     # Use ThreadPoolExecutor to parallelize the API calls
     with ThreadPoolExecutor() as executor:
@@ -44,13 +45,15 @@ def process_flashcards(document_name: str, start: int, end: int) -> list[Flashca
 
 
 def process_answer(
-    documents: list[str], user_question: str, chat_history: list[dict[str, str]]
+    document_ids: list[uuid.UUID],
+    user_question: str,
+    chat_history: list[dict[str, str]],
 ) -> RagAnswer:
 
     # Get a list of relevant contexts from the database
     curriculum: list[Citation] = []
-    for document_name in documents:
-        curriculum.extend(get_context(document_name, user_question))
+    for document_id in document_ids:
+        curriculum.extend(get_context(document_id, user_question))
 
     # Handle case when no context is available
     if len(curriculum) == 0:

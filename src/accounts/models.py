@@ -1,3 +1,4 @@
+import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -52,12 +53,21 @@ class Document(models.Model):
     Model representing documents.
     """
 
-    id = models.AutoField(primary_key=True)
+    # UUID for document
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     start_page = models.IntegerField(default=1)
     end_page = models.IntegerField(default=1)
+    subject = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="The subject of the document",
+    )
+    learning_goals = models.JSONField(
+        default=list, help_text="List of learning goals", blank=True
+    )
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="documents"
     )

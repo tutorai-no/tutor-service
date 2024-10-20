@@ -10,9 +10,10 @@ class ChatSerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Unique identifier for the chat session.",
     )
-    documentId = serializers.CharField(
-        help_text="Identifier for the selected curriculum document."
+    documentId = serializers.UUIDField(
+        help_text="The ID of the document being discussed.",
     )
+
     message = serializers.CharField(help_text="The user message.")
 
     def validate(self, data: dict) -> dict:
@@ -26,42 +27,6 @@ class ChatSerializer(serializers.Serializer):
         else:
             # Generate a new chatId
             data["chatId"] = str(uuid.uuid4())
-        return data
-
-
-class DocumentSerializer(serializers.Serializer):
-    # The name of the pdf file
-    document = serializers.CharField(
-        help_text="The name of the document file",
-    )
-
-    # The start index
-    start = serializers.IntegerField(
-        help_text="The start index",
-    )
-
-    # The end index
-    end = serializers.IntegerField(
-        help_text="The end index",
-    )
-
-    subject = serializers.CharField(
-        help_text="The subject of the quiz",
-    )
-
-    # The learning goals
-    learning_goals = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="The learning goals",
-        required=False,  # Make the field optional
-    )
-
-    # Check if the start index is less than the end index
-    def validate(self, data: dict) -> dict:
-        if data["start"] > data["end"]:
-            raise serializers.ValidationError(
-                "The start index must be less than the end index"
-            )
         return data
 
 

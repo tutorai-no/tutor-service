@@ -68,8 +68,8 @@ class QuizGenerationTests(TestCase):
         # Check the quiz object
         self.assertIsInstance(quiz, Quiz)
         self.assertEqual(quiz.document_name, document_name)
-        self.assertEqual(quiz.start, start)
-        self.assertEqual(quiz.end, end)
+        self.assertEqual(quiz.start_page, start)
+        self.assertEqual(quiz.end_page, end)
 
         self.assertGreaterEqual(len(quiz.questions), 2)
 
@@ -94,8 +94,8 @@ class QuizGradingTests(TestCase):
         # A diverse quiz with mixed types of questions
         self.diverse_quiz = Quiz(
             document_name="test_document.pdf",
-            start=1,
-            end=2,
+            start_page=1,
+            end_page=2,
             questions=[
                 MultipleChoiceQuestion(
                     question="What is the capital of France?",
@@ -115,8 +115,8 @@ class QuizGradingTests(TestCase):
         # A quiz with only multiple-choice questions
         self.only_multiple_choice_quiz = Quiz(
             document_name="test_document.pdf",
-            start=1,
-            end=2,
+            start_page=1,
+            end_page=2,
             questions=[
                 MultipleChoiceQuestion(
                     question="What is the capital of France?",
@@ -134,8 +134,8 @@ class QuizGradingTests(TestCase):
         # A quiz with only question-answer type questions
         self.only_question_answer_quiz = Quiz(
             document_name="test_document.pdf",
-            start=1,
-            end=2,
+            start_page=1,
+            end_page=2,
             questions=[
                 QuestionAnswer(question="What is 2 + 2?", answer="4"),
                 QuestionAnswer(

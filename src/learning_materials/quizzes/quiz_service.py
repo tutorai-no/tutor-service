@@ -20,13 +20,13 @@ llm = ChatOpenAI(temperature=0.0)
 
 
 def generate_quiz(
-    document: str, start: int, end: int, learning_goals: list[str] = []
+    document_id: str, start: int, end: int, learning_goals: list[str] = []
 ) -> Quiz:
     """
     Generates a quiz for the specified document and page range based on learning goals.
     """
 
-    logger.info(f"Generating quiz for document {document}")
+    logger.info(f"Generating quiz for document {document_id}")
     if start > end:
         raise ValueError(
             "The start index of the document cannot be after the end index!"
@@ -49,8 +49,8 @@ def generate_quiz(
 
         Please format your response as a JSON object matching the Quiz model with these exact keys:
         - "document_name": (string) The name of the document.
-        - "start": (integer) The starting page number of the quiz.
-        - "end": (integer) The ending page number of the quiz.
+        - "start_page": (integer) The starting page number of the quiz.
+        - "end_page": (integer) The ending page number of the quiz.
         - "questions": (list) A list of questions, where each question is either:
             - A QuestionAnswer object with:
                 - "question": (string) The question text.
@@ -69,9 +69,11 @@ def generate_quiz(
 
     # Generate the quiz questions
     questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
-    pages: List[Citation] = get_page_range(document, start, end)
+    pages: List[Citation] = get_page_range(document_id, start, end)
 
+    document_name = ""
     for page in pages:
+        document_name = page.document_name
         # Chain to determine the quiz questions for each page
         quiz_data = chain.invoke(
             {
@@ -82,7 +84,9 @@ def generate_quiz(
         )
         questions.extend(quiz_data.questions)
 
-    return Quiz(document_name=document, start=start, end=end, questions=questions)
+    return Quiz(
+        document_name=document_name, start_page=start, end_page=end, questions=questions
+    )
 
 
 def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:

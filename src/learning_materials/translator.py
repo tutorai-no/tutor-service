@@ -27,7 +27,7 @@ def translate_quiz_to_orm_model(quiz: Quiz, users: list[CustomUser]) -> QuizMode
     """Translate a Quiz Pydantic model to an ORM model and associate with users."""
     # Create all the questions and answers for the quiz
     quiz_model = QuizModel.objects.create(
-        document_name=quiz.document_name, start=quiz.start, end=quiz.end
+        document_name=quiz.document_name, start=quiz.start_page, end=quiz.end_page
     )
 
     # Associate the quiz with multiple users
@@ -66,8 +66,8 @@ def translate_quiz_to_pydantic_model(quiz: QuizModel) -> Quiz:
     """Translate a Quiz ORM model to a Pydantic model."""
     return Quiz(
         document_name=quiz.document_name,
-        start=quiz.start,
-        end=quiz.end,
+        start_page=quiz.start,
+        end_page=quiz.end,
         questions=[
             QuestionAnswer(question=qa.question, answer=qa.answer)
             for qa in quiz.questionanswermodel_set.all()

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import uuid
 from config import Config
 from pymongo import MongoClient
 import logging
@@ -31,14 +32,14 @@ class Database(ABC):
 
     @abstractmethod
     def get_curriculum(
-        self, document_name: str, embedding: list[float]
+        self, document_id: uuid.UUID, embedding: list[float]
     ) -> list[Citation]:
         """
         Get the curriculum from the database
 
         Args:
+            document_id (str): The id of the document to use
             embedding (list[float]): The embedding of the question
-            document_name (str): The name of the document to use
 
         Returns:
             list[str]: The curriculum related to the question
@@ -47,12 +48,13 @@ class Database(ABC):
 
     @abstractmethod
     def get_page_range(
-        self, document_name: str, page_num_start: int, page_num_end: int
+        self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
     ) -> list[Citation]:
         """
         Retrieves a range of pages from the knowledge base.
 
         Args:
+            document_id (str): The ID of the document to retrieve the pages from.
             page_num_start (int): The starting page number (inclusive).
             page_num_end (int): The ending page number (inclusive).
 
@@ -63,7 +65,12 @@ class Database(ABC):
 
     @abstractmethod
     def post_curriculum(
-        self, curriculum: str, page_num: int, document_name: str, embedding: list[float]
+        self,
+        curriculum: str,
+        page_num: int,
+        document_name: str,
+        embedding: list[float],
+        document_id: uuid.UUID,
     ) -> bool:
         """
         Post the curriculum to the database
@@ -87,7 +94,7 @@ class MongoDB(Database):
         self.embeddings = OpenAIEmbedding()
 
     def get_curriculum(
-        self, document_name: str, embedding: list[float]
+        self, document_id: uuid.UUID, embedding: list[float]
     ) -> list[Citation]:
         # Checking if embedding consists of decimals or "none"
         if not embedding:
@@ -118,7 +125,7 @@ class MongoDB(Database):
 
         # Filter out the documents with low similarity
         for document in documents:
-            if document["documentName"] != document_name:
+            if document["documentId"] != str(document_id):
                 continue
 
             if (
@@ -136,12 +143,12 @@ class MongoDB(Database):
         return results
 
     def get_page_range(
-        self, document_name: str, page_num_start: int, page_num_end: int
+        self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
     ) -> list[Citation]:
         # Get the curriculum from the database
         cursor = self.collection.find(
             {
-                "documentName": document_name,
+                "documentId": str(document_id),
                 "pageNum": {"$gte": page_num_start, "$lte": page_num_end},
             }
         )
@@ -163,7 +170,12 @@ class MongoDB(Database):
         return results
 
     def post_curriculum(
-        self, curriculum: str, page_num: int, document_name: str, embedding: list[float]
+        self,
+        curriculum: str,
+        page_num: int,
+        document_name: str,
+        embedding: list[float],
+        document_id: uuid.UUID,
     ) -> bool:
         if not curriculum:
             raise ValueError("Curriculum cannot be None")
@@ -180,6 +192,9 @@ class MongoDB(Database):
         if not document_name:
             raise ValueError("Document name cannot be None")
 
+        if not document_id:
+            raise ValueError("Document ID cannot be None")
+
         try:
             # Insert the curriculum into the database with metadata
             self.collection.insert_one(
@@ -188,11 +203,11 @@ class MongoDB(Database):
                     "pageNum": page_num,
                     "documentName": document_name,
                     "embedding": embedding,
+                    "documentId": str(document_id),
                 }
             )
             return True
         except Exception as e:
-            # Handle the specific exception
             logger.error(f"Error posting curriculum: {e}")
             return False
 
@@ -200,15 +215,26 @@ class MongoDB(Database):
 class MockDatabase(Database):
     """
     A mock database for testing purposes, storing data in memory.
+    Singleton implementation to ensure only one instance exists.
     """
 
+    _instance = None  # Class variable to hold the singleton instance
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            # If no instance exists, create one
+            cls._instance = super(MockDatabase, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
     def __init__(self):
-        # In-memory storage for mock data
-        self.data = []
-        self.similarity_threshold = 0.7
+        # Initialize only once (avoiding resetting on subsequent calls)
+        if not hasattr(self, "initialized"):
+            self.data = []  # In-memory storage for mock data
+            self.similarity_threshold = 0.7
+            self.initialized = True
 
     def get_curriculum(
-        self, document_name: str, embedding: list[float]
+        self, document_id: uuid.UUID, embedding: list[float]
     ) -> list[Citation]:
         if not embedding:
             raise ValueError("Embedding cannot be None")
@@ -217,40 +243,45 @@ class MockDatabase(Database):
 
         # Filter documents based on similarity and document_name
         for document in self.data:
-            if document["document_name"] == document_name:
+            if document["documentId"] == str(document_id):
                 similarity = cosine_similarity(embedding, document["embedding"])
                 if similarity > self.similarity_threshold:
                     results.append(
                         Citation(
                             text=document["text"],
-                            page_num=document["page_num"],
-                            document_name=document["document_name"],
+                            page_num=document["pageNum"],
+                            document_name=document["documentName"],
                         )
                     )
         return results
 
     def get_page_range(
-        self, document_name: str, page_num_start: int, page_num_end: int
+        self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
     ) -> list[Citation]:
         results = []
 
         # Filter documents based on document_name and page range
         for document in self.data:
             if (
-                document["document_name"] == document_name
-                and page_num_start <= document["page_num"] <= page_num_end
+                document["documentId"] == str(document_id)
+                and page_num_start <= document["pageNum"] <= page_num_end
             ):
                 results.append(
                     Citation(
                         text=document["text"],
-                        page_num=document["page_num"],
-                        document_name=document["document_name"],
+                        page_num=document["pageNum"],
+                        document_name=document["documentName"],
                     )
                 )
         return results
 
     def post_curriculum(
-        self, curriculum: str, page_num: int, document_name: str, embedding: list[float]
+        self,
+        curriculum: str,
+        page_num: int,
+        document_name: str,
+        embedding: list[float],
+        document_id: str,
     ) -> bool:
         if not curriculum or not document_name or page_num is None or not embedding:
             raise ValueError("All parameters are required and must be valid")
@@ -259,9 +290,10 @@ class MockDatabase(Database):
         self.data.append(
             {
                 "text": curriculum,
-                "page_num": page_num,
-                "document_name": document_name,
+                "pageNum": page_num,
+                "documentName": document_name,
                 "embedding": embedding,
+                "documentId": str(document_id),
             }
         )
         return True

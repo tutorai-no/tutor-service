@@ -28,11 +28,12 @@ from learning_materials.compendiums.compendium_service import generate_compendiu
 from learning_materials.serializer import (
     CardsetSerializer,
     ChatSerializer,
-    DocumentSerializer,
     FlashcardSerializer,
     ReviewFlashcardSerializer,
     QuizStudentAnswer,
 )
+from accounts.serializers import DocumentSerializer
+from accounts.models import Document
 
 
 class FlashcardCreationView(GenericAPIView):
@@ -69,14 +70,15 @@ class FlashcardCreationView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            file_name = serializer.validated_data.get("document")
-            start = serializer.validated_data.get("start")
-            end = serializer.validated_data.get("end")
+            document_id = serializer.validated_data.get("id")
+            start = serializer.validated_data.get("start_page")
+            end = serializer.validated_data.get("end_page")
             subject = serializer.validated_data.get("subject")
             user = request.user
 
-            flashcards = process_flashcards(file_name, start, end)
-            cardset_name = f"{file_name}_{start}_{end}"
+            flashcards = process_flashcards(document_id, start, end)
+            document = Document.objects.get(id=document_id)
+            cardset_name = f"{document.name}_{start}_{end}"
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
@@ -343,7 +345,7 @@ class QuizCreationView(GenericAPIView):
                 description="Quiz created successfully",
                 examples={
                     "application/json": {
-                        "document": "Sample.pdf",
+                        "id": "94d07cab-569b-40af-baf9-f2d3880a18e3",
                         "start": 1,
                         "end": 10,
                         "questions": [
@@ -370,10 +372,10 @@ class QuizCreationView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            document = serializer.validated_data.get("document")
-            start = serializer.validated_data.get("start")
-            end = serializer.validated_data.get("end")
-            quiz = generate_quiz(document, start, end)
+            document_id = serializer.validated_data.get("id")
+            start = serializer.validated_data.get("start_page")
+            end = serializer.validated_data.get("end_page")
+            quiz = generate_quiz(document_id, start, end)
 
             # Retrieve the authenticated user
             user = request.user
@@ -449,10 +451,10 @@ class CompendiumCreationView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            document = serializer.validated_data.get("document")
-            start = serializer.validated_data.get("start")
-            end = serializer.validated_data.get("end")
-            compendium = generate_compendium(document, start, end)
+            document_id = serializer.validated_data.get("id")
+            start = serializer.validated_data.get("start_page")
+            end = serializer.validated_data.get("end_page")
+            compendium = generate_compendium(document_id, start, end)
             response = compendium.model_dump()
             return Response(response, status=status.HTTP_200_OK)
         else:
