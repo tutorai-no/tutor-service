@@ -1,6 +1,7 @@
 import time
 import uuid
 import re
+from uuid import uuid4
 
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
@@ -22,7 +23,7 @@ from learning_materials.models import (
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Citation
 from learning_materials.knowledge_base.rag_service import post_context
-from accounts.models import CustomUser
+from accounts.models import CustomUser, Document
 
 base = "/api/"
 
@@ -35,6 +36,7 @@ class FlashcardGenerationTest(TestCase):
 
         self.url = f"{base}flashcards/create/"
         self.valid_document_name = "test.pdf"
+        self.valid_document_id = str(uuid4())
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
         self.context = """
@@ -50,10 +52,17 @@ class FlashcardGenerationTest(TestCase):
             password="StrongP@ss1",
         )
         self.client.force_authenticate(user=self.user)
-
         # Populate rag database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
-            post_context(self.context, i, self.valid_document_name)
+            post_context(
+                self.context, i, self.valid_document_name, self.valid_document_id
+            )
+
+        Document.objects.create(
+            id=self.valid_document_id,
+            name=self.valid_document_name,
+            user=self.user,
+        )
 
     def test_generate_flashcards(self):
         page = Citation(
@@ -91,9 +100,9 @@ class FlashcardGenerationTest(TestCase):
     def test_valid_request(self):
         self.assertFalse(Cardset.objects.exists())
         valid_response = {
-            "document": self.valid_document_name,
-            "start": self.valid_page_num_start,
-            "end": self.valid_page_num_end,
+            "id": self.valid_document_id,
+            "start_page": self.valid_page_num_start,
+            "end_page": self.valid_page_num_end,
             "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_response, format="json")
@@ -108,9 +117,9 @@ class FlashcardGenerationTest(TestCase):
     def test_invalid_end_start_index(self):
         self.assertFalse(Cardset.objects.exists())
         invalid_response = {
-            "document": self.valid_document_name,
-            "start": 1,
-            "end": 0,
+            "id": self.valid_document_id,
+            "start_page": 1,
+            "end_page": 0,
             "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_response, format="json")
@@ -585,6 +594,7 @@ class QuizGenerationTest(TestCase):
 
         # Define valid and invalid test data
         self.valid_document_name = "test.pdf"
+        self.valid_document_id = str(uuid4())
         self.invalid_document_name = "invalid.pdf"
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
@@ -596,7 +606,9 @@ class QuizGenerationTest(TestCase):
 
         # Populate RAG (Retrieval-Augmented Generation) database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
-            post_context(self.context, i, self.valid_document_name)
+            post_context(
+                self.context, i, self.valid_document_name, self.valid_document_id
+            )
 
     def test_invalid_request(self):
         """
@@ -621,9 +633,9 @@ class QuizGenerationTest(TestCase):
         self.assertFalse(QuizModel.objects.exists())
 
         valid_payload = {
-            "document": self.valid_document_name,
-            "start": self.valid_page_num_start,
-            "end": self.valid_page_num_end,
+            "id": self.valid_document_id,
+            "start_page": self.valid_page_num_start,
+            "end_page": self.valid_page_num_end,
             "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_payload, format="json")
@@ -640,8 +652,8 @@ class QuizGenerationTest(TestCase):
 
         # Verify the response data
         self.assertIn("document_name", response.data)
-        self.assertEqual(response.data["start"], self.valid_page_num_start)
-        self.assertEqual(response.data["end"], self.valid_page_num_end)
+        self.assertEqual(response.data["start_page"], self.valid_page_num_start)
+        self.assertEqual(response.data["end_page"], self.valid_page_num_end)
         self.assertIn("questions", response.data)
         self.assertIsInstance(response.data["questions"], list)
         # Ensure questions are present
@@ -662,9 +674,9 @@ class QuizGenerationTest(TestCase):
         self.assertFalse(QuizModel.objects.exists())
 
         valid_payload = {
-            "document": self.valid_document_name,
-            "start": self.valid_page_num_start,
-            "end": self.valid_page_num_end,
+            "id": self.valid_document_id,
+            "start_page": self.valid_page_num_start,
+            "end_page": self.valid_page_num_end,
             "subject": "Some subject",
             "learning_goals": ["goal1", "goal2"],
         }
@@ -682,8 +694,8 @@ class QuizGenerationTest(TestCase):
 
         # Verify the response data
         self.assertEqual(response.data["document_name"], self.valid_document_name)
-        self.assertEqual(response.data["start"], self.valid_page_num_start)
-        self.assertEqual(response.data["end"], self.valid_page_num_end)
+        self.assertEqual(response.data["start_page"], self.valid_page_num_start)
+        self.assertEqual(response.data["end_page"], self.valid_page_num_end)
 
         self.assertIn("questions", response.data)
         self.assertIsInstance(response.data["questions"], list)
@@ -704,9 +716,9 @@ class QuizGenerationTest(TestCase):
         self.assertFalse(QuizModel.objects.exists())
 
         invalid_payload = {
-            "document": self.valid_document_name,
-            "start": self.valid_page_num_end,  # start is greater than end
-            "end": self.valid_page_num_start,
+            "id": self.valid_document_id,
+            "start_page": self.valid_page_num_end,  # start is greater than end
+            "end_page": self.valid_page_num_start,
             "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_payload, format="json")
@@ -809,13 +821,17 @@ class CompendiumAPITest(TestCase):
         self.valid_document = "test.pdf"
         self.start_page = 1
         self.end_page = 10
+        self.valid_document_id = str(uuid4())
+
+        for i in range(self.start_page, self.end_page + 1):
+            post_context("Some context", i, self.valid_document, self.valid_document_id)
 
     def test_valid_request(self):
         """Test the create_compendium endpoint with a valid request."""
         valid_payload = {
-            "document": self.valid_document,
-            "start": self.start_page,
-            "end": self.end_page,
+            "id": self.valid_document_id,
+            "start_page": self.start_page,
+            "end_page": self.end_page,
             "subject": "Some subject",
         }
         response = self.client.post(
@@ -828,9 +844,9 @@ class CompendiumAPITest(TestCase):
     def test_invalid_page_range(self):
         """Test the create_compendium endpoint with an invalid page range (start > end)."""
         invalid_payload = {
-            "document": self.valid_document,
-            "start": 10,
-            "end": 1,
+            "id": self.valid_document_id,
+            "start_page": 10,
+            "end_page": 1,
             "subject": "Some subject",
         }
         response = self.client.post(
@@ -842,11 +858,17 @@ class CompendiumAPITest(TestCase):
         """Test the create_compendium endpoint with missing required parameters."""
         invalid_payloads = [
             {
-                "document": self.valid_document,
-                "start": self.start_page,
+                "id": self.valid_document_id,
+                "start_page": self.start_page,
             },  # missing 'end'
-            {"document": self.valid_document, "end": self.end_page},  # missing 'start'
-            {"start": self.start_page, "end": self.end_page},  # missing 'document'
+            {
+                "id": self.valid_document_id,
+                "end_page": self.end_page,
+            },  # missing 'start'
+            {
+                "start_page": self.start_page,
+                "end_page": self.end_page,
+            },  # missing 'document'
         ]
         for payload in invalid_payloads:
             response = self.client.post(
@@ -870,15 +892,28 @@ class ChatAssistantTest(TestCase):
         )
 
         # Prepare test data
-        self.valid_document_id = "curriculum1"
-        self.invalid_document_id = "invalid_curriculum"
+        self.valid_document_id = uuid4()
+        self.invalid_document_id = uuid4()
         self.message = "Explain Newton's laws of motion."
         self.chat_url = f"{base}chat/"
         self.chat_history_url = f"{base}chat/history/"
-        self.context = "Newton's laws are three physical laws that together laid the foundation for classical mechanics."
-
+        self.context = "Newton's laws are three physical laws that together laid the foundation for classical mechanics. The laws of motion"
+        self.document_name = "test.pdf"
         # Populate the curriculum context (assuming a function to post context)
-        post_context(self.context, page_num=1, document_name=self.valid_document_id)
+        post_context(
+            self.context,
+            page_num=1,
+            document_name=self.document_name,
+            document_id=self.valid_document_id,
+        )
+
+        Document.objects.create(
+            id=self.valid_document_id,
+            name=self.document_name,
+            start_page=1,
+            end_page=1,
+            user=self.user,
+        )
 
     def test_authenticated_access_required(self):
         # Log out the user

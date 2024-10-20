@@ -160,10 +160,44 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
 
 
 class DocumentSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(
+        help_text="The ID of the document",
+    )
+
+    name = serializers.CharField(
+        help_text="The name of the document",
+        required=False,
+    )
+
+    subject = serializers.CharField(
+        help_text="The subject of the quiz",
+    )
+
+    # The learning goals
+    learning_goals = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="The learning goals",
+        required=False,  # Make the field optional
+    )
+
+    start_page = serializers.IntegerField(
+        help_text="The start page of the document",
+    )
+    end_page = serializers.IntegerField(
+        help_text="The end page of the document",
+    )
+
     class Meta:
         model = Document
-        fields = ["id", "name", "start_page", "end_page"]
+        fields = ["id", "name", "start_page", "end_page", "subject", "learning_goals"]
         read_only_fields = ["id"]
+
+    def validate(self, data: dict) -> dict:
+        if data["start_page"] > data["end_page"]:
+            raise serializers.ValidationError(
+                "The start index must be less than the end index"
+            )
+        return data
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

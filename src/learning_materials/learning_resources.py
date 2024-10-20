@@ -18,8 +18,8 @@ class MultipleChoiceQuestion(BaseModel):
 class Quiz(BaseModel):
     # Metadata
     document_name: str = Field(description="The name of the document")
-    start: int = Field(description="The starting page of the quiz")
-    end: int = Field(description="The ending page of the quiz")
+    start_page: int = Field(description="The starting page of the quiz")
+    end_page: int = Field(description="The ending page of the quiz")
 
     # The list of questions
     questions: list[Union[QuestionAnswer, MultipleChoiceQuestion]] = Field(
@@ -30,8 +30,8 @@ class Quiz(BaseModel):
 class Compendium(BaseModel):
     # Metadata
     document_name: str = Field(description="The name of the document")
-    start: int = Field(description="The starting page of the compendium")
-    end: int = Field(description="The ending page of the compendium")
+    start_page: int = Field(description="The starting page of the compendium")
+    end_page: int = Field(description="The ending page of the compendium")
     key_concepts: list[str] = Field(
         description="A list of key concepts covered in the compendium"
     )

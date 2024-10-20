@@ -1,3 +1,4 @@
+import uuid
 from django.core import mail
 
 from django.contrib.auth import get_user_model
@@ -550,6 +551,16 @@ class UserProfileTests(APITestCase):
         )
         refresh = RefreshToken.for_user(self.user)
         self.access_token = str(refresh.access_token)
+        self.valid_document_1 = {
+            "id": str(uuid.uuid4()),
+            "start_page": 1,
+            "end_page": 5,
+        }
+        self.valid_document_2 = {
+            "id": str(uuid.uuid4()),
+            "start_page": 6,
+            "end_page": 10,
+        }
 
     def authenticate(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
@@ -565,7 +576,7 @@ class UserProfileTests(APITestCase):
         self.authenticate()
         self.client.patch(
             self.profile_url,
-            {"documents": [{"name": "Document 1", "start_page": 1, "end_page": 5}]},
+            {"documents": [self.valid_document_1]},
             format="json",
         )
         self.user.refresh_from_db()
@@ -603,7 +614,7 @@ class UserProfileTests(APITestCase):
 
     def test_partial_update_profile_with_document(self):
         self.authenticate()
-        data = {"documents": [{"name": "Document 1", "start_page": 1, "end_page": 5}]}
+        data = {"documents": [self.valid_document_1]}
         response = self.client.patch(self.profile_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
@@ -613,8 +624,8 @@ class UserProfileTests(APITestCase):
         self.authenticate()
         data = {
             "documents": [
-                {"name": "Document 1", "start_page": 1, "end_page": 5},
-                {"name": "Document 2", "start_page": 6, "end_page": 10},
+                self.valid_document_1,
+                self.valid_document_2,
             ]
         }
         response = self.client.patch(self.profile_url, data, format="json")
@@ -626,7 +637,7 @@ class UserProfileTests(APITestCase):
         self.authenticate()
         data = {
             "documents": [
-                {"name": "Document 1", "start_page": 1, "end_page": 5},
+                self.valid_document_1,
             ]
         }
         response = self.client.patch(self.profile_url, data, format="json")
@@ -636,7 +647,7 @@ class UserProfileTests(APITestCase):
 
         self.authenticate()
         # Update with new document
-        data = {"documents": [{"name": "Document 2", "start_page": 6, "end_page": 10}]}
+        data = {"documents": [self.valid_document_2]}
         response = self.client.patch(self.profile_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
