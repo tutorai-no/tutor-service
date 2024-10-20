@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
@@ -30,10 +32,13 @@ from learning_materials.serializer import (
     ChatSerializer,
     FlashcardSerializer,
     ReviewFlashcardSerializer,
+    QuizModelSerializer,
     QuizStudentAnswer,
 )
 from accounts.serializers import DocumentSerializer
 from accounts.models import Document
+
+logger = logging.getLogger(__name__)
 
 
 class FlashcardCreationView(GenericAPIView):
@@ -375,15 +380,21 @@ class QuizCreationView(GenericAPIView):
             document_id = serializer.validated_data.get("id")
             start = serializer.validated_data.get("start_page")
             end = serializer.validated_data.get("end_page")
-            quiz = generate_quiz(document_id, start, end)
+            learning_goals = serializer.validated_data.get("learning_goals", [])
+
+            # Generate the quiz data (Assuming generate_quiz returns a structured dict)
+            quiz_data = generate_quiz(document_id, start, end, learning_goals)
 
             # Retrieve the authenticated user
             user = request.user
 
-            # Save the quiz to the database and associate with the user
-            translate_quiz_to_orm_model(quiz, [user])
-            response_data = quiz.model_dump()
-            return Response(response_data, status=status.HTTP_200_OK)
+            # Translate the quiz data into ORM models and associate with the user
+            quiz_model = translate_quiz_to_orm_model(quiz_data, [user])
+
+            # Serialize the created quiz
+            response_serializer = QuizModelSerializer(quiz_model)
+
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

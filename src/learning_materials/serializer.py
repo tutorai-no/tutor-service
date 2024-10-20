@@ -1,7 +1,14 @@
 import uuid
 from rest_framework import serializers
 
-from learning_materials.models import ChatHistory, Cardset, FlashcardModel
+from learning_materials.models import (
+    ChatHistory,
+    Cardset,
+    FlashcardModel,
+    MultipleChoiceQuestionModel,
+    QuestionAnswerModel,
+    QuizModel,
+)
 
 
 class ChatSerializer(serializers.Serializer):
@@ -93,3 +100,34 @@ class CardsetSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
+
+
+class QuestionAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionAnswerModel
+        fields = ["id", "question", "answer"]
+
+
+class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MultipleChoiceQuestionModel
+        fields = ["id", "question", "options", "answer"]
+
+
+class QuizModelSerializer(serializers.ModelSerializer):
+    questions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuizModel
+        fields = ["id", "document_name", "start_page", "end_page", "questions"]
+
+    def get_questions(self, obj):
+        # Retrieve all related questions, both QA and MC
+        qa_questions = obj.questionanswermodel_set.all()
+        mc_questions = obj.multiplechoicequestionmodel_set.all()
+
+        qa_serialized = QuestionAnswerSerializer(qa_questions, many=True).data
+        mc_serialized = MultipleChoiceQuestionSerializer(mc_questions, many=True).data
+
+        # Combine both types of questions
+        return qa_serialized + mc_serialized
