@@ -88,8 +88,10 @@ class QuizModel(models.Model):
     document_name = models.CharField(
         max_length=100, help_text="The name of the document", default="unknown"
     )
-    start = models.IntegerField(help_text="The starting page of the quiz", default=1)
-    end = models.IntegerField(help_text="The ending page of the quiz", default=1)
+    start_page = models.IntegerField(
+        help_text="The starting page of the quiz", default=1
+    )
+    end_page = models.IntegerField(help_text="The ending page of the quiz", default=1)
 
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
