@@ -16,9 +16,10 @@ from accounts.serializers import (
     PasswordResetConfirmSerializer,
     SubscriptionHistorySerializer,
     SubscriptionSerializer,
+    UserFeedbackSerializer,
     UserProfileSerializer,
 )
-from accounts.models import Subscription
+from accounts.models import Feedback, Subscription
 
 User = get_user_model()
 
@@ -122,3 +123,20 @@ class SubscriptionHistoryView(generics.ListAPIView):
 
     def get_queryset(self):
         return self.request.user.subscription_history.all()
+
+
+class UserFeedback(generics.GenericAPIView):
+    serializer_class = UserFeedbackSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            feedback_type = serializer.validated_data["feedbackType"]
+            feedback_text = serializer.validated_data["feedbackText"]
+            # Save feedback to database
+            Feedback.objects.create(
+                user=request.user, feedback_type=feedback_type, feedback_text=feedback_text
+            )
+            return Response(status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

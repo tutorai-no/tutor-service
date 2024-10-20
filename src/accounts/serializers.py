@@ -264,3 +264,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 Document.objects.create(user=instance, **doc_data)
 
         return instance
+
+class UserFeedbackSerializer(serializers.Serializer):
+    feedbackType = serializers.CharField(
+        help_text="The type of feedback",
+        required=True,
+    )
+    feedbackText = serializers.CharField(
+        help_text="The feedback text",
+        required=True,
+    )
