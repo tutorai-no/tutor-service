@@ -647,10 +647,11 @@ class QuizGenerationTest(TestCase):
         # Retrieve the created quiz
         quiz = QuizModel.objects.first()
         self.assertEqual(quiz.document_name, self.valid_document_name)
-        self.assertEqual(quiz.start, self.valid_page_num_start)
-        self.assertEqual(quiz.end, self.valid_page_num_end)
+        self.assertEqual(quiz.start_page, self.valid_page_num_start)
+        self.assertEqual(quiz.end_page, self.valid_page_num_end)
 
         # Verify the response data
+        self.assertIn("id", response.data)
         self.assertIn("document_name", response.data)
         self.assertEqual(response.data["start_page"], self.valid_page_num_start)
         self.assertEqual(response.data["end_page"], self.valid_page_num_end)
@@ -689,10 +690,11 @@ class QuizGenerationTest(TestCase):
         # Retrieve the created quiz
         quiz = QuizModel.objects.first()
         self.assertEqual(quiz.document_name, self.valid_document_name)
-        self.assertEqual(quiz.start, self.valid_page_num_start)
-        self.assertEqual(quiz.end, self.valid_page_num_end)
+        self.assertEqual(quiz.start_page, self.valid_page_num_start)
+        self.assertEqual(quiz.end_page, self.valid_page_num_end)
 
         # Verify the response data
+        self.assertIn("id", response.data)
         self.assertEqual(response.data["document_name"], self.valid_document_name)
         self.assertEqual(response.data["start_page"], self.valid_page_num_start)
         self.assertEqual(response.data["end_page"], self.valid_page_num_end)
