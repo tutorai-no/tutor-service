@@ -68,8 +68,8 @@ def translate_quiz_to_pydantic_model(quiz: QuizModel) -> Quiz:
     """Translate a Quiz ORM model to a Pydantic model."""
     return Quiz(
         document_name=quiz.document_name,
-        start_page=quiz.start,
-        end_page=quiz.end,
+        start_page=quiz.start_page,
+        end_page=quiz.end_page,
         questions=[
             QuestionAnswer(question=qa.question, answer=qa.answer)
             for qa in quiz.questionanswermodel_set.all()
