@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.validators import FileExtensionValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -8,7 +9,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from accounts.models import Document, Subscription, SubscriptionHistory
+from accounts.models import Document, Feedback, Subscription, SubscriptionHistory
 
 
 User = get_user_model()
@@ -274,3 +275,12 @@ class UserFeedbackSerializer(serializers.Serializer):
         help_text="The feedback text",
         required=True,
     )
+    feedbackScreenshot = serializers.ImageField(
+        help_text="The feedback screenshot",
+        allow_null=True,
+        required=False,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+    )
+    class Meta:
+        model = Feedback
+        fields = ['feedbackType', 'feedbackText', 'feedbackScreenshot'] 

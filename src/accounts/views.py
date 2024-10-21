@@ -134,9 +134,13 @@ class UserFeedback(generics.GenericAPIView):
         if serializer.is_valid():
             feedback_type = serializer.validated_data["feedbackType"]
             feedback_text = serializer.validated_data["feedbackText"]
+            feedback_screenshot = serializer.validated_data["feedbackScreenshot"]
             # Save feedback to database
             Feedback.objects.create(
-                user=request.user, feedback_type=feedback_type, feedback_text=feedback_text
+                user=request.user, 
+                feedback_type=feedback_type, 
+                feedback_text=feedback_text,
+                feedback_screenshot=feedback_screenshot
             )
             return Response(status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
