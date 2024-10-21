@@ -265,6 +265,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 class UserFeedbackSerializer(serializers.Serializer):
     feedbackType = serializers.CharField(
         help_text="The type of feedback",
