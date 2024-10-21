@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework import routers
 
 from accounts.views import (
-    CustomTokenObtainPairView,
+    LoginView,
     LogoutView,
     PasswordResetConfirmView,
     PasswordResetView,
@@ -54,7 +54,7 @@ urlpatterns = [
     path("chat/history/", ChatHistoryListView.as_view(), name="chat-history-list"),
     path("chat/history/<str:chatId>/", ChatHistoryView.as_view(), name="chat-history"),
     path("register/", RegisterView.as_view(), name="register"),
-    path("login/", CustomTokenObtainPairView.as_view(), name="login"),
+    path("login/", LoginView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("password-reset/", PasswordResetView.as_view(), name="password_reset"),
