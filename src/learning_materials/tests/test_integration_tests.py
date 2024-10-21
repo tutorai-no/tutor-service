@@ -114,6 +114,19 @@ class FlashcardGenerationTest(TestCase):
         flashcards = FlashcardModel.objects.filter(cardset=cardset)
         self.assertGreater(flashcards.count(), 0)
 
+        # Validate Response Cardset Data
+        self.assertIn("id", response.data)
+        self.assertIn("flashcards", response.data)
+
+        # Validate flashcards data
+        flashcards_data = response.data["flashcards"]
+        self.assertIsInstance(flashcards_data, list)
+        self.assertGreater(len(flashcards_data), 0)
+        self.assertIsInstance(flashcards_data[0], dict)
+        self.assertIn("front", flashcards_data[0])
+        self.assertIn("back", flashcards_data[0])
+        self.assertIn("id", flashcards_data[0])
+
     def test_invalid_end_start_index(self):
         self.assertFalse(Cardset.objects.exists())
         invalid_response = {
@@ -742,8 +755,8 @@ class QuizGradingTest(TestCase):
         # Add user to quiz
         self.quiz = QuizModel.objects.create(
             document_name=self.valid_document_name,
-            start=0,
-            end=1,
+            start_page=0,
+            end_page=1,
         )
 
         # Create questions for the quiz
