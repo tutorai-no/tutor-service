@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
@@ -94,6 +95,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             if not user.is_active:
                 raise AuthenticationFailed("User is inactive.", code="authorization")
             data = super().validate({"username": user.username, "password": password})
+            user.last_login = timezone.now()
+            user.save()
             return data
         else:
             raise AuthenticationFailed("Invalid credentials", code="authorization")
