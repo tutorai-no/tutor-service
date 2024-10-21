@@ -7,6 +7,7 @@ from django.core.validators import RegexValidator
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
+from learning_materials.serializer import CardsetSerializer, QuizStudentAnswer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from accounts.models import Document, Subscription, SubscriptionHistory
@@ -233,6 +234,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     )
     documents = DocumentSerializer(many=True, required=False)
 
+    cardsets = CardsetSerializer(many=True, read_only=True)
+    quizzes = QuizStudentAnswer(many=True, read_only=True)
+
     class Meta:
         model = User
         fields = (
@@ -243,6 +247,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "subscription",
             "subscription_id",
             "documents",
+            "cardsets",
+            "quizzes",
         )
 
     def update(self, instance, validated_data):

@@ -72,7 +72,7 @@ def translate_quiz_to_pydantic_model(quiz: QuizModel) -> Quiz:
         end_page=quiz.end_page,
         questions=[
             QuestionAnswer(question=qa.question, answer=qa.answer)
-            for qa in quiz.questionanswermodel_set.all()
+            for qa in quiz.question_answers.all()
         ]
         + [
             MultipleChoiceQuestion(
@@ -80,7 +80,7 @@ def translate_quiz_to_pydantic_model(quiz: QuizModel) -> Quiz:
                 options=mcq.options,
                 answer=mcq.answer,
             )
-            for mcq in quiz.multiplechoicequestionmodel_set.all()
+            for mcq in quiz.multiple_choice_questions.all()
         ],
     )
 

@@ -15,6 +15,7 @@ class Cardset(models.Model):
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        related_name="cardsets",
         on_delete=models.CASCADE,
         help_text="The user who created this cardset",
     )
@@ -43,6 +44,7 @@ class FlashcardModel(models.Model):
     )
     cardset = models.ForeignKey(
         Cardset,
+        related_name="flashcards",
         on_delete=models.CASCADE,
         help_text="The cardset to which the flashcard belongs",
     )
@@ -111,6 +113,7 @@ class QuestionAnswerModel(models.Model):
     answer = models.TextField(help_text="The answer part of the QA pair")
     quiz = models.ForeignKey(
         QuizModel,
+        related_name="question_answers",
         on_delete=models.CASCADE,
         help_text="The quiz to which the question-answer pair belongs",
     )
@@ -130,6 +133,7 @@ class MultipleChoiceQuestionModel(models.Model):
     answer = models.TextField(help_text="The correct answer to the question")
     quiz = models.ForeignKey(
         QuizModel,
+        related_name="multiple_choice_questions",
         on_delete=models.CASCADE,
         help_text="The quiz to which the multiple-choice question belongs",
     )
