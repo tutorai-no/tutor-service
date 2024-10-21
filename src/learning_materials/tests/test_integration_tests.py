@@ -742,8 +742,8 @@ class QuizGradingTest(TestCase):
         # Add user to quiz
         self.quiz = QuizModel.objects.create(
             document_name=self.valid_document_name,
-            start=0,
-            end=1,
+            start_page=0,
+            end_page=1,
         )
 
         # Create questions for the quiz
