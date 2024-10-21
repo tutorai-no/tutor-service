@@ -38,6 +38,7 @@ def generate_quiz(
     # Define the prompt template for generating quiz questions
     quiz_prompt_template = """
         You are a teacher AI tasked with creating a quiz based on the following content and learning goals.
+        The quiz must have a good variety of multiple-choice, short answer questions.
 
         Content:
         {page_content}
@@ -52,13 +53,13 @@ def generate_quiz(
         - "start_page": (integer) The starting page number of the quiz.
         - "end_page": (integer) The ending page number of the quiz.
         - "questions": (list) A list of questions, where each question is either:
-            - A QuestionAnswer object with:
-                - "question": (string) The question text.
-                - "answer": (string) The answer text.
             - A MultipleChoiceQuestion object with:
                 - "question": (string) The question text.
                 - "options": (list of strings) The list of options to choose from.
                 - "answer": (string) The correct answer.
+            - A QuestionAnswer object with:
+                - "question": (string) The question text.
+                - "answer": (string) The answer text.
     """
     prompt = PromptTemplate(
         template=quiz_prompt_template,
