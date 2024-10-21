@@ -283,4 +283,5 @@ class UserFeedbackSerializer(serializers.Serializer):
     )
     class Meta:
         model = Feedback
-        fields = ['feedbackType', 'feedbackText', 'feedbackScreenshot'] 
+        fields = ('feedbackType', 'feedbackText', 'feedbackScreenshot')
+         
