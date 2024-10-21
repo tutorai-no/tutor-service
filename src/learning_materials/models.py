@@ -100,7 +100,7 @@ class QuizModel(models.Model):
     )
 
     def __str__(self):
-        return f"Quiz for {self.document_name} from page {self.start} to {self.end}"
+        return f"Quiz for {self.document_name} from page {self.start_page} to {self.end_page}"
 
 
 class QuestionAnswerModel(models.Model):
