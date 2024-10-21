@@ -93,14 +93,7 @@ class FlashcardCreationView(GenericAPIView):
                 translate_flashcard_to_orm_model(flashcard, cardset)
                 for flashcard in flashcards
             ]
-
-            exportable_flashcard = parse_for_anki(flashcards)
-            flashcard_dicts = [flashcard.model_dump() for flashcard in flashcards]
-
-            response = {
-                "flashcards": flashcard_dicts,
-                "exportable_flashcards": exportable_flashcard,
-            }
+            response = CardsetSerializer(cardset).data
             return Response(data=response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -151,7 +144,7 @@ class CardsetExportView(GenericAPIView):
 
 class ReviewFlashcardView(GenericAPIView):
     serializer_class = ReviewFlashcardSerializer
-    authentication_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Review a individual flashcard",
