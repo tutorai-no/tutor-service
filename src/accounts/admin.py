@@ -32,7 +32,18 @@ class DocumentAdmin(admin.ModelAdmin):
     search_fields = ["name", "subject"]
 
 
-admin.site.register(Feedback)
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    model = Feedback
+    list_display = ["feedback_type", "feedback_text", "created_at", "user"]
+    readonly_fields = [
+        "feedback_text",
+        "feedback_type",
+        "created_at",
+        "user",
+    ]
+    search_fields = ["feedback_type", "feedback_text", "user__username"]
+    list_filter = ["created_at"]
 
 
 @admin.register(Subscription)
