@@ -16,7 +16,22 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + ((None, {"fields": ("subscription",)}),)
 
 
-admin.site.register(Document)
+@admin.register(Document)
+class DocumentAdmin(admin.ModelAdmin):
+    model = Document
+    list_display = [
+        "name",
+        "created_at",
+        "updated_at",
+        "user",
+        "subject",
+        "id",
+    ]
+    readonly_fields = ["created_at", "updated_at", "id"]
+    list_filter = ["created_at", "updated_at"]
+    search_fields = ["name", "subject"]
+
+
 admin.site.register(Feedback)
 
 
