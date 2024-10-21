@@ -75,6 +75,7 @@ class Document(models.Model):
     def __str__(self):
         return f"{self.name} - {self.user.username} start: {self.start_page} end: {self.end_page}"
 
+
 class Feedback(models.Model):
     """
     Model representing feedback.
@@ -89,6 +90,6 @@ class Feedback(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     feedback_type = models.CharField(max_length=100)
     feedback_text = models.TextField()
-    
+
     def __str__(self):
-        return f"{self.feedback_type} - {self.user.username}" 
+        return f"{self.feedback_type} - {self.user.username}"
