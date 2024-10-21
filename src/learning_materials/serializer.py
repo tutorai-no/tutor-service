@@ -88,9 +88,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
 
 
 class CardsetSerializer(serializers.ModelSerializer):
-    flashcards = FlashcardSerializer(
-        many=True, read_only=True, source="flashcardmodel_set"
-    )
+    flashcards = FlashcardSerializer(many=True, read_only=True)
 
     class Meta:
         model = Cardset
@@ -123,8 +121,8 @@ class QuizModelSerializer(serializers.ModelSerializer):
 
     def get_questions(self, obj):
         # Retrieve all related questions, both QA and MC
-        qa_questions = obj.questionanswermodel_set.all()
-        mc_questions = obj.multiplechoicequestionmodel_set.all()
+        qa_questions = obj.question_answers.all()
+        mc_questions = obj.multiple_choice_questions.all()
 
         qa_serialized = QuestionAnswerSerializer(qa_questions, many=True).data
         mc_serialized = MultipleChoiceQuestionSerializer(mc_questions, many=True).data

@@ -135,7 +135,7 @@ class CardsetExportView(GenericAPIView):
             )
 
         cardset = Cardset.objects.get(id=cardset_id)
-        flashcards_model = cardset.flashcardmodel_set.all()
+        flashcards_model = cardset.flashcards.all()
         flashcards = translate_flashcards_to_pydantic_model(flashcards_model)
         exportable_flashcard = parse_for_anki(flashcards)
         response = {"exportable_flashcards": exportable_flashcard}
