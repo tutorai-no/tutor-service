@@ -31,6 +31,6 @@ jobs:
         run: |
           docker compose down
           docker compose pull backend
-          docker compose build backend
+          docker compose build
           docker compose run backend python manage.py migrate
-          docker compose up -d backend
+          docker compose up -d 
