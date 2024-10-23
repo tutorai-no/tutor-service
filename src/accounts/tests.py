@@ -219,11 +219,14 @@ class LoginTests(APITestCase):
         )
 
     def test_login_with_username_success(self):
+        last_login = self.user.last_login
         data = {"username": "loginuser", "password": "StrongP@ss1"}
         response = self.client.post(self.login_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access", response.data)
         self.assertIn("refresh", response.data)
+        self.user.refresh_from_db()
+        self.assertNotEqual(self.user.last_login, last_login)
 
     def test_login_with_email_success(self):
         data = {
@@ -712,6 +715,7 @@ class UserProfileTests(APITestCase):
         user.refresh_from_db()
         self.assertEqual(user.subscription, premium)
 
+
 class UserFeedbackTests(APITestCase):
     def setUp(self):
         self.feedback_url = reverse("feedback")
@@ -720,7 +724,7 @@ class UserFeedbackTests(APITestCase):
         )
         refresh = RefreshToken.for_user(self.user)
         self.access_token = str(refresh.access_token)
-        
+
     def authenticate(self):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
 

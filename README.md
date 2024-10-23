@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/SverreNystad/TutorAI/django.yml)
+[![CI](https://github.com/The-TutorAI-project/tutor-service/actions/workflows/ci.yml/badge.svg)](https://github.com/The-TutorAI-project/tutor-service/actions/workflows/ci.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/SverreNystad/TutorAI)
 ![GitHub language count](https://img.shields.io/github/languages/count/SverreNystad/TutorAI)
 [![Project Version](https://img.shields.io/badge/version-1.0.0-blue)](https://img.shields.io/badge/version-1.0.0-blue)
@@ -22,7 +22,6 @@
     - [Configuration](#configuration)
     - [Usage](#usage)
   - [📖 Documentations](#-documentations)
-  - [Contributors](#contributors)
 
 </details>
 
