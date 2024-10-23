@@ -1,10 +1,12 @@
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator
+from django.core.validators import MaxValueValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
@@ -275,7 +277,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         return instance
 
-
+def validate_image_size(image):
+    max_size_in_mb = 4
+    max_size_in_bytes = max_size_in_mb * 1024 * 1024  # Convert MB to bytes
+    if image.size > max_size_in_bytes:
+        raise ValidationError(f"Image size should not exceed {max_size_in_mb} MB.")
+    
 class UserFeedbackSerializer(serializers.Serializer):
     feedbackType = serializers.CharField(
         help_text="The type of feedback",
@@ -289,7 +296,10 @@ class UserFeedbackSerializer(serializers.Serializer):
         help_text="The feedback screenshot",
         allow_null=True,
         required=False,
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+        validators=[
+            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png']),
+            validate_image_size,
+            ],
     )
     class Meta:
         model = Feedback
