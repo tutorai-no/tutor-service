@@ -11,7 +11,7 @@ from django.contrib.auth.tokens import default_token_generator
 
 from accounts.serializers import (
     RegisterSerializer,
-    CustomTokenObtainPairSerializer,
+    LoginSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
     SubscriptionHistorySerializer,
@@ -29,8 +29,8 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-class CustomTokenObtainPairView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
+class LoginView(TokenObtainPairView):
+    serializer_class = LoginSerializer
 
 
 class LogoutView(APIView):

@@ -521,11 +521,11 @@ class FlashcardCRUDTest(TestCase):
         flashcard = FlashcardModel.objects.create(
             front="Front", back="Back", cardset=self.cardset
         )
-        self.assertEqual(self.cardset.flashcardmodel_set.count(), 1)
+        self.assertEqual(self.cardset.flashcards.count(), 1)
         url = f"/api/flashcards/{flashcard.id}/"
         response = self.client.delete(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.cardset.flashcardmodel_set.count(), 0)
+        self.assertEqual(self.cardset.flashcards.count(), 0)
 
 
 class CardsetExportTest(TestCase):

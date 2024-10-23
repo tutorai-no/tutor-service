@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator
 from django.contrib.auth.password_validation import validate_password
@@ -7,6 +8,7 @@ from django.core.validators import RegexValidator
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
+from learning_materials.serializer import CardsetSerializer, QuizModelSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from accounts.models import Document, Feedback, Subscription, SubscriptionHistory
@@ -80,7 +82,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+class LoginSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         username_or_email = attrs.get("username")
         password = attrs.get("password")
@@ -95,6 +97,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             if not user.is_active:
                 raise AuthenticationFailed("User is inactive.", code="authorization")
             data = super().validate({"username": user.username, "password": password})
+            user.last_login = timezone.now()
+            user.save()
             return data
         else:
             raise AuthenticationFailed("Invalid credentials", code="authorization")
@@ -231,6 +235,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     )
     documents = DocumentSerializer(many=True, required=False)
 
+    cardsets = CardsetSerializer(many=True, read_only=True)
+    quizzes = QuizModelSerializer(many=True, read_only=True)
+
     class Meta:
         model = User
         fields = (
@@ -241,6 +248,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "subscription",
             "subscription_id",
             "documents",
+            "cardsets",
+            "quizzes",
         )
 
     def update(self, instance, validated_data):
@@ -265,6 +274,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 Document.objects.create(user=instance, **doc_data)
 
         return instance
+
 
 class UserFeedbackSerializer(serializers.Serializer):
     feedbackType = serializers.CharField(

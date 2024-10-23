@@ -75,6 +75,7 @@ class Document(models.Model):
     def __str__(self):
         return f"{self.name} - {self.user.username} start: {self.start_page} end: {self.end_page}"
 
+
 class Feedback(models.Model):
     """
     Model representing feedback.
@@ -92,4 +93,4 @@ class Feedback(models.Model):
     feedback_screenshot = models.ImageField(upload_to='feedback_screenshots', blank=True, null=True)
     
     def __str__(self):
-        return f"{self.feedback_type} - {self.user.username}" 
+        return f"{self.feedback_type} - {self.user.username}"
