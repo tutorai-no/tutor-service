@@ -807,3 +807,55 @@ class UserFeedbackTests(APITestCase):
         img_io.seek(0)
         return img_io
  
+    def test_feedback_with_invalid_screenshot(self):
+        self.assertFalse(Feedback.objects.exists())
+        self.authenticate()
+
+        # Create the in-memory image as before
+        img_io = BytesIO()
+        img_io.write(b"invalid image data")
+        img_io.seek(0)
+        uploaded_file = SimpleUploadedFile(
+            name='test_image.jpg',
+            content=img_io.read(),
+            content_type='image/jpeg'
+        )
+
+        data = {
+            "feedbackType": "Bug Report",
+            "feedbackText": "Test Feedback",
+            "feedbackScreenshot": uploaded_file,
+        }
+
+        response = self.client.post(self.feedback_url, data, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("feedbackScreenshot", response.data)
+        self.assertFalse(Feedback.objects.exists())
+        
+    def test_screenshot_with_too_large_image(self):
+        #max_size = 5 * 1024 * 1024
+        image = Image.new('RGB', (2*1024, 3*1024), color='red')
+        img_io = BytesIO()
+        image.save(img_io, format='JPEG')
+        img_io.seek(0)
+        
+        uploaded_file = SimpleUploadedFile(
+            name='test_image_too_large.jpg',
+            content=img_io.read(),
+            content_type='image/jpeg'
+        )
+
+        data = {
+            "feedbackType": "Bug Report",
+            "feedbackText": "Test Feedback",
+            "feedbackScreenshot": uploaded_file,
+        }
+
+        response = self.client.post(self.feedback_url, data, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertFalse(Feedback.objects.exists())
+        
+        
+     
