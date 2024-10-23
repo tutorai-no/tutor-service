@@ -1,9 +1,13 @@
 import uuid
-from django.core import mail
+from io import BytesIO
+from PIL import Image
 
+from django.core import mail
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
+
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -14,7 +18,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from rest_framework_simplejwt.exceptions import TokenError
 from unittest.mock import patch
 
-from accounts.models import Subscription
+from accounts.models import Feedback, Subscription
 
 User = get_user_model()
 
@@ -725,18 +729,133 @@ class UserFeedbackTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
 
     def test_feedback_success(self):
+        self.assertFalse(Feedback.objects.exists())
         self.authenticate()
         data = {
             "feedbackType": "Bug Report",
             "feedbackText": "Test Feedback",
+            "feedbackScreenshot": None,
         }
         response = self.client.post(self.feedback_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Feedback.objects.exists())
 
     def test_unauthenticated_feedback(self):
+        self.assertFalse(Feedback.objects.exists())
         data = {
             "feedbackType": "Bug Report",
             "feedbackText": "Test Feedback",
+            "feedbackScreenshot": None,
         }
         response = self.client.post(self.feedback_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertFalse(Feedback.objects.exists())
+    
+    def test_feedback_missing_fields(self):
+        self.assertFalse(Feedback.objects.exists())
+        self.authenticate()
+        data = {
+            "feedbackType": "Bug Report",
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("feedbackText", response.data)
+        self.assertFalse(Feedback.objects.exists())
+        
+    def test_feedback_without_feedbackType(self):
+        self.assertFalse(Feedback.objects.exists())
+        self.authenticate()
+        data = {
+            "feedbackText": "Test Feedback",
+        }
+        response = self.client.post(self.feedback_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("feedbackType", response.data)
+        self.assertFalse(Feedback.objects.exists())
+    
+        
+    
+    def test_feedback_with_screenshot(self):
+        self.assertFalse(Feedback.objects.exists())
+        self.authenticate()
+
+        # Create the in-memory image as before
+        img_io = self.create_test_image()
+        uploaded_file = SimpleUploadedFile(
+            name='test_image.jpg',
+            content=img_io.read(),
+            content_type='image/jpeg'
+        )
+
+        data = {
+            "feedbackType": "Bug Report",
+            "feedbackText": "Test Feedback",
+            "feedbackScreenshot": uploaded_file,
+        }
+
+        response = self.client.post(self.feedback_url, data, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Feedback.objects.exists())
+        feedback = Feedback.objects.first()
+        self.assertTrue(feedback.feedback_screenshot)
+
+    def create_test_image(self):
+        image = Image.new('RGB', (100, 100), color='red')
+        img_io = BytesIO()
+        image.save(img_io, format='JPEG')
+        img_io.seek(0)
+        return img_io
+ 
+    def test_feedback_with_invalid_screenshot(self):
+        self.assertFalse(Feedback.objects.exists())
+        self.authenticate()
+
+        # Create the in-memory image as before
+        img_io = BytesIO()
+        img_io.write(b"invalid image data")
+        img_io.seek(0)
+        uploaded_file = SimpleUploadedFile(
+            name='test_image.jpg',
+            content=img_io.read(),
+            content_type='image/jpeg'
+        )
+
+        data = {
+            "feedbackType": "Bug Report",
+            "feedbackText": "Test Feedback",
+            "feedbackScreenshot": uploaded_file,
+        }
+
+        response = self.client.post(self.feedback_url, data, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("feedbackScreenshot", response.data)
+        self.assertFalse(Feedback.objects.exists())
+        
+    def test_screenshot_with_too_large_image(self):
+        #max_size = 5 * 1024 * 1024
+        image = Image.new('RGB', (2*1024, 3*1024), color='red')
+        img_io = BytesIO()
+        image.save(img_io, format='JPEG')
+        img_io.seek(0)
+        
+        uploaded_file = SimpleUploadedFile(
+            name='test_image_too_large.jpg',
+            content=img_io.read(),
+            content_type='image/jpeg'
+        )
+
+        data = {
+            "feedbackType": "Bug Report",
+            "feedbackText": "Test Feedback",
+            "feedbackScreenshot": uploaded_file,
+        }
+
+        response = self.client.post(self.feedback_url, data, format='multipart')
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertFalse(Feedback.objects.exists())
+        
+        
+     
