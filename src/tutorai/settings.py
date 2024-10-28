@@ -28,8 +28,8 @@ SECRET_KEY = os.getenv(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+print(f"DEBUG: {DEBUG}", flush=True)
 ALLOWED_HOSTS = ["46.101.107.247", "backend.tutorai.no", "localhost"]
 
 CSRF_TRUSTED_ORIGINS = [
