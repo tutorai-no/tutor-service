@@ -22,6 +22,7 @@ services:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - RAG_DATABASE_SYSTEM=${RAG_DATABASE_SYSTEM}
       - LOGGING_LEVEL=${LOGGING_LEVEL}
+      - DEBUG=${DEBUG}
 
   db:
     image: postgres:latest
