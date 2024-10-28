@@ -1,5 +1,6 @@
 ## Django ##
 src/test.py
+src/feedback_screenshots/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
