@@ -80,4 +80,4 @@ typing_extensions==4.12.2
 tzdata==2023.4
 uritemplate==4.1.1
 urllib3==2.2.3
-yarl==1.17.0
+yarl==1.17.1
