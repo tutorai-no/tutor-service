@@ -35,7 +35,7 @@ jiter==0.6.1
 jsonpatch==1.33
 jsonpointer==3.0.0
 kiwisolver==1.4.7
-langchain==0.3.5
+langchain==0.3.6
 langchain-core==0.3.14
 langchain-openai==0.2.4
 langchain-text-splitters==0.3.1
