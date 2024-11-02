@@ -41,8 +41,8 @@ To setup the backend one can either automatically setup the backend using docker
 For ease of use and version management control, we use Docker to keep track of our containers and virtual environments.
 
 ```bash
-docker-compose build
-docker-compose up
+docker compose build
+docker compose up
 ```
 
 ### Manual
@@ -116,8 +116,3 @@ For secure and efficient management of environment-specific variables, Tutor-Ser
    If you don't have an API key from OpenAI, you can obtain one by visiting [OpenAI API Keys](https://platform.openai.com/api-keys). Follow their instructions to generate a new API key.
 
    By following these steps, you'll ensure that your application has all the necessary environment-specific configurations, while keeping sensitive data secure and out of version control.
-
-<<<<<<< HEAD
-```
-=======
->>>>>>> 3deb5aaf715f9d5e34fe636bb48bea69ac8e23b5
