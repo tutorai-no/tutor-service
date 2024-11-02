@@ -91,7 +91,7 @@ class MongoDB(Database):
         self.client = MongoClient(Config().MONGODB_URI)
         self.db = self.client["test-curriculum-database"]
         self.collection = self.db["test-curriculum-collection"]
-        self.similarity_threshold = 0.7
+        self.similarity_threshold = 0.5
         self.embeddings = OpenAIEmbedding()
 
     def get_curriculum(self, document_id: uuid.UUID, embedding: list[float]) -> list[Citation]:
@@ -111,17 +111,11 @@ class MongoDB(Database):
             )[0][0]
             similarities.append((doc, similarity))
 
-        test_similarity = cosine_similarity([embedding], [embedding])[0][0]
-        print("Self-similarity (should be 1.0):", test_similarity)
-
         # Sort documents by similarity in descending order
         similarities.sort(key=lambda x: x[1], reverse=True)
 
         # Retrieve top 5 matches
         top_5_matches = similarities[:5]
-
-        for match in top_5_matches:
-            print("Similarities: ", match[1])
 
         # Return those of the top 5 matches that are above the similarity threshold
         for match in top_5_matches:
