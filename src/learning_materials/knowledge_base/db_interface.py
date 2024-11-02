@@ -7,8 +7,9 @@ import logging
 from learning_materials.learning_resources import Citation
 from learning_materials.knowledge_base.embeddings import (
     OpenAIEmbedding,
-    cosine_similarity,
 )
+
+from sklearn.metrics.pairwise import cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -93,50 +94,43 @@ class MongoDB(Database):
         self.similarity_threshold = 0.7
         self.embeddings = OpenAIEmbedding()
 
-    def get_curriculum(
-        self, document_id: uuid.UUID, embedding: list[float]
-    ) -> list[Citation]:
-        # Checking if embedding consists of decimals or "none"
-        if not embedding:
-            raise ValueError("Embedding cannot be None")
-
-        # Define the MongoDB query that utilizes the search index "embeddings".
-        query = {
-            "$vectorSearch": {
-                "index": "embeddings",
-                "path": "embedding",
-                "queryVector": embedding,
-                # MongoDB suggests using numCandidates=10*limit or numCandidates=20*limit
-                "numCandidates": 30,
-                "limit": 3,
-            }
-        }
-
-        # Execute the query
-        documents = self.collection.aggregate([query])
-
-        if not documents:
+    def get_curriculum(self, document_id: uuid.UUID, embedding: list[float]) -> list[Citation]:
+        # Step 1: Filter by documentId first
+        cursor = self.collection.find({"documentId": str(document_id)})
+        if not cursor:
             raise ValueError("No documents found")
-
-        # Convert the documents to a list
-        documents = list(documents)
-
+        
         results = []
 
-        # Filter out the documents with low similarity
-        for document in documents:
-            if document["documentId"] != str(document_id):
-                continue
+        # Compute cosine similarities
+        similarities = []
+        for doc in cursor:
+            similarity = cosine_similarity(
+                [doc["embedding"]],
+                [embedding]
+            )[0][0]
+            similarities.append((doc, similarity))
 
-            if (
-                cosine_similarity(embedding, document["embedding"])
-                > self.similarity_threshold
-            ):
+        test_similarity = cosine_similarity([embedding], [embedding])[0][0]
+        print("Self-similarity (should be 1.0):", test_similarity)
+
+        # Sort documents by similarity in descending order
+        similarities.sort(key=lambda x: x[1], reverse=True)
+
+        # Retrieve top 5 matches
+        top_5_matches = similarities[:5]
+
+        for match in top_5_matches:
+            print("Similarities: ", match[1])
+
+        # Return those of the top 5 matches that are above the similarity threshold
+        for match in top_5_matches:
+            if match[1] > self.similarity_threshold:
                 results.append(
                     Citation(
-                        text=document["text"],
-                        page_num=document["pageNum"],
-                        document_name=document["documentName"],
+                        text=match[0]["text"],
+                        page_num=match[0]["pageNum"],
+                        document_name=match[0]["documentName"],
                     )
                 )
 
