@@ -1,9 +1,9 @@
-from datetime import timezone
+from datetime import datetime, timezone
 import logging
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
@@ -66,12 +66,12 @@ class FileUploadView(APIView):
 
             file_metadata = {
                 "name": file.name,
-                "course_ids": [course_uuid],
+                "course_ids": [str(course_uuid)],
                 "file_url": file_url,
                 "num_pages": request.data.get('num_pages', 0),
                 "content_type": file.content_type,
                 "file_size": file.size,
-                "uploaded_at": timezone.now(),
+                "uploaded_at": datetime.now(timezone.utc),
                 "user": request.user.id,
             }
 
@@ -85,6 +85,14 @@ class FileUploadView(APIView):
         except Exception as e:
             logging.error(f"Error uploading file: {e}")
             return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserFilesListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserFileSerializer
+
+    def get_queryset(self):
+        return UserFile.objects.filter(user=self.request.user)
 
 
 class CourseFilesView(APIView):
