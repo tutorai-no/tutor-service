@@ -2,6 +2,7 @@ import uuid
 from rest_framework import serializers
 
 from learning_materials.models import (
+    UserFile,
     ChatHistory,
     Cardset,
     FlashcardModel,
@@ -9,6 +10,16 @@ from learning_materials.models import (
     QuestionAnswerModel,
     QuizModel,
 )
+
+
+class UserFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserFile
+        fields = [
+            'id', 'name', 'course_ids', 'file_url', 'num_pages', 
+            'uploaded_at', 'content_type', 'file_size', 'user'
+        ]
+        read_only_fields = ['id', 'uploaded_at', 'file_url', 'user']
 
 
 class ChatSerializer(serializers.Serializer):

@@ -1,3 +1,4 @@
+from datetime import timezone
 import logging
 
 from rest_framework.views import APIView
@@ -12,8 +13,8 @@ from drf_yasg import openapi
 from uuid import UUID
 
 from learning_materials.files.file_service import (
+    generate_sas_url,
     upload_file_to_blob,
-    list_files_in_course,
 )
 from learning_materials.learning_material_service import (
     process_flashcards,
@@ -24,7 +25,7 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import Cardset, FlashcardModel, ChatHistory, QuizModel
+from learning_materials.models import Cardset, FlashcardModel, ChatHistory, QuizModel, UserFile
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -33,6 +34,7 @@ from learning_materials.translator import (
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
+    UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
     FlashcardSerializer,
@@ -50,14 +52,6 @@ class FileUploadView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
 
-    @swagger_auto_schema(
-        operation_description="Upload a file to Azure Blob Storage",
-        responses={
-            200: openapi.Response(description="File uploaded successfully"),
-            400: openapi.Response(description="Invalid request data"),
-        },
-        tags=["Files"],
-    )
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
         course_id = request.data.get('course_id')
@@ -65,18 +59,30 @@ class FileUploadView(APIView):
         if not file or not course_id:
             return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate the UUID format for course_id
         try:
-            user_uuid = request.user.uuid  # Use UUID from CustomUser
+            user_uuid = request.user.id  # Assuming UUID for user ID
             course_uuid = UUID(course_id)
-        except ValueError:
-            logger.error(f"Invalid course_id: {course_id}")
-            return Response({"detail": "Invalid course_id format"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            # Upload file to Azure Blob Storage
             file_url = upload_file_to_blob(file, user_uuid, course_uuid)
-            return Response({"file_url": file_url}, status=status.HTTP_200_OK)
+            
+            # Prepare metadata for saving
+            file_metadata = {
+                "name": file.name,
+                "course_ids": [course_uuid],
+                "file_url": file_url,
+                "num_pages": request.data.get('num_pages', 0),  # num_pages provided from frontend
+                "content_type": file.content_type,
+                "file_size": file.size,
+                "user": request.user,
+                "uploaded_at": timezone.now(),
+            }
+            # Save metadata to the database
+            serializer = UserFileSerializer(data=file_metadata)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             logging.error(f"Error uploading file: {e}")
             return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -93,11 +99,21 @@ class CourseFilesView(APIView):
             return Response({"detail": "course_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Fetch list of file URLs from Azure Blob Storage
-            file_urls = list_files_in_course(user_uuid, course_id)
-            return Response({"files": file_urls}, status=status.HTTP_200_OK)
+            # Fetch UserFile entries associated with the course and user
+            course_uuid = UUID(course_id)
+            user_files = UserFile.objects.filter(course_ids__contains=[course_uuid], user=request.user)
+
+            # Update each file's URL to include a SAS token
+            for user_file in user_files:
+                blob_name = f"{user_uuid}/{course_uuid}/{user_file.name}"
+                user_file.file_url = generate_sas_url(blob_name)
+
+            # Serialize the files and return them in the response
+            serializer = UserFileSerializer(user_files, many=True)
+            return Response({"files": serializer.data}, status=status.HTTP_200_OK)
+
         except Exception as e:
-            logging.error(f"Error retrieving files: {e}")
+            logger.error(f"Error retrieving files: {e}")
             return Response({"detail": "Error retrieving files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

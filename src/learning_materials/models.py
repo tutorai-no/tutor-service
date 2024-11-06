@@ -1,7 +1,31 @@
 from datetime import datetime, timedelta
 from django.db import models
+from uuid import uuid4
 
 from tutorai import settings
+
+
+class UserFile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    course_ids = models.JSONField(default=list)  # Store list of course UUIDs
+    file_url = models.URLField(max_length=1024)
+    num_pages = models.IntegerField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    content_type = models.CharField(max_length=100)  # MIME type
+    file_size = models.BigIntegerField(null=True, blank=True)  # File size in bytes
+
+    # Link to the user who uploaded the file
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='uploaded_files'
+    )
+
+    class Meta:
+        db_table = 'user_files'
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.name} (ID: {self.id})"
 
 
 class Cardset(models.Model):
