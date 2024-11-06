@@ -18,3 +18,5 @@ class Config:
         self.API_KEY = os.getenv("OPENAI_API_KEY")
         self.MONGODB_URI = os.getenv("MONGODB_URI")
         self.RAG_DATABASE_SYSTEM = os.getenv("RAG_DATABASE_SYSTEM", "mongodb")
+        self.AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+        self.AZURE_STORAGE_CONTAINER_NAME = os.getenv("AZURE_STORAGE_CONTAINER_NAME")

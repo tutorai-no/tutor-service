@@ -3,13 +3,18 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from uuid import UUID
 
-
+from learning_materials.files.file_service import (
+    upload_file_to_blob,
+    list_files_in_course,
+)
 from learning_materials.learning_material_service import (
     process_flashcards,
     process_answer,
@@ -39,6 +44,61 @@ from accounts.serializers import DocumentSerializer
 from accounts.models import Document
 
 logger = logging.getLogger(__name__)
+
+
+class FileUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @swagger_auto_schema(
+        operation_description="Upload a file to Azure Blob Storage",
+        responses={
+            200: openapi.Response(description="File uploaded successfully"),
+            400: openapi.Response(description="Invalid request data"),
+        },
+        tags=["Files"],
+    )
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        course_id = request.data.get('course_id')
+
+        if not file or not course_id:
+            return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate the UUID format for course_id
+        try:
+            user_uuid = request.user.uuid  # Use UUID from CustomUser
+            course_uuid = UUID(course_id)
+        except ValueError:
+            logger.error(f"Invalid course_id: {course_id}")
+            return Response({"detail": "Invalid course_id format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Upload file to Azure Blob Storage
+            file_url = upload_file_to_blob(file, user_uuid, course_uuid)
+            return Response({"file_url": file_url}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logging.error(f"Error uploading file: {e}")
+            return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CourseFilesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        course_id = self.kwargs.get("course_id")
+        user_uuid = str(request.user.uuid)  # Ensure you retrieve the correct UUID attribute
+
+        if not course_id:
+            return Response({"detail": "course_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Fetch list of file URLs from Azure Blob Storage
+            file_urls = list_files_in_course(user_uuid, course_id)
+            return Response({"files": file_urls}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logging.error(f"Error retrieving files: {e}")
+            return Response({"detail": "Error retrieving files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class FlashcardCreationView(GenericAPIView):
