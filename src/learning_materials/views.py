@@ -60,22 +60,21 @@ class FileUploadView(APIView):
             return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user_uuid = request.user.id  # Assuming UUID for user ID
+            user_uuid = request.user.id
             course_uuid = UUID(course_id)
             file_url = upload_file_to_blob(file, user_uuid, course_uuid)
-            
-            # Prepare metadata for saving
+
             file_metadata = {
                 "name": file.name,
                 "course_ids": [course_uuid],
                 "file_url": file_url,
-                "num_pages": request.data.get('num_pages', 0),  # num_pages provided from frontend
+                "num_pages": request.data.get('num_pages', 0),
                 "content_type": file.content_type,
                 "file_size": file.size,
-                "user": request.user,
                 "uploaded_at": timezone.now(),
+                "user": request.user.id,
             }
-            # Save metadata to the database
+
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
                 serializer.save()
@@ -99,7 +98,6 @@ class CourseFilesView(APIView):
             return Response({"detail": "course_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Fetch UserFile entries associated with the course and user
             course_uuid = UUID(course_id)
             user_files = UserFile.objects.filter(course_ids__contains=[course_uuid], user=request.user)
 
@@ -108,12 +106,11 @@ class CourseFilesView(APIView):
                 blob_name = f"{user_uuid}/{course_uuid}/{user_file.name}"
                 user_file.file_url = generate_sas_url(blob_name)
 
-            # Serialize the files and return them in the response
             serializer = UserFileSerializer(user_files, many=True)
             return Response({"files": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.error(f"Error retrieving files: {e}")
+            logging.error(f"Error retrieving files: {e}")
             return Response({"detail": "Error retrieving files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
