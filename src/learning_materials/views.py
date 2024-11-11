@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import logging
+import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -56,13 +57,20 @@ class FileUploadView(APIView):
         file = request.FILES.get('file')
         course_id = request.data.get('course_id')
 
+        print('Request: ', request.data)
+
         if not file or not course_id:
             return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user_uuid = request.user.id
+            print('Uploading file')
+            user_uuid = request.user.uuid
+            print('user_uuid: ', user_uuid)
             course_uuid = UUID(course_id)
-            file_url = upload_file_to_blob(file, user_uuid, course_uuid)
+            print('course_uuid: ', course_uuid)
+            file_uuid = uuid.uuid4()
+            print('file_uuid: ', file_uuid)
+            file_url = upload_file_to_blob(file, user_uuid, course_uuid, file_uuid)
 
             file_metadata = {
                 "name": file.name,
@@ -72,8 +80,10 @@ class FileUploadView(APIView):
                 "content_type": file.content_type,
                 "file_size": file.size,
                 "uploaded_at": datetime.now(timezone.utc),
-                "user": request.user.id,
+                "user": request.user.pk,
             }
+
+            print(file_metadata)
 
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
@@ -92,6 +102,7 @@ class UserFilesListView(ListAPIView):
     serializer_class = UserFileSerializer
 
     def get_queryset(self):
+        print(self.request.user)
         return UserFile.objects.filter(user=self.request.user)
 
 

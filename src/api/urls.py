@@ -39,7 +39,7 @@ router.register(r"flashcards", FlashcardViewSet, basename="flashcard")
 urlpatterns = [
     path("health-check/", health_check, name="health-check"),
     path("files/upload/", FileUploadView.as_view(), name="upload-file"),
-    path("user/files/", UserFilesListView.as_view(), name="user-files"),
+    path("files/", UserFilesListView.as_view(), name="user-files"),
     path("courses/<uuid:course_id>/files/", CourseFilesView.as_view(), name="course-files"),
     path(
         "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"

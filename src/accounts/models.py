@@ -19,8 +19,10 @@ class Subscription(models.Model):
 
 class CustomUser(AbstractUser):
     """
-    Custom user model extending AbstractUser to include subscription and UUID.
+    Custom user model with UUID as primary key.
     """
+    id = models.BigAutoField(primary_key=True)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
     email = models.EmailField(unique=True)
     subscription = models.ForeignKey(
         Subscription,
@@ -29,7 +31,9 @@ class CustomUser(AbstractUser):
         blank=True,
         related_name="subscribers",
     )
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
+    # Keep username, email, first_name, and last_name for login and display purposes
+    username = models.CharField(max_length=150, unique=True)
 
     def __str__(self):
         return self.username
