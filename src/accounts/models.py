@@ -21,8 +21,7 @@ class CustomUser(AbstractUser):
     """
     Custom user model with UUID as primary key.
     """
-    id = models.BigAutoField(primary_key=True)
-    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     subscription = models.ForeignKey(
         Subscription,

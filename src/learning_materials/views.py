@@ -64,7 +64,7 @@ class FileUploadView(APIView):
 
         try:
             print('Uploading file')
-            user_uuid = request.user.uuid
+            user_uuid = request.user.id
             print('user_uuid: ', user_uuid)
             course_uuid = UUID(course_id)
             print('course_uuid: ', course_uuid)
