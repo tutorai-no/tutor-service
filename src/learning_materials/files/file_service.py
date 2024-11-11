@@ -11,7 +11,7 @@ AZURE_CONTAINER_NAME = config.AZURE_STORAGE_CONTAINER_NAME
 blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECTION_STRING)
 container_client = blob_service_client.get_container_client(AZURE_CONTAINER_NAME)
 
-def upload_file_to_blob(file: UploadedFile, user_uuid: UUID, course_uuid: UUID) -> str:
+def upload_file_to_blob(file: UploadedFile, user_uuid: UUID, course_uuid: UUID, file_uuid: UUID) -> str:
     """
     Uploads a file to Azure Blob Storage and returns the URL.
 
@@ -23,7 +23,8 @@ def upload_file_to_blob(file: UploadedFile, user_uuid: UUID, course_uuid: UUID) 
     Returns:
         str: The URL of the uploaded file in Azure Blob Storage.
     """
-    blob_name = f"{user_uuid}/{course_uuid}/{file.name}"
+    blob_name = f"{user_uuid}/{course_uuid}/{file_uuid}"
+    print(f"Uploading file to Azure Blob Storage: {blob_name}")
     blob_client = container_client.get_blob_client(blob_name)
     blob_client.upload_blob(file, overwrite=True)
     return blob_client.url

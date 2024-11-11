@@ -16,10 +16,10 @@ class UserFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserFile
         fields = [
-            'id', 'name', 'course_ids', 'file_url', 'num_pages', 
-            'uploaded_at', 'content_type', 'file_size', 'user'
+            'id', 'name', 'file_url', 'content_type', 'file_size', 'uploaded_at', 'num_pages', 'course_ids', 'user'
         ]
-        read_only_fields = ['id', 'uploaded_at', 'file_url', 'user']
+        read_only_fields = ['id', 'uploaded_at', 'file_url']
+
 
 
 class ChatSerializer(serializers.Serializer):
