@@ -13,6 +13,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from uuid import UUID
 
+from learning_materials.files.file_embeddings import create_file_embeddings
 from learning_materials.files.file_service import (
     generate_sas_url,
     upload_file_to_blob,
@@ -56,6 +57,7 @@ class FileUploadView(APIView):
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
         course_id = request.data.get('course_id')
+        auth_header = request.headers.get('Authorization')
 
         if not file or not course_id:
             return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -65,11 +67,14 @@ class FileUploadView(APIView):
             course_uuid = UUID(course_id)
             file_uuid = uuid.uuid4()
             file_url = upload_file_to_blob(file, user_uuid, course_uuid, file_uuid)
+            sas_url = generate_sas_url(file_url)
 
             file_metadata = {
+                "id": file_uuid,
                 "name": file.name,
                 "course_ids": [str(course_uuid)],
                 "file_url": file_url,
+                "sas_url": sas_url,
                 "num_pages": request.data.get('num_pages', 0),
                 "content_type": file.content_type,
                 "file_size": file.size,
@@ -78,6 +83,7 @@ class FileUploadView(APIView):
 
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
+                create_file_embeddings(file, file_uuid, auth_header)
                 serializer.save(user=request.user)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
@@ -86,6 +92,7 @@ class FileUploadView(APIView):
         except Exception as e:
             logging.error(f"Error uploading file: {e}")
             return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 class UserFilesListView(ListAPIView):
