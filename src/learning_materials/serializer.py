@@ -1,6 +1,7 @@
 import uuid
 from rest_framework import serializers
 
+from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAINER_NAME
 from learning_materials.models import (
     UserFile,
     ChatHistory,
@@ -13,12 +14,19 @@ from learning_materials.models import (
 
 
 class UserFileSerializer(serializers.ModelSerializer):
+    sas_url = serializers.SerializerMethodField()
+
     class Meta:
         model = UserFile
         fields = [
-            'id', 'name', 'file_url', 'content_type', 'file_size', 'uploaded_at', 'num_pages', 'course_ids', 'user'
+            'id', 'name', 'file_url', 'content_type', 'file_size', 'uploaded_at', 'num_pages', 'course_ids', 'sas_url'
         ]
         read_only_fields = ['user']
+
+    def get_sas_url(self, obj):
+        # Generate the SAS URL for the file using its blob name
+        blob_name = obj.file_url.split(f"/{AZURE_CONTAINER_NAME}/")[-1]
+        return generate_sas_url(blob_name)
 
 
 class ChatSerializer(serializers.Serializer):
