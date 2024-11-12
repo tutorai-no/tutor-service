@@ -74,12 +74,11 @@ class FileUploadView(APIView):
                 "content_type": file.content_type,
                 "file_size": file.size,
                 "uploaded_at": datetime.now(timezone.utc),
-                "user": request.user.pk,
             }
 
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
-                serializer.save()
+                serializer.save(user=request.user)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -94,7 +93,6 @@ class UserFilesListView(ListAPIView):
     serializer_class = UserFileSerializer
 
     def get_queryset(self):
-        print(self.request.user)
         return UserFile.objects.filter(user=self.request.user)
 
 
