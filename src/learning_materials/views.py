@@ -57,19 +57,13 @@ class FileUploadView(APIView):
         file = request.FILES.get('file')
         course_id = request.data.get('course_id')
 
-        print('Request: ', request.data)
-
         if not file or not course_id:
             return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            print('Uploading file')
             user_uuid = request.user.id
-            print('user_uuid: ', user_uuid)
             course_uuid = UUID(course_id)
-            print('course_uuid: ', course_uuid)
             file_uuid = uuid.uuid4()
-            print('file_uuid: ', file_uuid)
             file_url = upload_file_to_blob(file, user_uuid, course_uuid, file_uuid)
 
             file_metadata = {
@@ -82,8 +76,6 @@ class FileUploadView(APIView):
                 "uploaded_at": datetime.now(timezone.utc),
                 "user": request.user.pk,
             }
-
-            print(file_metadata)
 
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
