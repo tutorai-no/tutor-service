@@ -24,7 +24,6 @@ def upload_file_to_blob(file: UploadedFile, user_uuid: UUID, course_uuid: UUID, 
         str: The URL of the uploaded file in Azure Blob Storage.
     """
     blob_name = f"{user_uuid}/{course_uuid}/{file_uuid}"
-    print(f"Uploading file to Azure Blob Storage: {blob_name}")
     blob_client = container_client.get_blob_client(blob_name)
     blob_client.upload_blob(file, overwrite=True)
     return blob_client.url
