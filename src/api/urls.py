@@ -15,6 +15,8 @@ from accounts.views import (
 )
 from api.views import health_check
 from learning_materials.views import (
+    CourseDetailView,
+    CourseListView,
     FileUploadView,
     UserFilesListView,
     CourseFilesView,
@@ -77,5 +79,7 @@ urlpatterns = [
         name="subscription_history",
     ),
     path("feedback/", UserFeedback.as_view(), name="feedback"),
+    path('courses/', CourseListView.as_view(), name='course-list'),
+    path('courses/<uuid:pk>/', CourseDetailView.as_view(), name='course-detail'),
     path("", include(router.urls)),
 ]
