@@ -31,9 +31,6 @@ class CustomUser(AbstractUser):
         related_name="subscribers",
     )
 
-    # Keep username, email, first_name, and last_name for login and display purposes
-    username = models.CharField(max_length=150, unique=True)
-
     def __str__(self):
         return self.username
 
