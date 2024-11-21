@@ -4,7 +4,7 @@ import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView, ListAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView, ListCreateAPIView, RetrieveAPIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
@@ -27,7 +27,7 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import Cardset, FlashcardModel, ChatHistory, QuizModel, UserFile
+from learning_materials.models import Cardset, Course, FlashcardModel, ChatHistory, QuizModel, UserFile
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -36,6 +36,7 @@ from learning_materials.translator import (
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
+    CourseSerializer,
     UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
@@ -48,6 +49,30 @@ from accounts.serializers import DocumentSerializer
 from accounts.models import Document
 
 logger = logging.getLogger(__name__)
+
+
+# View for listing and creating courses
+class CourseListView(ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CourseSerializer
+
+    def get_queryset(self):
+        # Fetch courses related to the current authenticated user
+        return Course.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Set the user automatically on course creation
+        serializer.save(user=self.request.user)
+
+# View for retrieving a single course and its related files
+class CourseDetailView(RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CourseSerializer
+    queryset = Course.objects.all()  # Retrieves all courses
+
+    def get_queryset(self):
+        # Limit to courses belonging to the authenticated user
+        return Course.objects.filter(user=self.request.user)
 
 
 class FileUploadView(APIView):
@@ -63,16 +88,15 @@ class FileUploadView(APIView):
             return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user_uuid = request.user.id
-            course_uuid = UUID(course_id)
+            user = request.user
+            course = Course.objects.get(id=course_id, user=user)
             file_uuid = uuid.uuid4()
-            file_url = upload_file_to_blob(file, user_uuid, course_uuid, file_uuid)
+            file_url = upload_file_to_blob(file, user.id, course.id, file_uuid)
             sas_url = generate_sas_url(file_url)
 
             file_metadata = {
                 "id": file_uuid,
                 "name": file.name,
-                "course_ids": [str(course_uuid)],
                 "file_url": file_url,
                 "sas_url": sas_url,
                 "num_pages": request.data.get('num_pages', 0),
@@ -84,15 +108,18 @@ class FileUploadView(APIView):
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
                 create_file_embeddings(file, file_uuid, auth_header)
-                serializer.save(user=request.user)
+                user_file = serializer.save(user=user)
+                # Associate the file with the course
+                course.files.add(user_file)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        except Course.DoesNotExist:
+            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logging.error(f"Error uploading file: {e}")
             return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 class UserFilesListView(ListAPIView):

@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAINER_NAME
 from learning_materials.models import (
+    Course,
     UserFile,
     ChatHistory,
     Cardset,
@@ -11,6 +12,24 @@ from learning_materials.models import (
     QuestionAnswerModel,
     QuizModel,
 )
+
+
+from rest_framework import serializers
+from .models import Course
+
+class CourseSerializer(serializers.ModelSerializer):
+    files = serializers.PrimaryKeyRelatedField(many=True, read_only=True)  # Related files for the course
+
+    class Meta:
+        model = Course
+        fields = ['id', 'name', 'files']
+        read_only_fields = ['user']  # Ensure user is read-only if it’s automatically set by the view
+
+    def create(self, validated_data):
+        # Set the user automatically from the request context
+        user = self.context['request'].user
+        course = Course.objects.create(user=user, **validated_data)
+        return course
 
 
 class UserFileSerializer(serializers.ModelSerializer):
