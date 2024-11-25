@@ -17,39 +17,37 @@ from learning_materials.models import (
 from rest_framework import serializers
 from .models import Course
 
-class CourseSerializer(serializers.ModelSerializer):
-    files = serializers.PrimaryKeyRelatedField(many=True, read_only=True)  # Related files for the course
-
-    class Meta:
-        model = Course
-        fields = ['id', 'name', 'files']
-        read_only_fields = ['user']  # Ensure user is read-only if it’s automatically set by the view
-
-    def create(self, validated_data):
-        # Set the user automatically from the request context
-        user = self.context['request'].user
-        course = Course.objects.create(user=user, **validated_data)
-        return course
-
 
 class UserFileSerializer(serializers.ModelSerializer):
     sas_url = serializers.SerializerMethodField()
     id = serializers.UUIDField(required=False)
+    courses = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = UserFile
         fields = [
             'id', 'name', 'file_url', 'content_type', 'file_size',
-            'uploaded_at', 'num_pages', 'course_ids', 'sas_url'
+            'uploaded_at', 'num_pages', 'sas_url', 'courses'
         ]
-        read_only_fields = ['user']
-        extra_kwargs = {
-            'id': {'read_only': False}
-        }
+        read_only_fields = ['user', 'uploaded_at']
 
     def get_sas_url(self, obj):
         blob_name = obj.file_url.split(f"/{AZURE_CONTAINER_NAME}/")[-1]
         return generate_sas_url(blob_name)
+    
+
+class CourseSerializer(serializers.ModelSerializer):
+    files = UserFileSerializer(many=True, read_only=True)  # Use the appropriate serializer
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Course
+        fields = ['id', 'name', 'files', 'user']
+        # No need to specify read_only_fields since 'user' is set via HiddenField
+
+    def create(self, validated_data):
+        # The user is automatically set by the HiddenField
+        return super().create(validated_data)
 
 
 class ChatSerializer(serializers.Serializer):
