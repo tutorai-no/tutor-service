@@ -51,24 +51,36 @@ from accounts.models import Document
 logger = logging.getLogger(__name__)
 
 
-# View for listing and creating courses
-class CourseListView(ListCreateAPIView):
+class CoursesView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CourseSerializer
 
     def get_queryset(self):
-        # Fetch courses related to the current authenticated user
+        # Limit to courses belonging to the authenticated user
         return Course.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
-        # Set the user automatically on course creation
-        serializer.save(user=self.request.user)
+    @swagger_auto_schema(
+        operation_description="List all courses",
+        responses={200: openapi.Response(description="Courses retrieved successfully")},
+        tags=["Courses"],
+    )
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="Create a new course",
+        request_body=CourseSerializer,
+        responses={201: openapi.Response(description="Course created successfully")},
+        tags=["Courses"],
+    )
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+    
 
 # View for retrieving a single course and its related files
 class CourseDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CourseSerializer
-    queryset = Course.objects.all()  # Retrieves all courses
 
     def get_queryset(self):
         # Limit to courses belonging to the authenticated user
@@ -102,16 +114,14 @@ class FileUploadView(APIView):
                 "num_pages": request.data.get('num_pages', 0),
                 "content_type": file.content_type,
                 "file_size": file.size,
-                "uploaded_at": datetime.now(timezone.utc),
             }
 
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
-                create_file_embeddings(file, file_uuid, auth_header)
                 user_file = serializer.save(user=user)
                 # Associate the file with the course
-                course.files.add(user_file)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                user_file.courses.add(course)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -128,30 +138,28 @@ class UserFilesListView(ListAPIView):
 
     def get_queryset(self):
         return UserFile.objects.filter(user=self.request.user)
-
+    
 
 class CourseFilesView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
-        course_id = self.kwargs.get("course_id")
-        user_uuid = str(request.user.uuid)  # Ensure you retrieve the correct UUID attribute
-
-        if not course_id:
-            return Response({"detail": "course_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request, course_id):
+        user = request.user
 
         try:
-            course_uuid = UUID(course_id)
-            user_files = UserFile.objects.filter(course_ids__contains=[course_uuid], user=request.user)
+            course = Course.objects.get(id=course_id, user=user)
+            user_files = course.files.all()
 
             # Update each file's URL to include a SAS token
             for user_file in user_files:
-                blob_name = f"{user_uuid}/{course_uuid}/{user_file.name}"
+                blob_name = f"{user.id}/{course.id}/{user_file.name}"
                 user_file.file_url = generate_sas_url(blob_name)
 
             serializer = UserFileSerializer(user_files, many=True)
             return Response({"files": serializer.data}, status=status.HTTP_200_OK)
 
+        except Course.DoesNotExist:
+            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logging.error(f"Error retrieving files: {e}")
             return Response({"detail": "Error retrieving files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
