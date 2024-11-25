@@ -63,23 +63,25 @@ LOGIN_URL = "/admin/login/"
 # Application definition
 
 INSTALLED_APPS = [
+    # Your apps
+    "accounts",
+    "api",
+    "learning_materials",
+    
+    # Django built-in apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # External dependencies
+    
+    # Third-party apps
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "drf_yasg",
-    # Own applications
-    "api",
-    "accounts",
-    "learning_materials",
 ]
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
