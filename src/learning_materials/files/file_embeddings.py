@@ -5,7 +5,7 @@ config = Config()
 BASE_URL_SCRAPER = config.BASE_URL_SCRAPER
 
 def create_file_embeddings(file, file_uuid: str, auth_header: str) -> dict:
-    endpoint = f"{BASE_URL_SCRAPER}/file"
+    endpoint = f"{BASE_URL_SCRAPER}/file/"
     file.seek(0)
     file_content = file.read()
 
@@ -14,7 +14,7 @@ def create_file_embeddings(file, file_uuid: str, auth_header: str) -> dict:
     }
 
     data = {
-        "uuids": file_uuid
+        "uuids": [file_uuid]
     }
 
     headers = {

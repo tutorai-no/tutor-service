@@ -24,7 +24,7 @@ services:
       - LOGGING_LEVEL=${LOGGING_LEVEL}
       - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
       - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME}
-      - BASE_URL_SCRAPER=http://server:8080
+      - BASE_URL_SCRAPER=http://scraper-service:8080
       - DEBUG=${DEBUG}
     networks:
       - tutorai_network
