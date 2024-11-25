@@ -96,6 +96,9 @@ class FileUploadView(APIView):
         course_id = request.data.get('course_id')
         auth_header = request.headers.get('Authorization')
 
+        if not auth_header:
+            return Response({"detail": "Authorization header is required"}, status=status.HTTP_401_UNAUTHORIZED)
+
         if not file or not course_id:
             return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 

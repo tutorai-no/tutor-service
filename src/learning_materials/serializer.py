@@ -17,13 +17,17 @@ from learning_materials.models import (
 class UserFileSerializer(serializers.ModelSerializer):
     sas_url = serializers.SerializerMethodField()
     id = serializers.UUIDField(required=False)
-    courses = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    course_ids = serializers.PrimaryKeyRelatedField(
+        source='courses',
+        many=True,
+        read_only=True
+    )
 
     class Meta:
         model = UserFile
         fields = [
             'id', 'name', 'blob_name', 'file_url', 'content_type', 'file_size',
-            'uploaded_at', 'num_pages', 'sas_url', 'courses'
+            'uploaded_at', 'num_pages', 'sas_url', 'course_ids'
         ]
         read_only_fields = ['user', 'uploaded_at']
 
