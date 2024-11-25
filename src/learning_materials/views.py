@@ -123,8 +123,9 @@ class FileUploadView(APIView):
             serializer = UserFileSerializer(data=file_metadata)
             if serializer.is_valid():
                 user_file = serializer.save(user=user)
-                # Associate the file with the course
                 user_file.courses.add(course)
+                file.seek(0)
+                create_file_embeddings(file, str(file_uuid), auth_header)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
