@@ -23,6 +23,7 @@ class Course(models.Model):
 class UserFile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=255)
+    blob_name = models.CharField(max_length=1024)
     file_url = models.URLField(max_length=1024)
     num_pages = models.IntegerField()
     uploaded_at = models.DateTimeField(auto_now_add=True)

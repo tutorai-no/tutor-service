@@ -103,12 +103,13 @@ class FileUploadView(APIView):
             user = request.user
             course = Course.objects.get(id=course_id, user=user)
             file_uuid = uuid.uuid4()
-            file_url = upload_file_to_blob(file, user.id, course.id, file_uuid)
-            sas_url = generate_sas_url(file_url)
+            blob_name, file_url = upload_file_to_blob(file, user.id, course.id, file_uuid)
+            sas_url = generate_sas_url(blob_name)
 
             file_metadata = {
                 "id": file_uuid,
                 "name": file.name,
+                "blob_name": blob_name,  # Store blob_name
                 "file_url": file_url,
                 "sas_url": sas_url,
                 "num_pages": request.data.get('num_pages', 0),
@@ -149,11 +150,6 @@ class CourseFilesView(APIView):
         try:
             course = Course.objects.get(id=course_id, user=user)
             user_files = course.files.all()
-
-            # Update each file's URL to include a SAS token
-            for user_file in user_files:
-                blob_name = f"{user.id}/{course.id}/{user_file.name}"
-                user_file.file_url = generate_sas_url(blob_name)
 
             serializer = UserFileSerializer(user_files, many=True)
             return Response({"files": serializer.data}, status=status.HTTP_200_OK)

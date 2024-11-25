@@ -14,10 +14,6 @@ from learning_materials.models import (
 )
 
 
-from rest_framework import serializers
-from .models import Course
-
-
 class UserFileSerializer(serializers.ModelSerializer):
     sas_url = serializers.SerializerMethodField()
     id = serializers.UUIDField(required=False)
@@ -26,14 +22,13 @@ class UserFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserFile
         fields = [
-            'id', 'name', 'file_url', 'content_type', 'file_size',
+            'id', 'name', 'blob_name', 'file_url', 'content_type', 'file_size',
             'uploaded_at', 'num_pages', 'sas_url', 'courses'
         ]
         read_only_fields = ['user', 'uploaded_at']
 
     def get_sas_url(self, obj):
-        blob_name = obj.file_url.split(f"/{AZURE_CONTAINER_NAME}/")[-1]
-        return generate_sas_url(blob_name)
+        return generate_sas_url(obj.blob_name)
     
 
 class CourseSerializer(serializers.ModelSerializer):
