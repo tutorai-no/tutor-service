@@ -1,15 +1,23 @@
+from datetime import datetime, timezone
 import logging
+import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView, ListCreateAPIView, RetrieveAPIView
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from uuid import UUID
 
-
+from learning_materials.files.file_embeddings import create_file_embeddings
+from learning_materials.files.file_service import (
+    generate_sas_url,
+    upload_file_to_blob,
+)
 from learning_materials.learning_material_service import (
     process_flashcards,
     process_answer,
@@ -19,7 +27,7 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import Cardset, FlashcardModel, ChatHistory, QuizModel
+from learning_materials.models import Cardset, Course, FlashcardModel, ChatHistory, QuizModel, UserFile
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -28,6 +36,8 @@ from learning_materials.translator import (
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
+    CourseSerializer,
+    UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
     FlashcardSerializer,
@@ -39,6 +49,120 @@ from accounts.serializers import DocumentSerializer
 from accounts.models import Document
 
 logger = logging.getLogger(__name__)
+
+
+class CoursesView(ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CourseSerializer
+
+    def get_queryset(self):
+        # Limit to courses belonging to the authenticated user
+        return Course.objects.filter(user=self.request.user)
+
+    @swagger_auto_schema(
+        operation_description="List all courses",
+        responses={200: openapi.Response(description="Courses retrieved successfully")},
+        tags=["Courses"],
+    )
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="Create a new course",
+        request_body=CourseSerializer,
+        responses={201: openapi.Response(description="Course created successfully")},
+        tags=["Courses"],
+    )
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+    
+
+# View for retrieving a single course and its related files
+class CourseDetailView(RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CourseSerializer
+
+    def get_queryset(self):
+        # Limit to courses belonging to the authenticated user
+        return Course.objects.filter(user=self.request.user)
+
+
+class FileUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        course_id = request.data.get('course_id')
+        auth_header = request.headers.get('Authorization')
+
+        if not auth_header:
+            return Response({"detail": "Authorization header is required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not file or not course_id:
+            return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = request.user
+            course = Course.objects.get(id=course_id, user=user)
+            file_uuid = uuid.uuid4()
+            blob_name, file_url = upload_file_to_blob(file, user.id, course.id, file_uuid)
+            sas_url = generate_sas_url(blob_name)
+
+            file_metadata = {
+                "id": file_uuid,
+                "name": file.name,
+                "blob_name": blob_name,  # Store blob_name
+                "file_url": file_url,
+                "sas_url": sas_url,
+                "num_pages": request.data.get('num_pages', 0),
+                "content_type": file.content_type,
+                "file_size": file.size,
+            }
+
+            serializer = UserFileSerializer(data=file_metadata)
+            if serializer.is_valid():
+                user_file = serializer.save(user=user)
+                user_file.courses.add(course)
+                file.seek(0)
+                create_file_embeddings(file, str(file_uuid), auth_header)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Course.DoesNotExist:
+            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logging.error(f"Error uploading file: {e}")
+            return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UserFilesListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserFileSerializer
+
+    def get_queryset(self):
+        return UserFile.objects.filter(user=self.request.user)
+    
+
+class CourseFilesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, course_id):
+        user = request.user
+
+        try:
+            course = Course.objects.get(id=course_id, user=user)
+            user_files = course.files.all()
+
+            serializer = UserFileSerializer(user_files, many=True)
+            return Response({"files": serializer.data}, status=status.HTTP_200_OK)
+
+        except Course.DoesNotExist:
+            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logging.error(f"Error retrieving files: {e}")
+            return Response({"detail": "Error retrieving files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class FlashcardCreationView(GenericAPIView):

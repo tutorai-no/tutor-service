@@ -91,7 +91,7 @@ class MongoDB(Database):
         self.client = MongoClient(Config().MONGODB_URI)
         self.db = self.client["test-curriculum-database"]
         self.collection = self.db["test-curriculum-collection"]
-        self.similarity_threshold = 0.5
+        self.similarity_threshold = 0.2
         self.embeddings = OpenAIEmbedding()
 
     def get_curriculum(self, document_id: uuid.UUID, embedding: list[float]) -> list[Citation]:

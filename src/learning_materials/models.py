@@ -1,7 +1,45 @@
 from datetime import datetime, timedelta
 from django.db import models
+from uuid import uuid4
 
 from tutorai import settings
+
+
+class Course(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='courses'
+    )
+
+    class Meta:
+        db_table = 'courses'
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} (ID: {self.id})"
+
+
+class UserFile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    blob_name = models.CharField(max_length=1024)
+    file_url = models.URLField(max_length=1024)
+    num_pages = models.IntegerField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    content_type = models.CharField(max_length=100)
+    file_size = models.BigIntegerField(null=True, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='uploaded_files'
+    )
+    courses = models.ManyToManyField(Course, related_name='files')
+
+    class Meta:
+        db_table = 'user_files'
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.name} (ID: {self.id})"
 
 
 class Cardset(models.Model):

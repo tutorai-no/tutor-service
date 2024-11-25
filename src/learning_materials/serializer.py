@@ -1,7 +1,10 @@
 import uuid
 from rest_framework import serializers
 
+from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAINER_NAME
 from learning_materials.models import (
+    Course,
+    UserFile,
     ChatHistory,
     Cardset,
     FlashcardModel,
@@ -9,6 +12,41 @@ from learning_materials.models import (
     QuestionAnswerModel,
     QuizModel,
 )
+
+
+class UserFileSerializer(serializers.ModelSerializer):
+    sas_url = serializers.SerializerMethodField()
+    id = serializers.UUIDField(required=False)
+    course_ids = serializers.PrimaryKeyRelatedField(
+        source='courses',
+        many=True,
+        read_only=True
+    )
+
+    class Meta:
+        model = UserFile
+        fields = [
+            'id', 'name', 'blob_name', 'file_url', 'content_type', 'file_size',
+            'uploaded_at', 'num_pages', 'sas_url', 'course_ids'
+        ]
+        read_only_fields = ['user', 'uploaded_at']
+
+    def get_sas_url(self, obj):
+        return generate_sas_url(obj.blob_name)
+    
+
+class CourseSerializer(serializers.ModelSerializer):
+    files = UserFileSerializer(many=True, read_only=True)  # Use the appropriate serializer
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Course
+        fields = ['id', 'name', 'files', 'user']
+        # No need to specify read_only_fields since 'user' is set via HiddenField
+
+    def create(self, validated_data):
+        # The user is automatically set by the HiddenField
+        return super().create(validated_data)
 
 
 class ChatSerializer(serializers.Serializer):

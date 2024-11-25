@@ -19,9 +19,9 @@ class Subscription(models.Model):
 
 class CustomUser(AbstractUser):
     """
-    Custom user model extending AbstractUser to include subscription.
+    Custom user model with UUID as primary key.
     """
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     subscription = models.ForeignKey(
         Subscription,
@@ -30,7 +30,6 @@ class CustomUser(AbstractUser):
         blank=True,
         related_name="subscribers",
     )
-    # Add any additional fields you need here
 
     def __str__(self):
         return self.username

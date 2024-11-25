@@ -15,6 +15,11 @@ from accounts.views import (
 )
 from api.views import health_check
 from learning_materials.views import (
+    CourseDetailView,
+    CoursesView,
+    FileUploadView,
+    UserFilesListView,
+    CourseFilesView,
     CardsetExportView,
     CardsetViewSet,
     CompendiumCreationView,
@@ -35,6 +40,11 @@ router.register(r"flashcards", FlashcardViewSet, basename="flashcard")
 
 urlpatterns = [
     path("health-check/", health_check, name="health-check"),
+    path('courses/', CoursesView.as_view(), name='courses-list-create'),
+    path('courses/<uuid:pk>/', CourseDetailView.as_view(), name='course-detail'),
+    path('courses/<uuid:course_id>/files/', CourseFilesView.as_view(), name='course-files'),
+    path("files/upload/", FileUploadView.as_view(), name="upload-file"),
+    path("files/", UserFilesListView.as_view(), name="user-files"),
     path(
         "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"
     ),
