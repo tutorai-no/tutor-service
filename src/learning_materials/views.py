@@ -24,7 +24,8 @@ from learning_materials.files.file_service import (
     upload_file_to_blob,
 )
 from learning_materials.learning_material_service import (
-    process_flashcards,
+    process_flashcards_by_page_range,
+    process_flashcards_by_subject,
     process_answer,
 )
 from learning_materials.quizzes.quiz_service import (
@@ -73,7 +74,8 @@ class CoursesView(ListCreateAPIView):
 
     @swagger_auto_schema(
         operation_description="List all courses",
-        responses={200: openapi.Response(description="Courses retrieved successfully")},
+        responses={200: openapi.Response(
+            description="Courses retrieved successfully")},
         tags=["Courses"],
     )
     def get(self, request, *args, **kwargs):
@@ -82,7 +84,8 @@ class CoursesView(ListCreateAPIView):
     @swagger_auto_schema(
         operation_description="Create a new course",
         request_body=CourseSerializer,
-        responses={201: openapi.Response(description="Course created successfully")},
+        responses={201: openapi.Response(
+            description="Course created successfully")},
         tags=["Courses"],
     )
     def post(self, request, *args, **kwargs):
@@ -235,9 +238,19 @@ class FlashcardCreationView(GenericAPIView):
             subject = serializer.validated_data.get("subject")
             user = request.user
 
-            flashcards = process_flashcards(document_id, start, end)
+            print("Start, End, Subject", start, end, subject, flush=True)
+
+            if start is not None and end is not None:
+                flashcards = process_flashcards_by_page_range(
+                    document_id, start, end)
+                cardset_name = f"{document_id}_{start}_{end}"
+
+            elif subject:
+                flashcards = process_flashcards_by_subject(
+                    document_id, subject)
+
+                cardset_name = f"{document_id}_subject"
             document = Document.objects.get(id=document_id)
-            cardset_name = f"{document.name}_{start}_{end}"
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
@@ -323,19 +336,22 @@ class ReviewFlashcardView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            answer_was_correct = serializer.validated_data.get("answer_was_correct")
+            answer_was_correct = serializer.validated_data.get(
+                "answer_was_correct")
             flashcard_id = serializer.validated_data.get("id")
             try:
                 flashcard = FlashcardModel.objects.get(id=flashcard_id)
             except FlashcardModel.DoesNotExist:
                 return Response("Flashcard not found", status=status.HTTP_404_NOT_FOUND)
 
-            valid_user = flashcard.review(answer_was_correct, user=request.user)
+            valid_user = flashcard.review(
+                answer_was_correct, user=request.user)
             flashcard.save()
 
             if valid_user:
                 return Response(
-                    data=FlashcardSerializer(flashcard).data, status=status.HTTP_200_OK
+                    data=FlashcardSerializer(
+                        flashcard).data, status=status.HTTP_200_OK
                 )
             else:
                 return Response("Invalid user", status=status.HTTP_400_BAD_REQUEST)
@@ -451,7 +467,8 @@ class ChatHistoryListView(APIView):
 
     def get(self, request):
         user = request.user
-        chat_histories = ChatHistory.objects.filter(user=user).order_by("-last_used_at")
+        chat_histories = ChatHistory.objects.filter(
+            user=user).order_by("-last_used_at")
         data = []
         for chat in chat_histories:
             data.append(
@@ -528,10 +545,12 @@ class QuizCreationView(GenericAPIView):
             start = serializer.validated_data.get("start_page", None)
             end = serializer.validated_data.get("end_page", None)
             subject = serializer.validated_data.get("subject", None)
-            learning_goals = serializer.validated_data.get("learning_goals", [])
+            learning_goals = serializer.validated_data.get(
+                "learning_goals", [])
 
             # Generate the quiz data
-            quiz_data = generate_quiz(document_id, start, end, subject, learning_goals)
+            quiz_data = generate_quiz(
+                document_id, start, end, subject, learning_goals)
 
             # Retrieve the authenticated user
             user = request.user

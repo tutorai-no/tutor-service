@@ -58,7 +58,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "subscription")
+        fields = ("username", "email", "password",
+                  "password_confirm", "subscription")
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
@@ -71,7 +72,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop("password_confirm")
         subscription = validated_data.pop("subscription", None)
 
-        user = User.objects.create_user(subscription=subscription, **validated_data)
+        user = User.objects.create_user(
+            subscription=subscription, **validated_data)
 
         # Send welcome email
         send_mail(
@@ -97,13 +99,16 @@ class LoginSerializer(TokenObtainPairSerializer):
 
         if user and user.check_password(password):
             if not user.is_active:
-                raise AuthenticationFailed("User is inactive.", code="authorization")
-            data = super().validate({"username": user.username, "password": password})
+                raise AuthenticationFailed(
+                    "User is inactive.", code="authorization")
+            data = super().validate(
+                {"username": user.username, "password": password})
             user.last_login = timezone.now()
             user.save()
             return data
         else:
-            raise AuthenticationFailed("Invalid credentials", code="authorization")
+            raise AuthenticationFailed(
+                "Invalid credentials", code="authorization")
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -139,7 +144,8 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({"uid": "Invalid UID"})
 
         if not default_token_generator.check_token(user, token):
-            raise serializers.ValidationError({"token": "Invalid or expired token"})
+            raise serializers.ValidationError(
+                {"token": "Invalid or expired token"})
 
         attrs["user"] = user
         return attrs
@@ -199,7 +205,8 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
-        fields = ["id", "name", "start_page", "end_page", "subject", "learning_goals"]
+        fields = ["id", "name", "start_page",
+                  "end_page", "subject", "learning_goals"]
         read_only_fields = ["id"]
 
     def validate(self, data: dict) -> dict:
@@ -304,7 +311,7 @@ def validate_image_size(image):
     max_size_in_mb = 4
     max_size_in_bytes = max_size_in_mb * 1024 * 1024  # Convert MB to bytes
     if image.size > max_size_in_bytes:
-        raise ValidationError(f"Image size should not exceed {max_size_in_mb} MB.")
+        raise ValidationError(f"Image size should not exceed { max_size_in_mb} MB.")
 
 
 class UserFeedbackSerializer(serializers.Serializer):
