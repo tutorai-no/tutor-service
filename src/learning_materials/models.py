@@ -47,20 +47,21 @@ class Chat(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="chat_histories",
+        related_name="chats",
     )
     course = models.ForeignKey(
         Course,
         on_delete=models.CASCADE,
-        related_name="chat_histories",
+        related_name="chats",
+        null=True,
+        blank=True,
     )
-    messages = models.JSONField(default=list, help_text="List of chat messages")
+    messages = models.JSONField(default=list)  # List of {role: str, content: str, ...}
     created_at = models.DateTimeField(auto_now_add=True)
-    last_used_at = models.DateTimeField(auto_now=True)
-    title = models.CharField(max_length=255, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Chat {self.id} for {self.user} in course {self.course}"
+        return f"Chat {self.id} for user {self.user.id}"
 
 
 class Cardset(models.Model):
