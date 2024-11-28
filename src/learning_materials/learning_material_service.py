@@ -68,11 +68,4 @@ def process_answer(
     # Create a response object
     answer = RagAnswer(content=answer_content, citations=curriculum)
 
-    # Add the assistant's response to the chat history
-    chat_history.append({
-        "role": "assistant",
-        "content": answer.content,
-        "citations": [citation.model_dump() for citation in answer.citations],
-    })
-
     return answer
