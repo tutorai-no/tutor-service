@@ -221,7 +221,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
         # If both pages are provided, validate their relationship
         if start_page is not None and end_page is not None:
-            if start_page <= end_page:
+            if start_page > end_page:
                 raise serializers.ValidationError(
                     "'start_page' must be less than or equal to 'end_page'."
                 )
