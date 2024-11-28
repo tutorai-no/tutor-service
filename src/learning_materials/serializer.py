@@ -50,29 +50,58 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class ChatSerializer(serializers.Serializer):
-    chatId = serializers.CharField(
+    chatId = serializers.UUIDField(
         required=False,
-        allow_blank=True,
+        allow_null=True,
         help_text="Unique identifier for the chat session.",
     )
-    documentId = serializers.UUIDField(
-        help_text="The ID of the document being discussed.",
+    courseId = serializers.UUIDField(
+        help_text="The ID of the course.",
     )
-
     message = serializers.CharField(help_text="The user message.")
 
-    def validate(self, data: dict) -> dict:
+    def validate(self, data):
         user = self.context["request"].user
         chat_id = data.get("chatId")
+        course_id = data.get("courseId")
+
+        if not course_id:
+            raise serializers.ValidationError({"courseId": "CourseId is required."})
+
+        # Validate that the course exists and belongs to the user
+        try:
+            course = Course.objects.get(id=course_id, user=user)
+        except Course.DoesNotExist:
+            raise serializers.ValidationError({"courseId": "Invalid courseId."})
+
+        data['course'] = course
 
         if chat_id:
-            # Check if chatId exists for the user
-            if not ChatHistory.objects.filter(chat_id=chat_id, user=user).exists():
+            # Check if chatId exists for the user and course
+            if not ChatHistory.objects.filter(id=chat_id, user=user, course=course).exists():
                 raise serializers.ValidationError({"chatId": "Invalid chatId."})
         else:
             # Generate a new chatId
-            data["chatId"] = str(uuid.uuid4())
+            data["chatId"] = uuid4()
         return data
+
+
+class ChatMessageSerializer(serializers.Serializer):
+    role = serializers.CharField()
+    content = serializers.CharField()
+    citations = serializers.ListField(child=serializers.DictField(), required=False)
+
+
+class ChatHistorySerializer(serializers.ModelSerializer):
+    messages = ChatMessageSerializer(many=True)
+    id = serializers.UUIDField(read_only=True)
+    course_id = serializers.UUIDField(source='course.id')
+    title = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = ChatHistory
+        fields = ['id', 'course_id', 'messages', 'created_at', 'last_used_at', 'title']
+        read_only_fields = ['created_at', 'last_used_at']
 
 
 class ReviewFlashcardSerializer(serializers.Serializer):

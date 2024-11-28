@@ -42,6 +42,27 @@ class UserFile(models.Model):
         return f"{self.name} (ID: {self.id})"
 
 
+class ChatHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="chat_histories",
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="chat_histories",
+    )
+    messages = models.JSONField(default=list, help_text="List of chat messages")
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+    title = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"Chat {self.id} for {self.user} in course {self.course}"
+
+
 class Cardset(models.Model):
     """Model to store cardsets"""
 
@@ -178,18 +199,3 @@ class MultipleChoiceQuestionModel(models.Model):
 
     def __str__(self):
         return self.question
-
-
-class ChatHistory(models.Model):
-    chat_id = models.CharField(max_length=255, unique=True)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="chat_histories",
-    )
-    messages = models.JSONField(default=list, help_text="List of chat messages")
-    created_at = models.DateTimeField(auto_now_add=True)
-    last_used_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"ChatHistory {self.chat_id} for {self.user}"

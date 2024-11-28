@@ -40,6 +40,7 @@ from learning_materials.serializer import (
     UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
+    ChatHistorySerializer,
     FlashcardSerializer,
     ReviewFlashcardSerializer,
     QuizModelSerializer,
@@ -339,81 +340,53 @@ class RAGResponseView(APIView):
     serializer_class = ChatSerializer
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_description="Chat with an assistant knowledgeable about the selected curriculum.",
-        request_body=ChatSerializer,
-        responses={
-            200: openapi.Response(
-                description="Assistant response with citations.",
-                examples={
-                    "application/json": {
-                        "role": "assistant",
-                        "content": "Sample answer",
-                        "citations": [
-                            {
-                                "text": "Sample text",
-                                "page_num": 1,
-                                "document_id": "Sample.pdf",
-                            }
-                        ],
-                        "chatId": "uuid-string",
-                    }
-                },
-            ),
-            400: openapi.Response(description="Invalid request data"),
-            401: openapi.Response(
-                description="Authentication credentials were not provided or invalid"
-            ),
-        },
-        tags=["Chat"],
-    )
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
-            data=request.data, context={"request": request}
-        )
+        serializer = self.serializer_class(data=request.data, context={"request": request})
         if serializer.is_valid():
             chat_id = serializer.validated_data["chatId"]
-            document_id = serializer.validated_data["documentId"]
+            course = serializer.validated_data["course"]
             message = serializer.validated_data["message"]
             user = request.user
 
             # Retrieve or create ChatHistory
             chat_history, created = ChatHistory.objects.get_or_create(
-                chat_id=chat_id, user=user, defaults={"messages": []}
+                id=chat_id,
+                user=user,
+                course=course,
+                defaults={"messages": []}
             )
 
-            # Append the new message to chat history
+            # Add the user message to chat history
             chat_history.messages.append({"role": "user", "content": message})
+            chat_history.last_used_at = datetime.now()
             chat_history.save()
 
             # Generate assistant's response
             chat_messages = chat_history.messages
-            rag_answer = process_answer([document_id], message, chat_messages)
+            rag_answer = process_answer([course.id], message, chat_messages)
 
             # Append assistant's response to chat history
-            chat_history.messages.append(
-                {
-                    "role": "assistant",
-                    "content": rag_answer.content,
-                    "citations": [
-                        citation.model_dump() for citation in rag_answer.citations
-                    ],
-                }
-            )
+            chat_history.messages.append({
+                "role": "assistant",
+                "content": rag_answer.content,
+                "citations": [
+                    citation.model_dump() for citation in rag_answer.citations
+                ],
+            })
+            chat_history.last_used_at = datetime.now()
             chat_history.save()
 
-            # Prepare the response
+            # Prepare response data
             response_data = {
                 "role": "assistant",
                 "content": rag_answer.content,
                 "citations": [
                     citation.model_dump() for citation in rag_answer.citations
                 ],
-                "chatId": chat_id,
+                "chatId": str(chat_history.id),
             }
             return Response(response_data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ChatHistoryListView(APIView):
@@ -421,17 +394,28 @@ class ChatHistoryListView(APIView):
 
     def get(self, request):
         user = request.user
-        chat_histories = ChatHistory.objects.filter(user=user).order_by("-last_used_at")
-        data = []
-        for chat in chat_histories:
-            data.append(
-                {
-                    "chatId": chat.chat_id,
-                    "created_at": chat.created_at,
-                    "last_used_at": chat.last_used_at,
-                }
-            )
-        return Response(data, status=status.HTTP_200_OK)
+        course_id = request.query_params.get("courseId")
+        if course_id:
+            chat_histories = ChatHistory.objects.filter(user=user, course__id=course_id).order_by("-last_used_at")
+        else:
+            chat_histories = ChatHistory.objects.filter(user=user).order_by("-last_used_at")
+
+        serializer = ChatHistorySerializer(chat_histories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class ChatHistoryDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, chatId):
+        user = request.user
+        try:
+            chat_history = ChatHistory.objects.get(id=chatId, user=user)
+        except ChatHistory.DoesNotExist:
+            return Response({"error": "Chat history not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ChatHistorySerializer(chat_history)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ChatHistoryView(APIView):
