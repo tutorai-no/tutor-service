@@ -48,10 +48,11 @@ class Cardset(models.Model):
     """Model to store cardsets"""
 
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=100, help_text="The name of the cardset")
+    name = models.CharField(
+        max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
     subject = models.CharField(
-        max_length=100, help_text="The subject of the cardset", default="Unknown"
+        max_length=1000, help_text="The subject of the cardset", default="Unknown"
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -198,7 +199,8 @@ class ChatHistory(models.Model):
         on_delete=models.CASCADE,
         related_name="chat_histories",
     )
-    messages = models.JSONField(default=list, help_text="List of chat messages")
+    messages = models.JSONField(
+        default=list, help_text="List of chat messages")
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(auto_now=True)
 
