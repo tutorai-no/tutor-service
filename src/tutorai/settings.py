@@ -67,7 +67,6 @@ INSTALLED_APPS = [
     "accounts",
     "api",
     "learning_materials",
-    
     # Django built-in apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -75,7 +74,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    
     # Third-party apps
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
@@ -177,6 +175,12 @@ STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
