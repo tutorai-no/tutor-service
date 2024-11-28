@@ -49,40 +49,28 @@ class CourseSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class ChatSerializer(serializers.Serializer):
-    chatId = serializers.UUIDField(
-        required=False,
-        allow_null=True,
-        help_text="Unique identifier for the chat session.",
+class ChatRequestSerializer(serializers.Serializer):
+    chatId = serializers.UUIDField(required=False)
+    courseId = serializers.UUIDField(required=False)
+    userFileIds = serializers.ListField(
+        child=serializers.UUIDField(), required=False, allow_null=True
     )
-    courseId = serializers.UUIDField(
-        help_text="The ID of the course.",
-    )
-    message = serializers.CharField(help_text="The user message.")
+    message = serializers.CharField()
 
     def validate(self, data):
         user = self.context["request"].user
         chat_id = data.get("chatId")
         course_id = data.get("courseId")
 
-        if not course_id:
-            raise serializers.ValidationError({"courseId": "CourseId is required."})
-
-        # Validate that the course exists and belongs to the user
-        try:
-            course = Course.objects.get(id=course_id, user=user)
-        except Course.DoesNotExist:
-            raise serializers.ValidationError({"courseId": "Invalid courseId."})
-
-        data['course'] = course
-
         if chat_id:
-            # Check if chatId exists for the user and course
-            if not Chat.objects.filter(id=chat_id, user=user, course=course).exists():
+            if not Chat.objects.filter(id=chat_id, user=user).exists():
                 raise serializers.ValidationError({"chatId": "Invalid chatId."})
+        elif course_id:
+            if not Course.objects.filter(id=course_id, user=user).exists():
+                raise serializers.ValidationError({"courseId": "Invalid courseId."})
         else:
-            # Generate a new chatId
-            data["chatId"] = uuid4()
+            # Allow chats without a course
+            pass
         return data
 
 
@@ -95,13 +83,13 @@ class ChatMessageSerializer(serializers.Serializer):
 class ChatSerializer(serializers.ModelSerializer):
     messages = ChatMessageSerializer(many=True)
     id = serializers.UUIDField(read_only=True)
-    course_id = serializers.UUIDField(source='course.id')
+    course_id = serializers.UUIDField(source='course.id', required=False)
     title = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Chat
-        fields = ['id', 'course_id', 'messages', 'created_at', 'last_used_at', 'title']
-        read_only_fields = ['created_at', 'last_used_at']
+        fields = ['id', 'course_id', 'messages', 'created_at', 'updated_at', 'title']
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class ReviewFlashcardSerializer(serializers.Serializer):
