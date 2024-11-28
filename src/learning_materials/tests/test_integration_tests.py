@@ -13,7 +13,7 @@ from learning_materials.flashcards.flashcards_service import (
     parse_for_anki,
 )
 from learning_materials.models import (
-    ChatHistory,
+    Chat,
     FlashcardModel,
     Cardset,
     MultipleChoiceQuestionModel,
@@ -946,10 +946,10 @@ class ChatAssistantTest(TestCase):
         self.assertIn("chatId", response.data)
         self.assertEqual(response.data["role"], "assistant")
 
-        # Verify that a ChatHistory instance is created
+        # Verify that a Chat instance is created
         chat_id = response.data["chatId"]
         self.assertTrue(
-            ChatHistory.objects.filter(chat_id=chat_id, user=self.user).exists()
+            Chat.objects.filter(chat_id=chat_id, user=self.user).exists()
         )
 
     def test_send_message_with_invalid_document(self):
@@ -990,7 +990,7 @@ class ChatAssistantTest(TestCase):
         self.assertEqual(response.data["chatId"], chat_id)
 
         # Check timestamps
-        chat_history = ChatHistory.objects.get(chat_id=chat_id)
+        chat_history = Chat.objects.get(chat_id=chat_id)
         self.assertIsNotNone(chat_history.created_at)
         self.assertIsNotNone(chat_history.last_used_at)
         self.assertLessEqual(chat_history.created_at, chat_history.last_used_at)
@@ -1084,7 +1084,7 @@ class ChatAssistantTest(TestCase):
         chat_id = response.data["chatId"]
 
         # Retrieve the chat history
-        chat_history = ChatHistory.objects.get(chat_id=chat_id)
+        chat_history = Chat.objects.get(chat_id=chat_id)
         first_timestamp = chat_history.last_used_at
 
         # Wait for a moment before sending another message

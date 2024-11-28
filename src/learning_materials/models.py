@@ -42,7 +42,7 @@ class UserFile(models.Model):
         return f"{self.name} (ID: {self.id})"
 
 
-class ChatHistory(models.Model):
+class Chat(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
