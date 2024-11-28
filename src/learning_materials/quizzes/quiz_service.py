@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union
+from typing import List, Union, Optional
 
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 
 from learning_materials.learning_resources import Quiz
 from learning_materials.learning_resources import GradedQuiz
-from learning_materials.knowledge_base.rag_service import get_page_range
+from learning_materials.knowledge_base.rag_service import get_page_range, get_context
 from learning_materials.learning_resources import (
     Citation,
     QuestionAnswer,
@@ -20,16 +20,29 @@ llm = ChatOpenAI(temperature=0.0)
 
 
 def generate_quiz(
-    document_id: str, start: int, end: int, learning_goals: list[str] = []
+    document_id: str,
+    start: Optional[int],
+    end: Optional[int],
+    subject: Optional[str],
+    learning_goals: list[str] = [],
 ) -> Quiz:
     """
     Generates a quiz for the specified document and page range based on learning goals.
     """
 
     logger.info(f"Generating quiz for document {document_id}")
-    if start > end:
+    citations: list[Citation]
+    if start is not None and end is not None:
+        if start > end:
+            raise ValueError(
+                "The start index of the document cannot be after the end index!"
+            )
+        citations = get_page_range(document_id, start, end)
+    elif subject is not None:
+        citations = get_context(document_id, subject)
+    else:
         raise ValueError(
-            "The start index of the document cannot be after the end index!"
+            "Either start and end page numbers or a subject must be provided."
         )
 
     # Initialize the parser for Quiz
@@ -70,15 +83,14 @@ def generate_quiz(
 
     # Generate the quiz questions
     questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
-    pages: List[Citation] = get_page_range(document_id, start, end)
 
     document_name = ""
-    for page in pages:
-        document_name = page.document_name
+    for citation in citations:
+        document_name = citation.document_name
         # Chain to determine the quiz questions for each page
         quiz_data = chain.invoke(
             {
-                "page_content": page.text,
+                "page_content": citation.text,
                 "learning_goals": learning_goals,
                 "num_questions": 5,
             }
@@ -86,7 +98,11 @@ def generate_quiz(
         questions.extend(quiz_data.questions)
 
     return Quiz(
-        document_name=document_name, start_page=start, end_page=end, questions=questions
+        document_name=document_name,
+        start_page=start,
+        end_page=end,
+        subject=subject,
+        questions=questions,
     )
 
 

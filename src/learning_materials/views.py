@@ -4,7 +4,12 @@ import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView, ListAPIView, ListCreateAPIView, RetrieveAPIView
+from rest_framework.generics import (
+    GenericAPIView,
+    ListAPIView,
+    ListCreateAPIView,
+    RetrieveAPIView,
+)
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
@@ -27,7 +32,14 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import Cardset, Course, FlashcardModel, ChatHistory, QuizModel, UserFile
+from learning_materials.models import (
+    Cardset,
+    Course,
+    FlashcardModel,
+    ChatHistory,
+    QuizModel,
+    UserFile,
+)
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -75,7 +87,7 @@ class CoursesView(ListCreateAPIView):
     )
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
-    
+
 
 # View for retrieving a single course and its related files
 class CourseDetailView(RetrieveAPIView):
@@ -92,21 +104,29 @@ class FileUploadView(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request, *args, **kwargs):
-        file = request.FILES.get('file')
-        course_id = request.data.get('course_id')
-        auth_header = request.headers.get('Authorization')
+        file = request.FILES.get("file")
+        course_id = request.data.get("course_id")
+        auth_header = request.headers.get("Authorization")
 
         if not auth_header:
-            return Response({"detail": "Authorization header is required"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "Authorization header is required"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         if not file or not course_id:
-            return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "File and course_id are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             user = request.user
             course = Course.objects.get(id=course_id, user=user)
             file_uuid = uuid.uuid4()
-            blob_name, file_url = upload_file_to_blob(file, user.id, course.id, file_uuid)
+            blob_name, file_url = upload_file_to_blob(
+                file, user.id, course.id, file_uuid
+            )
             sas_url = generate_sas_url(blob_name)
 
             file_metadata = {
@@ -115,7 +135,7 @@ class FileUploadView(APIView):
                 "blob_name": blob_name,  # Store blob_name
                 "file_url": file_url,
                 "sas_url": sas_url,
-                "num_pages": request.data.get('num_pages', 0),
+                "num_pages": request.data.get("num_pages", 0),
                 "content_type": file.content_type,
                 "file_size": file.size,
             }
@@ -131,10 +151,15 @@ class FileUploadView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Course.DoesNotExist:
-            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             logging.error(f"Error uploading file: {e}")
-            return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"detail": "Error uploading file"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class UserFilesListView(ListAPIView):
@@ -143,7 +168,7 @@ class UserFilesListView(ListAPIView):
 
     def get_queryset(self):
         return UserFile.objects.filter(user=self.request.user)
-    
+
 
 class CourseFilesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -159,10 +184,15 @@ class CourseFilesView(APIView):
             return Response({"files": serializer.data}, status=status.HTTP_200_OK)
 
         except Course.DoesNotExist:
-            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             logging.error(f"Error retrieving files: {e}")
-            return Response({"detail": "Error retrieving files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"detail": "Error retrieving files"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class FlashcardCreationView(GenericAPIView):
@@ -495,12 +525,13 @@ class QuizCreationView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             document_id = serializer.validated_data.get("id")
-            start = serializer.validated_data.get("start_page")
-            end = serializer.validated_data.get("end_page")
+            start = serializer.validated_data.get("start_page", None)
+            end = serializer.validated_data.get("end_page", None)
+            subject = serializer.validated_data.get("subject", None)
             learning_goals = serializer.validated_data.get("learning_goals", [])
 
-            # Generate the quiz data (Assuming generate_quiz returns a structured dict)
-            quiz_data = generate_quiz(document_id, start, end, learning_goals)
+            # Generate the quiz data
+            quiz_data = generate_quiz(document_id, start, end, subject, learning_goals)
 
             # Retrieve the authenticated user
             user = request.user

@@ -178,20 +178,23 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     subject = serializers.CharField(
         help_text="The subject of the quiz",
+        required=False,
     )
 
     # The learning goals
     learning_goals = serializers.ListField(
         child=serializers.CharField(),
         help_text="The learning goals",
-        required=False,  # Make the field optional
+        required=False,
     )
 
     start_page = serializers.IntegerField(
         help_text="The start page of the document",
+        required=False,
     )
     end_page = serializers.IntegerField(
         help_text="The end page of the document",
+        required=False,
     )
 
     class Meta:
@@ -200,10 +203,29 @@ class DocumentSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
     def validate(self, data: dict) -> dict:
-        if data["start_page"] > data["end_page"]:
+        subject = data.get("subject")
+        start_page = data.get("start_page")
+        end_page = data.get("end_page")
+
+        # Ensure at least one of subject or page range is provided
+        if not subject and (start_page is None or end_page is None):
             raise serializers.ValidationError(
-                "The start index must be less than the end index"
+                "At least one of 'subject' or a valid 'start_page' and 'end_page' must be provided."
             )
+
+        # If one page field is provided, both must be provided
+        if (start_page is None) != (end_page is None):
+            raise serializers.ValidationError(
+                "Both 'start_page' and 'end_page' must be provided together."
+            )
+
+        # If both pages are provided, validate their relationship
+        if start_page is not None and end_page is not None:
+            if start_page <= end_page:
+                raise serializers.ValidationError(
+                    "'start_page' must be less than or equal to 'end_page'."
+                )
+
         return data
 
 
@@ -277,12 +299,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 def validate_image_size(image):
     max_size_in_mb = 4
     max_size_in_bytes = max_size_in_mb * 1024 * 1024  # Convert MB to bytes
     if image.size > max_size_in_bytes:
         raise ValidationError(f"Image size should not exceed {max_size_in_mb} MB.")
-    
+
+
 class UserFeedbackSerializer(serializers.Serializer):
     feedbackType = serializers.CharField(
         help_text="The type of feedback",
@@ -297,11 +321,11 @@ class UserFeedbackSerializer(serializers.Serializer):
         allow_null=True,
         required=False,
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png']),
+            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"]),
             validate_image_size,
-            ],
+        ],
     )
+
     class Meta:
         model = Feedback
-        fields = ('feedbackType', 'feedbackText', 'feedbackScreenshot')
-         
+        fields = ("feedbackType", "feedbackText", "feedbackScreenshot")
