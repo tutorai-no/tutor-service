@@ -24,6 +24,7 @@ jobs:
           RAG_DATABASE_SYSTEM: ${{ secrets.RAG_DATABASE_SYSTEM }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
         run: |
+          docker network create tutorai_network
           docker compose down -v
           docker compose build backend
           docker compose run backend python manage.py makemigrations accounts
