@@ -22,7 +22,7 @@ from learning_materials.learning_resources import (
 logger = logging.getLogger(__name__)
 
 
-def process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
+def _process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
     """
     Generate flashcards for a specific page range and file
     """
@@ -43,21 +43,18 @@ def process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
     return flashcards
 
 
-def process_flashcards_by_page_range(document_id: uuid.UUID, page_num_start: int, page_num_end: int) -> list[Flashcard]:
-    pages = get_page_range(document_id, page_num_start, page_num_end)
-    print("Point Range", flush=True)
-    flashcards = process_flashcards_by_pages(pages)
-
-    return flashcards
-
-
 def process_flashcards_by_subject(document_id: uuid.UUID, subject: str) -> list[Flashcard]:
     pages = get_context(document_id, subject)
     print("Point Subject", flush=True)
-    flashcards = process_flashcards_by_pages(pages)
+    flashcards = _process_flashcards_by_pages(pages)
 
     return flashcards
 
+def process_flashcards_by_page_range(document_id: uuid.UUID, page_num_start: int, page_num_end: int) -> list[Flashcard]:
+    pages = get_page_range(document_id, page_num_start, page_num_end)
+    flashcards = _process_flashcards_by_pages(pages)
+
+    return flashcards
 
 def process_answer(
     document_ids: list[uuid.UUID],
@@ -81,3 +78,6 @@ def process_answer(
 
     answer = RagAnswer(content=answer_content, citations=curriculum)
     return answer
+
+
+
