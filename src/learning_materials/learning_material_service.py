@@ -22,24 +22,39 @@ from learning_materials.learning_resources import (
 logger = logging.getLogger(__name__)
 
 
-def process_flashcards(document_id: uuid.UUID, start: int, end: int) -> list[Flashcard]:
+def process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
     """
     Generate flashcards for a specific page range and file
     """
     logger.info("Trying to find relevant document")
-    pages = get_page_range(document_id, start, end)
     logger.info(f"Found {len(pages)} pages in the document")
     flashcards: list[Flashcard] = []
-    logger.info(f"Generating flashcards for {document_id} from page {start} to {end}")
 
     # Use ThreadPoolExecutor to parallelize the API calls
     with ThreadPoolExecutor() as executor:
         # Schedule the execution of each page processing and hold the future objects
-        futures = [executor.submit(generate_flashcards, page) for page in pages]
+        futures = [executor.submit(generate_flashcards, page)
+                   for page in pages]
 
         # As each future completes, gather the results
         for future in as_completed(futures):
             flashcards.extend(future.result())
+
+    return flashcards
+
+
+def process_flashcards_by_page_range(document_id: uuid.UUID, page_num_start: int, page_num_end: int) -> list[Flashcard]:
+    pages = get_page_range(document_id, page_num_start, page_num_end)
+    print("Point Range", flush=True)
+    flashcards = process_flashcards_by_pages(pages)
+
+    return flashcards
+
+
+def process_flashcards_by_subject(document_id: uuid.UUID, subject: str) -> list[Flashcard]:
+    pages = get_context(document_id, subject)
+    print("Point Subject", flush=True)
+    flashcards = process_flashcards_by_pages(pages)
 
     return flashcards
 
@@ -61,7 +76,8 @@ def process_answer(
             "I'm sorry, but I don't have enough information to answer your question."
         )
     else:
-        answer_content = response_formulation(user_question, curriculum, chat_history)
+        answer_content = response_formulation(
+            user_question, curriculum, chat_history)
 
     answer = RagAnswer(content=answer_content, citations=curriculum)
     return answer
