@@ -616,6 +616,7 @@ class QuizGenerationTest(TestCase):
             It is a field of research in computer science that develops and studies methods and software that enable machines to perceive their environment and use learning and intelligence to take actions that maximize their chances of achieving defined goals.
             [1] Such machines may be called AIs.
         """
+        self.valid_subject = "Artificial Intelligence"
 
         # Populate RAG (Retrieval-Augmented Generation) database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
@@ -741,6 +742,34 @@ class QuizGenerationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # Ensure no quizzes are created
         self.assertFalse(QuizModel.objects.exists())
+
+    def test_valid_request_for_semantic_creation_of_quizzed(self):
+        self.assertFalse(QuizModel.objects.exists())
+
+        valid_payload = {
+            "id": self.valid_document_id,
+            "subject": self.valid_subject,
+        }
+
+        response = self.client.post(self.url, valid_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(QuizModel.objects.exists())
+
+        # Verify the response data
+        self.assertIn("id", response.data)
+        self.assertEqual(response.data["document_name"], self.valid_document_name)
+
+        self.assertIn("questions", response.data)
+        self.assertIsInstance(response.data["questions"], list)
+        self.assertGreater(len(response.data["questions"]), 0)
+
+        quiz = QuizModel.objects.first()
+        self.assertEqual(quiz.subject, self.valid_subject)
+        # Check that questions are created and associated with the quiz
+        self.assertTrue(
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists()
+            or MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
+        )
 
 
 class QuizGradingTest(TestCase):
