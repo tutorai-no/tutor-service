@@ -9,12 +9,12 @@ class Course(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=255)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='courses'
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="courses"
     )
 
     class Meta:
-        db_table = 'courses'
-        ordering = ['name']
+        db_table = "courses"
+        ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} (ID: {self.id})"
@@ -30,13 +30,15 @@ class UserFile(models.Model):
     content_type = models.CharField(max_length=100)
     file_size = models.BigIntegerField(null=True, blank=True)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='uploaded_files'
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="uploaded_files",
     )
-    courses = models.ManyToManyField(Course, related_name='files')
+    courses = models.ManyToManyField(Course, related_name="files")
 
     class Meta:
-        db_table = 'user_files'
-        ordering = ['-uploaded_at']
+        db_table = "user_files"
+        ordering = ["-uploaded_at"]
 
     def __str__(self):
         return f"{self.name} (ID: {self.id})"
@@ -129,10 +131,19 @@ class QuizModel(models.Model):
         max_length=100, help_text="The name of the document", default="unknown"
     )
     start_page = models.IntegerField(
-        help_text="The starting page of the quiz", default=1
+        help_text="The starting page of the quiz",
+        null=True,
+        blank=True,
     )
-    end_page = models.IntegerField(help_text="The ending page of the quiz", default=1)
+    end_page = models.IntegerField(
+        help_text="The ending page of the quiz",
+        null=True,
+        blank=True,
+    )
 
+    subject = models.CharField(
+        max_length=1000, help_text="The subject of the quiz", default="Unknown"
+    )
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name="quizzes",
