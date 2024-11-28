@@ -27,7 +27,7 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import Cardset, Course, FlashcardModel, ChatHistory, QuizModel, UserFile
+from learning_materials.models import Cardset, Course, FlashcardModel, Chat, QuizModel, UserFile
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -40,7 +40,7 @@ from learning_materials.serializer import (
     UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
-    ChatHistorySerializer,
+    ChatSerializer,
     FlashcardSerializer,
     ReviewFlashcardSerializer,
     QuizModelSerializer,
@@ -344,12 +344,12 @@ class RAGResponseView(APIView):
         serializer = self.serializer_class(data=request.data, context={"request": request})
         if serializer.is_valid():
             chat_id = serializer.validated_data["chatId"]
-            course = serializer.validated_data["course"]
+            course = serializer.validated_data["courseId"]
             message = serializer.validated_data["message"]
             user = request.user
 
-            # Retrieve or create ChatHistory
-            chat_history, created = ChatHistory.objects.get_or_create(
+            # Retrieve or create Chat
+            chat_history, created = Chat.objects.get_or_create(
                 id=chat_id,
                 user=user,
                 course=course,
@@ -389,43 +389,43 @@ class RAGResponseView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ChatHistoryListView(APIView):
+class ChatListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         course_id = request.query_params.get("courseId")
         if course_id:
-            chat_histories = ChatHistory.objects.filter(user=user, course__id=course_id).order_by("-last_used_at")
+            chat_histories = Chat.objects.filter(user=user, course__id=course_id).order_by("-last_used_at")
         else:
-            chat_histories = ChatHistory.objects.filter(user=user).order_by("-last_used_at")
+            chat_histories = Chat.objects.filter(user=user).order_by("-last_used_at")
 
-        serializer = ChatHistorySerializer(chat_histories, many=True)
+        serializer = ChatSerializer(chat_histories, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
-class ChatHistoryDetailView(APIView):
+class ChatDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, chatId):
         user = request.user
         try:
-            chat_history = ChatHistory.objects.get(id=chatId, user=user)
-        except ChatHistory.DoesNotExist:
+            chat_history = Chat.objects.get(id=chatId, user=user)
+        except Chat.DoesNotExist:
             return Response({"error": "Chat history not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = ChatHistorySerializer(chat_history)
+        serializer = ChatSerializer(chat_history)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class ChatHistoryView(APIView):
+class ChatView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, chatId):
         user = request.user
         try:
-            chat_history = ChatHistory.objects.get(chat_id=chatId, user=user)
-        except ChatHistory.DoesNotExist:
+            chat_history = Chat.objects.get(chat_id=chatId, user=user)
+        except Chat.DoesNotExist:
             return Response(
                 {"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND
             )

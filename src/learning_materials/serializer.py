@@ -5,7 +5,7 @@ from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAI
 from learning_materials.models import (
     Course,
     UserFile,
-    ChatHistory,
+    Chat,
     Cardset,
     FlashcardModel,
     MultipleChoiceQuestionModel,
@@ -78,7 +78,7 @@ class ChatSerializer(serializers.Serializer):
 
         if chat_id:
             # Check if chatId exists for the user and course
-            if not ChatHistory.objects.filter(id=chat_id, user=user, course=course).exists():
+            if not Chat.objects.filter(id=chat_id, user=user, course=course).exists():
                 raise serializers.ValidationError({"chatId": "Invalid chatId."})
         else:
             # Generate a new chatId
@@ -92,14 +92,14 @@ class ChatMessageSerializer(serializers.Serializer):
     citations = serializers.ListField(child=serializers.DictField(), required=False)
 
 
-class ChatHistorySerializer(serializers.ModelSerializer):
+class ChatSerializer(serializers.ModelSerializer):
     messages = ChatMessageSerializer(many=True)
     id = serializers.UUIDField(read_only=True)
     course_id = serializers.UUIDField(source='course.id')
     title = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
-        model = ChatHistory
+        model = Chat
         fields = ['id', 'course_id', 'messages', 'created_at', 'last_used_at', 'title']
         read_only_fields = ['created_at', 'last_used_at']
 

@@ -28,8 +28,8 @@ from learning_materials.views import (
     QuizCreationView,
     QuizGradingView,
     ReviewFlashcardView,
-    ChatHistoryListView,
-    ChatHistoryView,
+    ChatListView,
+    ChatView,
     RAGResponseView,
 )
 
@@ -61,8 +61,8 @@ urlpatterns = [
         "compendium/create/", CompendiumCreationView.as_view(), name="create-compendium"
     ),
     path("chat/", RAGResponseView.as_view(), name="chat"),
-    path("chat/history/", ChatHistoryListView.as_view(), name="chat-history-list"),
-    path("chat/history/<str:chatId>/", ChatHistoryView.as_view(), name="chat-history"),
+    path("chat/history/", ChatListView.as_view(), name="chat-history-list"),
+    path("chat/history/<str:chatId>/", ChatView.as_view(), name="chat-history"),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
