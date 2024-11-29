@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -13,7 +14,7 @@ from learning_materials.flashcards.flashcards_service import (
     parse_for_anki,
 )
 from learning_materials.models import (
-    ChatHistory,
+    Chat,
     FlashcardModel,
     Cardset,
     Course,
@@ -1184,208 +1185,295 @@ class CompendiumAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class ChatAssistantTest(TestCase):
+# tests/test_chat_views.py
+
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+from django.contrib.auth import get_user_model
+from uuid import uuid4
+from unittest.mock import patch
+from learning_materials.models import Course, Chat, UserFile
+import uuid
+
+User = get_user_model()
+
+
+class ChatAPITest(APITestCase):
     def setUp(self):
-        self.client = APIClient()
-        # Create and authenticate a user
-        self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpassword"
+        # Create two users
+        self.user1 = User.objects.create_user(
+            username="user1", email="user1@example.com", password="password123"
         )
-        self.client.force_authenticate(user=self.user)
-
-        # Create another user
-        self.other_user = User.objects.create_user(
-            username="otheruser", email="other@example.com", password="otherpassword"
+        self.user2 = User.objects.create_user(
+            username="user2", email="user2@example.com", password="password123"
         )
 
-        # Prepare test data
-        self.valid_document_id = uuid4()
-        self.invalid_document_id = uuid4()
-        self.message = "Explain Newton's laws of motion."
-        self.chat_url = f"{base}chat/"
-        self.chat_history_url = f"{base}chat/history/"
-        self.context = "Newton's laws are three physical laws that together laid the foundation for classical mechanics. The laws of motion"
-        self.document_name = "test.pdf"
-        # Populate the curriculum context (assuming a function to post context)
-        post_context(
-            self.context,
-            page_num=1,
-            document_name=self.document_name,
-            document_id=self.valid_document_id,
+        # Create a course for user1
+        self.course1 = Course.objects.create(name="Course 1", user=self.user1)
+
+        # Create chats for user1
+        self.chat1 = Chat.objects.create(
+            user=self.user1,
+            course=self.course1,
+            messages=[{"role": "user", "content": "Hello"}],
+        )
+        self.chat2 = Chat.objects.create(
+            user=self.user1, messages=[{"role": "user", "content": "Hi again"}]
         )
 
-    def test_authenticated_access_required(self):
-        # Log out the user
-        self.client.force_authenticate(user=None)
-        payload = {"documentId": self.valid_document_id, "message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
+        # Create a chat for user2
+        self.chat3 = Chat.objects.create(
+            user=self.user2, messages=[{"role": "user", "content": "User2's chat"}]
+        )
+
+        # URLs
+        self.chat_list_url = reverse("chat-history-list")
+        self.chat_detail_url = lambda chat_id: reverse(
+            "chat-history", kwargs={"chatId": chat_id}
+        )
+        self.chat_response_url = reverse("chat-response")
+
+        # Obtain JWT token for user1
+        self.token = self.get_token("user1", "password123")
+
+    def get_token(self, username, password):
+        url = reverse("login")  # Assuming 'login' is the name for the login view
+        response = self.client.post(
+            url, {"username": username, "password": password}, format="json"
+        )
+        return response.data.get("access")  # Adjust based on your token response
+
+    def authenticate(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.token)
+
+    # Helper method to create user files
+    def create_user_file(self, user, course=None):
+        user_file = UserFile.objects.create(
+            name="Test File",
+            blob_name="test_blob",
+            file_url="http://example.com/file.pdf",
+            num_pages=10,
+            content_type="application/pdf",
+            user=user,
+        )
+        if course:
+            user_file.courses.add(course)
+        return user_file
+
+    def test_chat_list_authenticated(self):
+        """Test retrieving chat history for authenticated user."""
+        self.authenticate()
+        response = self.client.get(self.chat_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        # Ensure chats are ordered by updated_at descending
+        self.assertGreater(
+            response.data[0]["updated_at"], response.data[1]["updated_at"]
+        )
+
+    def test_chat_list_filtered_by_course(self):
+        """Test retrieving chat history filtered by courseId."""
+        self.authenticate()
+        response = self.client.get(
+            self.chat_list_url, {"courseId": str(self.course1.id)}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], str(self.chat1.id))
+
+    def test_chat_list_no_authentication(self):
+        """Test that unauthenticated users cannot access chat history."""
+        response = self.client.get(self.chat_list_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_send_message_with_valid_data(self):
-        payload = {"documentId": self.valid_document_id, "message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
+    def test_chat_detail_authenticated(self):
+        """Test retrieving a specific chat for authenticated user."""
+        self.authenticate()
+        response = self.client.get(self.chat_detail_url(self.chat1.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("content", response.data)
-        self.assertIn("citations", response.data)
+        self.assertEqual(response.data["id"], str(self.chat1.id))
+        self.assertEqual(response.data["messages"][0]["content"], "Hello")
+
+    def test_chat_detail_nonexistent_chat(self):
+        """Test retrieving a chat that does not exist."""
+        self.authenticate()
+        non_existent_id = uuid.uuid4()
+        response = self.client.get(self.chat_detail_url(non_existent_id))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["error"], "Chat not found.")
+
+    def test_chat_detail_other_user_chat(self):
+        """Test that a user cannot access another user's chat."""
+        self.authenticate()
+        response = self.client.get(self.chat_detail_url(self.chat3.id))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["error"], "Chat not found.")
+
+    def test_chat_detail_no_authentication(self):
+        """Test that unauthenticated users cannot access a specific chat."""
+        response = self.client.get(self.chat_detail_url(self.chat1.id))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch("learning_materials.views.process_answer")
+    def test_chat_response_create_new_chat(self, mock_process_answer):
+        """Test creating a new chat and receiving a response."""
+        self.authenticate()
+
+        # Mock the LLM response
+        mock_process_answer.return_value.content = "Assistant's reply"
+        mock_process_answer.return_value.citations = []
+
+        payload = {"message": "Hello, assistant!", "courseId": str(self.course1.id)}
+
+        response = self.client.post(self.chat_response_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("chatId", response.data)
+        self.assertEqual(response.data["content"], "Assistant's reply")
         self.assertEqual(response.data["role"], "assistant")
 
-        # Verify that a ChatHistory instance is created
+        # Verify that the chat was created
         chat_id = response.data["chatId"]
-        self.assertTrue(
-            ChatHistory.objects.filter(chat_id=chat_id, user=self.user).exists()
-        )
+        chat = Chat.objects.get(id=chat_id)
+        self.assertEqual(chat.user, self.user1)
+        self.assertEqual(chat.course, self.course1)
+        self.assertEqual(len(chat.messages), 2)
+        self.assertEqual(chat.messages[0]["content"], "Hello, assistant!")
+        self.assertEqual(chat.messages[1]["content"], "Assistant's reply")
 
-    def test_send_message_with_invalid_document(self):
-        payload = {"documentId": self.invalid_document_id, "message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
+    @patch("learning_materials.views.process_answer")
+    def test_chat_response_add_message_to_existing_chat(self, mock_process_answer):
+        """Test adding a message to an existing chat."""
+        self.authenticate()
+
+        # Mock the LLM response
+        mock_process_answer.return_value.content = "Assistant's follow-up"
+        mock_process_answer.return_value.citations = []
+
+        payload = {"chatId": str(self.chat1.id), "message": "Can you elaborate?"}
+
+        response = self.client.post(self.chat_response_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["content"],
-            "I'm sorry, but I don't have enough information to answer your question.",
-        )
-        self.assertEqual(response.data["citations"], [])
-        self.assertIn("chatId", response.data)
+        self.assertEqual(response.data["chatId"], str(self.chat1.id))
+        self.assertEqual(response.data["content"], "Assistant's follow-up")
+        self.assertEqual(response.data["role"], "assistant")
 
-    def test_assistant_includes_citations(self):
-        payload = {"documentId": self.valid_document_id, "message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        citations = response.data["citations"]
-        self.assertGreater(len(citations), 0)
-        for citation in citations:
-            self.assertIn("text", citation)
-            self.assertIn("page_num", citation)
-            self.assertIn("document_id", citation)
+        # Verify that the chat was updated and our message was added and the assistant's response
+        self.chat1.refresh_from_db()
+        self.assertEqual(len(self.chat1.messages), 3)
+        print(self.chat1.messages, flush=True)
+        self.assertEqual(self.chat1.messages[-2]["content"], "Can you elaborate?")
+        self.assertEqual(self.chat1.messages[-1]["content"], "Assistant's follow-up")
 
-    def test_chat_persistence_and_timestamps(self):
-        # Start a new chat
-        payload = {"documentId": self.valid_document_id, "message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
-        chat_id = response.data["chatId"]
+    def test_chat_response_invalid_course_id(self):
+        """Test creating a chat with an invalid courseId."""
+        self.authenticate()
+        invalid_course_id = uuid.uuid4()
+        payload = {"message": "Hello!", "courseId": str(invalid_course_id)}
 
-        # Retrieve the chat history
-        chat_history_url = f"{self.chat_history_url}{chat_id}/"
-        response = self.client.get(chat_history_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("messages", response.data)
-        self.assertIn("created_at", response.data)
-        self.assertIn("last_used_at", response.data)
-        self.assertEqual(response.data["chatId"], chat_id)
-
-        # Check timestamps
-        chat_history = ChatHistory.objects.get(chat_id=chat_id)
-        self.assertIsNotNone(chat_history.created_at)
-        self.assertIsNotNone(chat_history.last_used_at)
-        self.assertLessEqual(chat_history.created_at, chat_history.last_used_at)
-
-    def test_resume_existing_chat(self):
-        # Start a new chat
-        payload = {"documentId": self.valid_document_id, "message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
-        chat_id = response.data["chatId"]
-
-        # Send another message in the same chat
-        new_message = "What is the second law?"
-        payload = {
-            "chatId": chat_id,
-            "documentId": self.valid_document_id,
-            "message": new_message,
-        }
-        response = self.client.post(self.chat_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # Retrieve the chat history and verify messages
-        chat_history_url = f"{self.chat_history_url}{chat_id}/"
-        response = self.client.get(chat_history_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        messages = response.data["messages"]
-        # User message and assistant response pairs
-        self.assertEqual(len(messages), 4)
-        self.assertEqual(messages[0]["content"], self.message)
-        self.assertEqual(messages[2]["content"], new_message)
-
-    def test_chat_history_list(self):
-        # Start multiple chats
-        for i in range(3):
-            payload = {
-                "documentId": self.valid_document_id,
-                "message": f"Test message {i}",
-            }
-            self.client.post(self.chat_url, payload, format="json")
-
-        # Retrieve chat history list
-        response = self.client.get(self.chat_history_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        chat_histories = response.data
-        self.assertEqual(len(chat_histories), 3)
-        for chat in chat_histories:
-            self.assertIn("chatId", chat)
-            self.assertIn("created_at", chat)
-            self.assertIn("last_used_at", chat)
-
-    def test_access_other_users_chat_history(self):
-        # Create a chat with the other user
-        other_client = APIClient()
-        other_client.force_authenticate(user=self.other_user)
-        payload = {
-            "documentId": self.valid_document_id,
-            "message": "Other user's message",
-        }
-        response = other_client.post(self.chat_url, payload, format="json")
-        other_chat_id = response.data["chatId"]
-
-        # Try to access the other user's chat history
-        chat_history_url = f"{self.chat_history_url}{other_chat_id}/"
-        response = self.client.get(chat_history_url, format="json")
+        response = self.client.post(self.chat_response_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_invalid_chat_id(self):
-        # Try to resume a chat with an invalid chatId
-        invalid_chat_id = str(uuid.uuid4())
+    def test_chat_response_no_authentication(self):
+        """Test that unauthenticated users cannot post chat responses."""
+        payload = {"message": "Hello!"}
+        response = self.client.post(self.chat_response_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_chat_response_invalid_data(self):
+        """Test posting chat response with invalid data."""
+        self.authenticate()
         payload = {
-            "chatId": invalid_chat_id,
-            "documentId": self.valid_document_id,
-            "message": self.message,
+            # Missing 'message' field
+            "chatId": str(self.chat1.id)
         }
-        response = self.client.post(self.chat_url, payload, format="json")
+        response = self.client.post(self.chat_response_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("message", response.data)
 
-    def test_missing_parameters(self):
-        # Missing documentId
-        payload = {"message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    @patch("learning_materials.views.process_answer")
+    def test_chat_response_processing_error_choose_another_model(
+        self, mock_process_answer
+    ):
+        """Test handling errors during message processing."""
+        # TODO CHECK THAT THE MODEL IS SWITCHED WHEN THE FIRST MODEL FAILS
+        pass
 
-        # Missing message
-        payload = {"documentId": self.valid_document_id}
-        response = self.client.post(self.chat_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_chat_response_without_course_and_chat_id(self):
+        """Test creating a chat without courseId and chatId."""
+        self.authenticate()
 
-    def test_last_used_at_updates(self):
+        # Mock the LLM response
+        with patch("learning_materials.views.process_answer") as mock_process_answer:
+            mock_process_answer.return_value.content = "Assistant's generic reply"
+            mock_process_answer.return_value.citations = []
+
+            payload = {"message": "General inquiry."}
+
+            response = self.client.post(self.chat_response_url, payload, format="json")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn("chatId", response.data)
+            self.assertEqual(response.data["content"], "Assistant's generic reply")
+            self.assertEqual(response.data["role"], "assistant")
+
+            # Verify that a new chat was created without a course
+            chat_id = response.data["chatId"]
+            chat = Chat.objects.get(id=chat_id)
+            self.assertEqual(chat.user, self.user1)
+            self.assertIsNone(chat.course)
+            self.assertEqual(len(chat.messages), 2)
+            self.assertEqual(chat.messages[0]["content"], "General inquiry.")
+            self.assertEqual(chat.messages[1]["content"], "Assistant's generic reply")
+
+    def test_chat_list_ordering(self):
+        """Test that the chat list is ordered by updated_at descending."""
+        self.authenticate()
+
+        # Update chat2 to have a more recent updated_at
+        self.chat2.messages.append({"role": "user", "content": "Latest message"})
+        self.chat2.save()
+
+        response = self.client.get(self.chat_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        # chat2 should now be first
+        self.assertEqual(response.data[0]["id"], str(self.chat2.id))
+        self.assertEqual(response.data[1]["id"], str(self.chat1.id))
+
+    @patch("learning_materials.views.process_answer")
+    def test_last_used_at_updates(self, mock_process_answer):
+        """Test that last_used_at is updated when a new message is posted in the same chat."""
+        self.authenticate()
+
+        # Mock the LLM response
+        mock_process_answer.return_value.content = "Assistant's reply"
+        mock_process_answer.return_value.citations = []
+
         # Start a new chat
-        payload = {"documentId": self.valid_document_id, "message": self.message}
-        response = self.client.post(self.chat_url, payload, format="json")
+        payload = {"courseId": str(self.course1.id), "message": "Hello, assistant!"}
+        response = self.client.post(self.chat_response_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         chat_id = response.data["chatId"]
 
         # Retrieve the chat history
-        chat_history = ChatHistory.objects.get(chat_id=chat_id)
-        first_timestamp = chat_history.last_used_at
+        chat_history = Chat.objects.get(id=chat_id)
+        first_timestamp = chat_history.updated_at
 
-        # Wait for a moment before sending another message
+        # Wait for a moment before sending another message to ensure the timestamp changes
         time.sleep(1)
 
         # Send another message in the same chat
         payload = {
             "chatId": chat_id,
-            "documentId": self.valid_document_id,
             "message": "Another question?",
         }
-        response = self.client.post(self.chat_url, payload, format="json")
+        response = self.client.post(self.chat_response_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Retrieve the updated chat history
+        # Refresh the chat instance from the database
         chat_history.refresh_from_db()
-        second_timestamp = chat_history.last_used_at
+        second_timestamp = chat_history.updated_at
 
-        # Check that 'last_used_at' has been updated
+        # Check that 'updated_at' has been updated
         self.assertGreater(second_timestamp, first_timestamp)
