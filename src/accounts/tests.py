@@ -310,7 +310,7 @@ class LoginTests(APITestCase):
 
 class TokenRefreshTests(APITestCase):
     def setUp(self):
-        self.token_refresh_url = reverse("token_refresh")
+        self.token_refresh_url = reverse("token-refresh")
         self.logout_url = reverse("logout")
         self.user = User.objects.create_user(
             username="refreshuser", email="refresh@example.com", password="StrongP@ss1"
@@ -319,7 +319,7 @@ class TokenRefreshTests(APITestCase):
         self.refresh_token = str(refresh)
         self.access_token = str(refresh.access_token)
 
-        self.password_reset_confirm_url = reverse("password_reset_confirm")
+        self.password_reset_confirm_url = reverse("password-reset-confirm")
         self.token = default_token_generator.make_token(self.user)
 
     def authenticate(self):
@@ -436,7 +436,7 @@ class LogoutTests(APITestCase):
 
 class PasswordResetTests(APITestCase):
     def setUp(self):
-        self.password_reset_url = reverse("password_reset")
+        self.password_reset_url = reverse("password-reset")
         self.user = User.objects.create_user(
             username="resetuser", email="reset@example.com", password="StrongP@ss1"
         )
@@ -470,7 +470,7 @@ class PasswordResetTests(APITestCase):
 
 class PasswordResetConfirmTests(APITestCase):
     def setUp(self):
-        self.password_reset_confirm_url = reverse("password_reset_confirm")
+        self.password_reset_confirm_url = reverse("password-reset-confirm")
         self.user = User.objects.create_user(
             username="confirmuser", email="confirm@example.com", password="StrongP@ss1"
         )
