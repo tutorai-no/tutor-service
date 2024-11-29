@@ -23,8 +23,7 @@ from learning_materials.models import (
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Citation
 from learning_materials.knowledge_base.rag_service import post_context
-from accounts.models import CustomUser, Document
-
+from accounts.models import CustomUser
 base = "/api/"
 
 User = get_user_model()
@@ -39,6 +38,7 @@ class FlashcardGenerationTest(TestCase):
         self.valid_document_id = str(uuid4())
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
+        self.subject = "Anakin Skywalker"
         self.context = """
             Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. 
             The Jedi are spread across the galaxy in a full-scale war against the Separatists. 
@@ -58,11 +58,6 @@ class FlashcardGenerationTest(TestCase):
                 self.context, i, self.valid_document_name, self.valid_document_id
             )
 
-        Document.objects.create(
-            id=self.valid_document_id,
-            name=self.valid_document_name,
-            user=self.user,
-        )
 
     def test_generate_flashcards(self):
         page = Citation(
@@ -139,6 +134,16 @@ class FlashcardGenerationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Cardset.objects.exists())
 
+    def test_no_page_range_request(self):
+        self.assertFalse(Cardset.objects.exists())
+        valid_request = {
+            "id": self.valid_document_id,
+            "subject": self.subject,
+        }
+        response = self.client.post(self.url, valid_request, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(Cardset.objects.exists())
+
 
 class FlashcardReviewTest(TestCase):
     def setUp(self):
@@ -156,7 +161,8 @@ class FlashcardReviewTest(TestCase):
             username="other_user", email="otheruser@example.com", password="StrongP@ss1"
         )
 
-        self.cardset = Cardset.objects.create(name="Test Cardset", user=self.user)
+        self.cardset = Cardset.objects.create(
+            name="Test Cardset", user=self.user)
         self.flashcard = FlashcardModel.objects.create(
             front="Front", back="Back", cardset=self.cardset
         )
@@ -300,7 +306,8 @@ class CardsetCRUDTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         cardset.refresh_from_db()
         self.assertEqual(cardset.name, data["name"])
-        self.assertEqual(cardset.description, "This is a test cardset.")  # Unchanged
+        self.assertEqual(cardset.description,
+                         "This is a test cardset.")  # Unchanged
 
     def test_delete_cardset(self):
         cardset = Cardset.objects.create(
@@ -368,16 +375,20 @@ class CardsetCRUDTest(TestCase):
             user=self.user,
         )
         # Create some flashcards
-        FlashcardModel.objects.create(front="Front 1", back="Back 1", cardset=cardset)
-        FlashcardModel.objects.create(front="Front 2", back="Back 2", cardset=cardset)
+        FlashcardModel.objects.create(
+            front="Front 1", back="Back 1", cardset=cardset)
+        FlashcardModel.objects.create(
+            front="Front 2", back="Back 2", cardset=cardset)
         # Ensure flashcards exist
-        self.assertEqual(FlashcardModel.objects.filter(cardset=cardset).count(), 2)
+        self.assertEqual(FlashcardModel.objects.filter(
+            cardset=cardset).count(), 2)
         # Delete the cardset
         url = f"/api/cardsets/{cardset.id}/"
         response = self.client.delete(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         # Ensure flashcards are deleted
-        self.assertFalse(FlashcardModel.objects.filter(cardset=cardset).exists())
+        self.assertFalse(FlashcardModel.objects.filter(
+            cardset=cardset).exists())
 
 
 class FlashcardCRUDTest(TestCase):
@@ -465,7 +476,8 @@ class FlashcardCRUDTest(TestCase):
         url = f"/api/flashcards/{flashcard.id}/"
         response = self.client.delete(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(FlashcardModel.objects.filter(id=flashcard.id).exists())
+        self.assertFalse(FlashcardModel.objects.filter(
+            id=flashcard.id).exists())
 
     def test_list_flashcards(self):
         FlashcardModel.objects.create(
@@ -616,6 +628,7 @@ class QuizGenerationTest(TestCase):
             It is a field of research in computer science that develops and studies methods and software that enable machines to perceive their environment and use learning and intelligence to take actions that maximize their chances of achieving defined goals.
             [1] Such machines may be called AIs.
         """
+        self.valid_subject = "Artificial Intelligence"
 
         # Populate RAG (Retrieval-Augmented Generation) database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
@@ -666,7 +679,8 @@ class QuizGenerationTest(TestCase):
         # Verify the response data
         self.assertIn("id", response.data)
         self.assertIn("document_name", response.data)
-        self.assertEqual(response.data["start_page"], self.valid_page_num_start)
+        self.assertEqual(
+            response.data["start_page"], self.valid_page_num_start)
         self.assertEqual(response.data["end_page"], self.valid_page_num_end)
         self.assertIn("questions", response.data)
         self.assertIsInstance(response.data["questions"], list)
@@ -708,8 +722,10 @@ class QuizGenerationTest(TestCase):
 
         # Verify the response data
         self.assertIn("id", response.data)
-        self.assertEqual(response.data["document_name"], self.valid_document_name)
-        self.assertEqual(response.data["start_page"], self.valid_page_num_start)
+        self.assertEqual(
+            response.data["document_name"], self.valid_document_name)
+        self.assertEqual(
+            response.data["start_page"], self.valid_page_num_start)
         self.assertEqual(response.data["end_page"], self.valid_page_num_end)
 
         self.assertIn("questions", response.data)
@@ -741,6 +757,34 @@ class QuizGenerationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # Ensure no quizzes are created
         self.assertFalse(QuizModel.objects.exists())
+
+    def test_valid_request_for_semantic_creation_of_quizzed(self):
+        self.assertFalse(QuizModel.objects.exists())
+
+        valid_payload = {
+            "id": self.valid_document_id,
+            "subject": self.valid_subject,
+        }
+
+        response = self.client.post(self.url, valid_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(QuizModel.objects.exists())
+
+        # Verify the response data
+        self.assertIn("id", response.data)
+        self.assertEqual(response.data["document_name"], self.valid_document_name)
+
+        self.assertIn("questions", response.data)
+        self.assertIsInstance(response.data["questions"], list)
+        self.assertGreater(len(response.data["questions"]), 0)
+
+        quiz = QuizModel.objects.first()
+        self.assertEqual(quiz.subject, self.valid_subject)
+        # Check that questions are created and associated with the quiz
+        self.assertTrue(
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists()
+            or MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
+        )
 
 
 class QuizGradingTest(TestCase):
@@ -839,7 +883,8 @@ class CompendiumAPITest(TestCase):
         self.valid_document_id = str(uuid4())
 
         for i in range(self.start_page, self.end_page + 1):
-            post_context("Some context", i, self.valid_document, self.valid_document_id)
+            post_context("Some context", i, self.valid_document,
+                         self.valid_document_id)
 
     def test_valid_request(self):
         """Test the create_compendium endpoint with a valid request."""
@@ -918,27 +963,22 @@ class ChatAssistantTest(TestCase):
         post_context(
             self.context,
             page_num=1,
-            document_name=self.document_name,
+            document_name=self.document_name,                                                                            
             document_id=self.valid_document_id,
         )
 
-        Document.objects.create(
-            id=self.valid_document_id,
-            name=self.document_name,
-            start_page=1,
-            end_page=1,
-            user=self.user,
-        )
 
     def test_authenticated_access_required(self):
         # Log out the user
         self.client.force_authenticate(user=None)
-        payload = {"documentId": self.valid_document_id, "message": self.message}
+        payload = {"documentId": self.valid_document_id,
+                   "message": self.message}
         response = self.client.post(self.chat_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_send_message_with_valid_data(self):
-        payload = {"documentId": self.valid_document_id, "message": self.message}
+        payload = {"documentId": self.valid_document_id,
+                   "message": self.message}
         response = self.client.post(self.chat_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("content", response.data)
@@ -953,7 +993,8 @@ class ChatAssistantTest(TestCase):
         )
 
     def test_send_message_with_invalid_document(self):
-        payload = {"documentId": self.invalid_document_id, "message": self.message}
+        payload = {"documentId": self.invalid_document_id,
+                   "message": self.message}
         response = self.client.post(self.chat_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
@@ -964,7 +1005,8 @@ class ChatAssistantTest(TestCase):
         self.assertIn("chatId", response.data)
 
     def test_assistant_includes_citations(self):
-        payload = {"documentId": self.valid_document_id, "message": self.message}
+        payload = {"documentId": self.valid_document_id,
+                   "message": self.message}
         response = self.client.post(self.chat_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         citations = response.data["citations"]
@@ -976,7 +1018,8 @@ class ChatAssistantTest(TestCase):
 
     def test_chat_persistence_and_timestamps(self):
         # Start a new chat
-        payload = {"documentId": self.valid_document_id, "message": self.message}
+        payload = {"documentId": self.valid_document_id,
+                   "message": self.message}
         response = self.client.post(self.chat_url, payload, format="json")
         chat_id = response.data["chatId"]
 
@@ -993,11 +1036,13 @@ class ChatAssistantTest(TestCase):
         chat_history = Chat.objects.get(chat_id=chat_id)
         self.assertIsNotNone(chat_history.created_at)
         self.assertIsNotNone(chat_history.last_used_at)
-        self.assertLessEqual(chat_history.created_at, chat_history.last_used_at)
+        self.assertLessEqual(chat_history.created_at,
+                             chat_history.last_used_at)
 
     def test_resume_existing_chat(self):
         # Start a new chat
-        payload = {"documentId": self.valid_document_id, "message": self.message}
+        payload = {"documentId": self.valid_document_id,
+                   "message": self.message}
         response = self.client.post(self.chat_url, payload, format="json")
         chat_id = response.data["chatId"]
 
@@ -1016,7 +1061,8 @@ class ChatAssistantTest(TestCase):
         response = self.client.get(chat_history_url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         messages = response.data["messages"]
-        self.assertEqual(len(messages), 4)  # User message and assistant response pairs
+        # User message and assistant response pairs
+        self.assertEqual(len(messages), 4)
         self.assertEqual(messages[0]["content"], self.message)
         self.assertEqual(messages[2]["content"], new_message)
 
@@ -1079,7 +1125,8 @@ class ChatAssistantTest(TestCase):
 
     def test_last_used_at_updates(self):
         # Start a new chat
-        payload = {"documentId": self.valid_document_id, "message": self.message}
+        payload = {"documentId": self.valid_document_id,
+                   "message": self.message}
         response = self.client.post(self.chat_url, payload, format="json")
         chat_id = response.data["chatId"]
 
