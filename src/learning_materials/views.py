@@ -56,10 +56,9 @@ from learning_materials.serializer import (
     FlashcardSerializer,
     ReviewFlashcardSerializer,
     QuizModelSerializer,
+    ContextSerializer,
     QuizStudentAnswer,
 )
-from accounts.serializers import ContextSerializer
-
 
 logger = logging.getLogger(__name__)
 
@@ -238,9 +237,7 @@ class FlashcardCreationView(GenericAPIView):
             subject = serializer.validated_data.get("subject")
             user = request.user
 
-            print("Start, End, Subject", start, end, subject, flush=True)
-
-            if start is not None and end is not None:
+            if start is not None and end is not None:       
                 flashcards = process_flashcards_by_page_range(
                     document_id, start, end)
                 cardset_name = f"{document_id}_{start}_{end}"

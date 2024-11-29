@@ -33,7 +33,64 @@ class UserFileSerializer(serializers.ModelSerializer):
 
     def get_sas_url(self, obj):
         return generate_sas_url(obj.blob_name)
-    
+
+class ContextSerializer(serializers.Serializer):
+    id = serializers.UUIDField(
+        help_text="The ID of the document",
+    )
+
+    name = serializers.CharField(
+        help_text="The name of the document",
+        required=False,
+    )
+
+    subject = serializers.CharField(
+        help_text="The subject of the quiz",
+        required=False,
+    )
+
+    # The learning goals
+    learning_goals = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="The learning goals",
+        required=False,
+    )
+
+    start_page = serializers.IntegerField(
+        help_text="The start page of the document",
+        required=False,
+    )
+    end_page = serializers.IntegerField(
+        help_text="The end page of the document",
+        required=False,
+    )
+
+
+    def validate(self, data: dict) -> dict:
+        subject = data.get("subject")
+        start_page = data.get("start_page")
+        end_page = data.get("end_page")
+
+        # Ensure at least one of subject or page range is provided
+        if not subject and (start_page is None or end_page is None):
+            raise serializers.ValidationError(
+                "At least one of 'subject' or a valid 'start_page' and 'end_page' must be provided."
+            )
+
+        # If one page field is provided, both must be provided
+        if (start_page is None) != (end_page is None):
+            raise serializers.ValidationError(
+                "Both 'start_page' and 'end_page' must be provided together."
+            )
+
+        # If both pages are provided, validate their relationship
+        if start_page is not None and end_page is not None:
+            if start_page > end_page:
+                raise serializers.ValidationError(
+                    "'start_page' must be less than or equal to 'end_page'."
+                )
+
+        return data
 
 class CourseSerializer(serializers.ModelSerializer):
     files = UserFileSerializer(many=True, read_only=True)  # Use the appropriate serializer
