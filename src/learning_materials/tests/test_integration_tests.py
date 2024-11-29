@@ -3,11 +3,14 @@ import uuid
 import re
 from uuid import uuid4
 
-from django.test import TestCase, Client
-from django.contrib.auth import get_user_model
+from unittest.mock import patch
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.test import TestCase, Client
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
@@ -18,6 +21,7 @@ from learning_materials.models import (
     FlashcardModel,
     Cardset,
     Course,
+    UserFile,
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
@@ -1185,20 +1189,6 @@ class CompendiumAPITest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-# tests/test_chat_views.py
-
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
-from django.contrib.auth import get_user_model
-from uuid import uuid4
-from unittest.mock import patch
-from learning_materials.models import Course, Chat, UserFile
-import uuid
-
-User = get_user_model()
-
-
 class ChatAPITest(APITestCase):
     def setUp(self):
         # Create two users
@@ -1234,21 +1224,16 @@ class ChatAPITest(APITestCase):
         )
         self.chat_response_url = reverse("chat-response")
 
-        # Obtain JWT token for user1
-        self.token = self.get_token("user1", "password123")
-
-    def get_token(self, username, password):
-        url = reverse("login")  # Assuming 'login' is the name for the login view
-        response = self.client.post(
-            url, {"username": username, "password": password}, format="json"
-        )
-        return response.data.get("access")  # Adjust based on your token response
+        # Authenticate user1
+        refresh = RefreshToken.for_user(self.user1)
+        self.refresh_token = str(refresh)
+        self.access_token = str(refresh.access_token)
 
     def authenticate(self):
-        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.token)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
 
-    # Helper method to create user files
     def create_user_file(self, user, course=None):
+        """Helper method to create user files"""
         user_file = UserFile.objects.create(
             name="Test File",
             blob_name="test_blob",
