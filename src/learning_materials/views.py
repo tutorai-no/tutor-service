@@ -58,8 +58,8 @@ from learning_materials.serializer import (
     QuizModelSerializer,
     QuizStudentAnswer,
 )
-from accounts.serializers import DocumentSerializer
-from accounts.models import Document
+from accounts.serializers import ContextSerializer
+
 
 logger = logging.getLogger(__name__)
 
@@ -199,12 +199,12 @@ class CourseFilesView(APIView):
 
 
 class FlashcardCreationView(GenericAPIView):
-    serializer_class = DocumentSerializer
+    serializer_class = ContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Generate flashcards from a given document",
-        request_body=DocumentSerializer,
+        request_body=ContextSerializer,
         responses={
             200: openapi.Response(
                 description="Flashcards generated successfully",
@@ -250,7 +250,6 @@ class FlashcardCreationView(GenericAPIView):
                     document_id, subject)
 
                 cardset_name = f"{document_id}_subject"
-            document = Document.objects.get(id=document_id)
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
@@ -503,12 +502,12 @@ class ChatHistoryView(APIView):
 
 
 class QuizCreationView(GenericAPIView):
-    serializer_class = DocumentSerializer
+    serializer_class = ContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
-        request_body=DocumentSerializer,
+        request_body=ContextSerializer,
         responses={
             200: openapi.Response(
                 description="Quiz created successfully",
@@ -604,11 +603,11 @@ class QuizGradingView(GenericAPIView):
 
 
 class CompendiumCreationView(GenericAPIView):
-    serializer_class = DocumentSerializer
+    serializer_class = ContextSerializer
 
     @swagger_auto_schema(
         operation_description="Create a compendium from a given document",
-        request_body=DocumentSerializer,
+        request_body=ContextSerializer,
         responses={
             200: openapi.Response(
                 description="Compendium created successfully",

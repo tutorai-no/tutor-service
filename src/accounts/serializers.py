@@ -13,7 +13,7 @@ from rest_framework.validators import UniqueValidator
 from learning_materials.serializer import CardsetSerializer, QuizModelSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from accounts.models import Document, Feedback, Subscription, SubscriptionHistory
+from accounts.models import Feedback, Subscription, SubscriptionHistory
 
 
 User = get_user_model()
@@ -172,7 +172,7 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "subscription", "start_date", "end_date"]
 
 
-class DocumentSerializer(serializers.ModelSerializer):
+class ContextSerializer(serializers.Serializer):
     id = serializers.UUIDField(
         help_text="The ID of the document",
     )
@@ -203,11 +203,6 @@ class DocumentSerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    class Meta:
-        model = Document
-        fields = ["id", "name", "start_page",
-                  "end_page", "subject", "learning_goals"]
-        read_only_fields = ["id"]
 
     def validate(self, data: dict) -> dict:
         subject = data.get("subject")
@@ -264,7 +259,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-    documents = DocumentSerializer(many=True, required=False)
+    documents = ContextSerializer(many=True, required=False)
 
     cardsets = CardsetSerializer(many=True, read_only=True)
     quizzes = QuizModelSerializer(many=True, read_only=True)
@@ -298,11 +293,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         # Save the user instance
         instance.save()
-
-        # Handle documents
-        if documents_data:
-            for doc_data in documents_data:
-                Document.objects.create(user=instance, **doc_data)
 
         return instance
 
