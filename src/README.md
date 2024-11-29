@@ -28,13 +28,13 @@ To run the backend write the following commands in the terminal
 To build the project:
 
 ```bash
-docker-compose build
+docker compose build
 ```
 
 To run the project:
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 #### Migrate the DB
@@ -42,7 +42,7 @@ docker-compose up
 To migrate django to the database
 
 ```bash
-docker-compose run tutorai python manage.py migrate
+docker compose run backend python manage.py migrate
 ```
 
 #### Create superuser
@@ -50,7 +50,7 @@ docker-compose run tutorai python manage.py migrate
 To log into the django database, create a superuser
 
 ```bash
-docker-compose run tutorai python manage.py createsuperuser
+docker compose run backend python manage.py createsuperuser
 ```
 
 And follow the steps it gives you.
@@ -70,26 +70,26 @@ Enjoy!
 When making changes to the models, you need to create a migration file and migrate the database.
 
 ```bash
-docker-compose run tutorai python manage.py makemigrations
-docker-compose run tutorai python manage.py migrate
+docker compose run backend python manage.py makemigrations
+docker compose run backend python manage.py migrate
 ```
 
 ## If the migrations are not working
 
-One need to delete migrations files in migrations folders. Shut down the docker-compose and remove the database volume. Then run the following commands:
+One need to delete migrations files in migrations folders. Shut down the docker compose and remove the database volume. Then run the following commands:
 
 ```bash
-docker-compose down
+docker compose down
 docker volume rm backend_postgres_data
 ```
 Then you can apply the migrations again.
 ```bash
-docker-compose run tutorai python manage.py makemigrations
-docker-compose run tutorai python manage.py migrate
+docker compose run backend python manage.py makemigrations
+docker compose run backend python manage.py migrate
 ```
-and then run the docker-compose again.
+and then run the docker compose again.
 ```bash
-docker-compose up
+docker compose up
 ```
 
 ## How to create a new application in the backend

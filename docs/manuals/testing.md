@@ -6,7 +6,7 @@ The project uses both frontend and backend testing. The backend uses Django's bu
 To run all the tests, run the following command in the `backend` directory of the project:
 
 ```bash
-docker-compose run tutorai python manage.py test flashcards
+docker compose run backend python manage.py test flashcards
 ```
 
 ## Frontend
