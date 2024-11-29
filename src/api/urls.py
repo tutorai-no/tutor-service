@@ -27,6 +27,7 @@ from learning_materials.views import (
     FlashcardViewSet,
     QuizCreationView,
     QuizGradingView,
+    QuizViewSet,
     ReviewFlashcardView,
     ChatHistoryListView,
     ChatHistoryView,
@@ -37,12 +38,17 @@ from learning_materials.views import (
 router = routers.DefaultRouter()
 router.register(r"cardsets", CardsetViewSet, basename="cardset")
 router.register(r"flashcards", FlashcardViewSet, basename="flashcard")
+router.register(r"quizzes", QuizViewSet, basename="quiz")
 
 urlpatterns = [
     path("health-check/", health_check, name="health-check"),
-    path('courses/', CoursesView.as_view(), name='courses-list-create'),
-    path('courses/<uuid:pk>/', CourseDetailView.as_view(), name='course-detail'),
-    path('courses/<uuid:course_id>/files/', CourseFilesView.as_view(), name='course-files'),
+    path("courses/", CoursesView.as_view(), name="courses-list-create"),
+    path("courses/<uuid:pk>/", CourseDetailView.as_view(), name="course-detail"),
+    path(
+        "courses/<uuid:course_id>/files/",
+        CourseFilesView.as_view(),
+        name="course-files",
+    ),
     path("files/upload/", FileUploadView.as_view(), name="upload-file"),
     path("files/", UserFilesListView.as_view(), name="user-files"),
     path(
