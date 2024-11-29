@@ -75,8 +75,7 @@ class CoursesView(ListCreateAPIView):
 
     @swagger_auto_schema(
         operation_description="List all courses",
-        responses={200: openapi.Response(
-            description="Courses retrieved successfully")},
+        responses={200: openapi.Response(description="Courses retrieved successfully")},
         tags=["Courses"],
     )
     def get(self, request, *args, **kwargs):
@@ -85,8 +84,7 @@ class CoursesView(ListCreateAPIView):
     @swagger_auto_schema(
         operation_description="Create a new course",
         request_body=CourseSerializer,
-        responses={201: openapi.Response(
-            description="Course created successfully")},
+        responses={201: openapi.Response(description="Course created successfully")},
         tags=["Courses"],
     )
     def post(self, request, *args, **kwargs):
@@ -237,22 +235,22 @@ class FlashcardCreationView(GenericAPIView):
             start = serializer.validated_data.get("start_page")
             end = serializer.validated_data.get("end_page")
             subject = serializer.validated_data.get("subject")
+            course_id = serializer.validated_data.get("course_id")
             user = request.user
 
-            if start is not None and end is not None:       
-                flashcards = process_flashcards_by_page_range(
-                    document_id, start, end)
+            if start is not None and end is not None:
+                flashcards = process_flashcards_by_page_range(document_id, start, end)
                 cardset_name = f"{document_id}_{start}_{end}"
 
             elif subject:
-                flashcards = process_flashcards_by_subject(
-                    document_id, subject)
+                flashcards = process_flashcards_by_subject(document_id, subject)
 
                 cardset_name = f"{document_id}_subject"
+            course = Course.objects.get(id=course_id)
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
-                name=cardset_name, subject=subject, user=user
+                name=cardset_name, subject=subject, course=course, user=user
             )
             flashcard_models = [
                 translate_flashcard_to_orm_model(flashcard, cardset)
@@ -334,22 +332,19 @@ class ReviewFlashcardView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            answer_was_correct = serializer.validated_data.get(
-                "answer_was_correct")
+            answer_was_correct = serializer.validated_data.get("answer_was_correct")
             flashcard_id = serializer.validated_data.get("id")
             try:
                 flashcard = FlashcardModel.objects.get(id=flashcard_id)
             except FlashcardModel.DoesNotExist:
                 return Response("Flashcard not found", status=status.HTTP_404_NOT_FOUND)
 
-            valid_user = flashcard.review(
-                answer_was_correct, user=request.user)
+            valid_user = flashcard.review(answer_was_correct, user=request.user)
             flashcard.save()
 
             if valid_user:
                 return Response(
-                    data=FlashcardSerializer(
-                        flashcard).data, status=status.HTTP_200_OK
+                    data=FlashcardSerializer(flashcard).data, status=status.HTTP_200_OK
                 )
             else:
                 return Response("Invalid user", status=status.HTTP_400_BAD_REQUEST)
@@ -364,7 +359,15 @@ class CardsetViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Cardset.objects.filter(user=self.request.user)
+        user = self.request.user
+        queryset = Cardset.objects.filter(user=user)
+
+        # Get the 'course_id' from query parameters if provided
+        course_id = self.request.query_params.get("course_id", None)
+        if course_id is not None:
+            queryset = queryset.filter(course_id=course_id)
+
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -386,13 +389,15 @@ class ChatListView(APIView):
         user = request.user
         course_id = request.query_params.get("courseId")
         if course_id:
-            chat_histories = Chat.objects.filter(user=user, course__id=course_id).order_by("-updated_at")
+            chat_histories = Chat.objects.filter(
+                user=user, course__id=course_id
+            ).order_by("-updated_at")
         else:
             chat_histories = Chat.objects.filter(user=user).order_by("-updated_at")
 
         serializer = ChatSerializer(chat_histories, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
 
 class ChatDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -402,7 +407,9 @@ class ChatDetailView(APIView):
         try:
             chat_history = Chat.objects.get(id=chatId, user=user)
         except Chat.DoesNotExist:
-            return Response({"error": "Chat history not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Chat history not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = ChatSerializer(chat_history)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -416,17 +423,21 @@ class ChatView(APIView):
         try:
             chat_history = Chat.objects.get(id=chatId, user=user)
         except Chat.DoesNotExist:
-            return Response({"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = ChatSerializer(chat_history)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
 
 class ChatResponseView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        serializer = ChatRequestSerializer(data=request.data, context={"request": request})
+        serializer = ChatRequestSerializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             data = serializer.validated_data
             user = request.user
@@ -550,18 +561,16 @@ class QuizCreationView(GenericAPIView):
             start = serializer.validated_data.get("start_page", None)
             end = serializer.validated_data.get("end_page", None)
             subject = serializer.validated_data.get("subject", None)
-            learning_goals = serializer.validated_data.get(
-                "learning_goals", [])
+            learning_goals = serializer.validated_data.get("learning_goals", [])
 
             # Generate the quiz data
-            quiz_data = generate_quiz(
-                document_id, start, end, subject, learning_goals)
+            quiz_data = generate_quiz(document_id, start, end, subject, learning_goals)
 
             # Retrieve the authenticated user
             user = request.user
 
             # Translate the quiz data into ORM models and associate with the user
-            quiz_model = translate_quiz_to_orm_model(quiz_data, [user])
+            quiz_model = translate_quiz_to_orm_model(quiz_data, user)
 
             # Serialize the created quiz
             response_serializer = QuizModelSerializer(quiz_model)
@@ -606,6 +615,27 @@ class QuizGradingView(GenericAPIView):
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class QuizViewSet(viewsets.ModelViewSet):
+    queryset = QuizModel.objects.all()
+    serializer_class = QuizModelSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Limit to quizzes belonging to the authenticated user
+        queryset = QuizModel.objects.filter(user=user)
+
+        # Get the 'course_id' from query parameters if provided
+        course_id = self.request.query_params.get("course_id", None)
+        if course_id is not None:
+            queryset = queryset.filter(course_id=course_id)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class CompendiumCreationView(GenericAPIView):

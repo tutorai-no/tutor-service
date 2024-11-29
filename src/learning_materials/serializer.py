@@ -15,24 +15,31 @@ from learning_materials.models import (
 
 
 class UserFileSerializer(serializers.ModelSerializer):
-    sas_url = serializers.SerializerMethodField()
     id = serializers.UUIDField(required=False)
+    sas_url = serializers.SerializerMethodField()
     course_ids = serializers.PrimaryKeyRelatedField(
-        source='courses',
-        many=True,
-        read_only=True
+        source="courses", many=True, read_only=True
     )
 
     class Meta:
         model = UserFile
         fields = [
-            'id', 'name', 'blob_name', 'file_url', 'content_type', 'file_size',
-            'uploaded_at', 'num_pages', 'sas_url', 'course_ids'
+            "id",
+            "name",
+            "blob_name",
+            "file_url",
+            "content_type",
+            "file_size",
+            "uploaded_at",
+            "num_pages",
+            "sas_url",
+            "course_ids",
         ]
-        read_only_fields = ['user', 'uploaded_at']
+        read_only_fields = ["user", "uploaded_at"]
 
     def get_sas_url(self, obj):
         return generate_sas_url(obj.blob_name)
+
 
 class ContextSerializer(serializers.Serializer):
     id = serializers.UUIDField(
@@ -46,6 +53,11 @@ class ContextSerializer(serializers.Serializer):
 
     subject = serializers.CharField(
         help_text="The subject of the quiz",
+        required=False,
+    )
+
+    course_id = serializers.UUIDField(
+        help_text="The ID of the course",
         required=False,
     )
 
@@ -64,7 +76,6 @@ class ContextSerializer(serializers.Serializer):
         help_text="The end page of the document",
         required=False,
     )
-
 
     def validate(self, data: dict) -> dict:
         subject = data.get("subject")
@@ -92,13 +103,16 @@ class ContextSerializer(serializers.Serializer):
 
         return data
 
+
 class CourseSerializer(serializers.ModelSerializer):
-    files = UserFileSerializer(many=True, read_only=True)  # Use the appropriate serializer
+    files = UserFileSerializer(
+        many=True, read_only=True
+    )  # Use the appropriate serializer
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = Course
-        fields = ['id', 'name', 'files', 'user']
+        fields = ["id", "name", "files", "user"]
         # No need to specify read_only_fields since 'user' is set via HiddenField
 
     def create(self, validated_data):
@@ -229,7 +243,15 @@ class QuizModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = QuizModel
-        fields = ["id", "document_name", "start_page", "end_page", "questions"]
+        fields = [
+            "id",
+            "document_name",
+            "start_page",
+            "end_page",
+            "questions",
+            "user",
+            "course",
+        ]
 
     def get_questions(self, obj):
         # Retrieve all related questions, both QA and MC

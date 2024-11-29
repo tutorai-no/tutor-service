@@ -40,6 +40,7 @@ class QuizGenerationTests(TestCase):
 
         start = 1
         end = 2
+        subject = "Artificial Intelligence"
 
         pages = [
             Citation(
@@ -63,7 +64,7 @@ class QuizGenerationTests(TestCase):
         ]
         mock_get_page_range.return_value = pages
 
-        quiz = generate_quiz(document_name, start, end)
+        quiz = generate_quiz(document_name, start, end, subject)
 
         # Check the quiz object
         self.assertIsInstance(quiz, Quiz)
