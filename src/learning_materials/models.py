@@ -48,8 +48,7 @@ class Cardset(models.Model):
     """Model to store cardsets"""
 
     id = models.AutoField(primary_key=True)
-    name = models.CharField(
-        max_length=100, help_text="The name of the cardset")
+    name = models.CharField(max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
     subject = models.CharField(
         max_length=1000, help_text="The subject of the cardset", default="Unknown"
@@ -140,6 +139,18 @@ class QuizModel(models.Model):
     document_name = models.CharField(
         max_length=100, help_text="The name of the document", default="unknown"
     )
+    subject = models.CharField(
+        max_length=1000, help_text="The subject of the quiz", default="Unknown"
+    )
+    course = models.ForeignKey(
+        Course,
+        related_name="quizzes",
+        on_delete=models.CASCADE,
+        help_text="The course to which the quiz belongs",
+        default=None,
+        blank=True,
+        null=True,
+    )
     start_page = models.IntegerField(
         help_text="The starting page of the quiz",
         null=True,
@@ -151,13 +162,11 @@ class QuizModel(models.Model):
         blank=True,
     )
 
-    subject = models.CharField(
-        max_length=1000, help_text="The subject of the quiz", default="Unknown"
-    )
-    users = models.ManyToManyField(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="quizzes",
-        help_text="Users associated with this quiz",
+        on_delete=models.CASCADE,
+        help_text="The user who created this quiz",
     )
 
     def __str__(self):
@@ -208,8 +217,7 @@ class ChatHistory(models.Model):
         on_delete=models.CASCADE,
         related_name="chat_histories",
     )
-    messages = models.JSONField(
-        default=list, help_text="List of chat messages")
+    messages = models.JSONField(default=list, help_text="List of chat messages")
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(auto_now=True)
 

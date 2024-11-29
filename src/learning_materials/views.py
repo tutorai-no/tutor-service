@@ -552,7 +552,7 @@ class QuizCreationView(GenericAPIView):
             user = request.user
 
             # Translate the quiz data into ORM models and associate with the user
-            quiz_model = translate_quiz_to_orm_model(quiz_data, [user])
+            quiz_model = translate_quiz_to_orm_model(quiz_data, user)
 
             # Serialize the created quiz
             response_serializer = QuizModelSerializer(quiz_model)
@@ -597,6 +597,27 @@ class QuizGradingView(GenericAPIView):
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class QuizViewSet(viewsets.ModelViewSet):
+    queryset = QuizModel.objects.all()
+    serializer_class = QuizModelSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Limit to quizzes belonging to the authenticated user
+        queryset = QuizModel.objects.filter(user=user)
+
+        # Get the 'course_id' from query parameters if provided
+        course_id = self.request.query_params.get("course_id", None)
+        if course_id is not None:
+            queryset = queryset.filter(course_id=course_id)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class CompendiumCreationView(GenericAPIView):
