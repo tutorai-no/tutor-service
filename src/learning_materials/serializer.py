@@ -1,11 +1,11 @@
-import uuid
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 
 from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAINER_NAME
 from learning_materials.models import (
     Course,
     UserFile,
-    ChatHistory,
+    Chat,
     Cardset,
     FlashcardModel,
     MultipleChoiceQuestionModel,
@@ -120,30 +120,47 @@ class CourseSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class ChatSerializer(serializers.Serializer):
-    chatId = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        help_text="Unique identifier for the chat session.",
+class ChatRequestSerializer(serializers.Serializer):
+    chatId = serializers.UUIDField(required=False)
+    courseId = serializers.UUIDField(required=False)
+    userFileIds = serializers.ListField(
+        child=serializers.UUIDField(), required=False, allow_null=True
     )
-    documentId = serializers.UUIDField(
-        help_text="The ID of the document being discussed.",
-    )
+    message = serializers.CharField()
 
-    message = serializers.CharField(help_text="The user message.")
-
-    def validate(self, data: dict) -> dict:
+    def validate(self, data):
         user = self.context["request"].user
         chat_id = data.get("chatId")
+        course_id = data.get("courseId")
 
         if chat_id:
-            # Check if chatId exists for the user
-            if not ChatHistory.objects.filter(chat_id=chat_id, user=user).exists():
-                raise serializers.ValidationError({"chatId": "Invalid chatId."})
+            if not Chat.objects.filter(id=chat_id, user=user).exists():
+                raise NotFound({"chatId": "Chat not found."})
+        elif course_id:
+            if not Course.objects.filter(id=course_id, user=user).exists():
+                raise NotFound({"courseId": "Course not found."})
         else:
-            # Generate a new chatId
-            data["chatId"] = str(uuid.uuid4())
+            # Allow chats without a course
+            pass
         return data
+
+
+class ChatMessageSerializer(serializers.Serializer):
+    role = serializers.CharField()
+    content = serializers.CharField()
+    citations = serializers.ListField(child=serializers.DictField(), required=False)
+
+
+class ChatSerializer(serializers.ModelSerializer):
+    messages = ChatMessageSerializer(many=True)
+    id = serializers.UUIDField(read_only=True)
+    course_id = serializers.UUIDField(source="course.id", required=False)
+    title = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = Chat
+        fields = ["id", "course_id", "messages", "created_at", "updated_at", "title"]
+        read_only_fields = ["created_at", "updated_at"]
 
 
 class ReviewFlashcardSerializer(serializers.Serializer):

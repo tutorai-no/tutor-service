@@ -37,10 +37,11 @@ from learning_materials.models import (
     Cardset,
     Course,
     FlashcardModel,
-    ChatHistory,
+    Chat,
     QuizModel,
     UserFile,
 )
+
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -53,6 +54,7 @@ from learning_materials.serializer import (
     UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
+    ChatRequestSerializer,
     FlashcardSerializer,
     ReviewFlashcardSerializer,
     QuizModelSerializer,
@@ -380,124 +382,142 @@ class FlashcardViewSet(viewsets.ModelViewSet):
         return FlashcardModel.objects.filter(cardset__user=self.request.user)
 
 
-class RAGResponseView(APIView):
-    serializer_class = ChatSerializer
-    permission_classes = [IsAuthenticated]
-
-    @swagger_auto_schema(
-        operation_description="Chat with an assistant knowledgeable about the selected curriculum.",
-        request_body=ChatSerializer,
-        responses={
-            200: openapi.Response(
-                description="Assistant response with citations.",
-                examples={
-                    "application/json": {
-                        "role": "assistant",
-                        "content": "Sample answer",
-                        "citations": [
-                            {
-                                "text": "Sample text",
-                                "page_num": 1,
-                                "document_id": "Sample.pdf",
-                            }
-                        ],
-                        "chatId": "uuid-string",
-                    }
-                },
-            ),
-            400: openapi.Response(description="Invalid request data"),
-            401: openapi.Response(
-                description="Authentication credentials were not provided or invalid"
-            ),
-        },
-        tags=["Chat"],
-    )
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
-            data=request.data, context={"request": request}
-        )
-        if serializer.is_valid():
-            chat_id = serializer.validated_data["chatId"]
-            document_id = serializer.validated_data["documentId"]
-            message = serializer.validated_data["message"]
-            user = request.user
-
-            # Retrieve or create ChatHistory
-            chat_history, created = ChatHistory.objects.get_or_create(
-                chat_id=chat_id, user=user, defaults={"messages": []}
-            )
-
-            # Append the new message to chat history
-            chat_history.messages.append({"role": "user", "content": message})
-            chat_history.save()
-
-            # Generate assistant's response
-            chat_messages = chat_history.messages
-            rag_answer = process_answer([document_id], message, chat_messages)
-
-            # Append assistant's response to chat history
-            chat_history.messages.append(
-                {
-                    "role": "assistant",
-                    "content": rag_answer.content,
-                    "citations": [
-                        citation.model_dump() for citation in rag_answer.citations
-                    ],
-                }
-            )
-            chat_history.save()
-
-            # Prepare the response
-            response_data = {
-                "role": "assistant",
-                "content": rag_answer.content,
-                "citations": [
-                    citation.model_dump() for citation in rag_answer.citations
-                ],
-                "chatId": chat_id,
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ChatHistoryListView(APIView):
+class ChatListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        chat_histories = ChatHistory.objects.filter(user=user).order_by("-last_used_at")
-        data = []
-        for chat in chat_histories:
-            data.append(
-                {
-                    "chatId": chat.chat_id,
-                    "created_at": chat.created_at,
-                    "last_used_at": chat.last_used_at,
-                }
-            )
-        return Response(data, status=status.HTTP_200_OK)
+        course_id = request.query_params.get("courseId")
+        if course_id:
+            chat_histories = Chat.objects.filter(
+                user=user, course__id=course_id
+            ).order_by("-updated_at")
+        else:
+            chat_histories = Chat.objects.filter(user=user).order_by("-updated_at")
+
+        serializer = ChatSerializer(chat_histories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class ChatHistoryView(APIView):
+class ChatDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, chatId):
         user = request.user
         try:
-            chat_history = ChatHistory.objects.get(chat_id=chatId, user=user)
-        except ChatHistory.DoesNotExist:
+            chat_history = Chat.objects.get(id=chatId, user=user)
+        except Chat.DoesNotExist:
+            return Response(
+                {"error": "Chat history not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ChatSerializer(chat_history)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, chatId):
+        user = request.user
+        try:
+            chat_history = Chat.objects.get(id=chatId, user=user)
+        except Chat.DoesNotExist:
             return Response(
                 {"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        data = {
-            "chatId": chat_history.chat_id,
-            "messages": chat_history.messages,
-            "created_at": chat_history.created_at,
-            "last_used_at": chat_history.last_used_at,
-        }
-        return Response(data, status=status.HTTP_200_OK)
+        serializer = ChatSerializer(chat_history)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ChatResponseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ChatRequestSerializer(
+            data=request.data, context={"request": request}
+        )
+        if serializer.is_valid():
+            data = serializer.validated_data
+            user = request.user
+            chat_id = data.get("chatId")
+            course_id = data.get("courseId")
+            user_file_ids = data.get("userFileIds", [])
+            message = data["message"]
+
+            # Handle chat creation or retrieval
+            if not chat_id:
+                course = None
+                if course_id:
+                    try:
+                        course = Course.objects.get(id=course_id, user=user)
+                    except Course.DoesNotExist:
+                        return Response(
+                            {"error": "Course not found."},
+                            status=status.HTTP_404_NOT_FOUND,
+                        )
+                chat = Chat.objects.create(
+                    id=uuid.uuid4(),
+                    user=user,
+                    course=course,
+                    messages=[],
+                )
+                chat_id = chat.id
+            else:
+                try:
+                    chat = Chat.objects.get(id=chat_id, user=user)
+                except Chat.DoesNotExist:
+                    return Response(
+                        {"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND
+                    )
+
+            # Update chat messages
+            chat.messages.append({"role": "user", "content": message})
+            chat.save()
+
+            # Process the LLM response
+            try:
+                document_ids = user_file_ids or ([course_id] if course_id else [])
+                assistant_response = process_answer(
+                    document_ids, message, chat.messages
+                )
+
+                chat.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": assistant_response.content,
+                        "citations": [
+                            citation.model_dump()
+                            for citation in assistant_response.citations
+                        ],
+                    }
+                )
+                chat.save()
+
+                # Return the response
+                return Response(
+                    {
+                        "chatId": str(chat.id),
+                        "role": "assistant",
+                        "content": assistant_response.content,
+                        "citations": [
+                            citation.model_dump()
+                            for citation in assistant_response.citations
+                        ],
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            except Exception as e:
+                # TODO: In case of model not being able to process the answer
+                # Choose another model to process the answer
+                logging.error(f"Error processing answer: {e}")
+                return Response(
+                    {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class QuizCreationView(GenericAPIView):

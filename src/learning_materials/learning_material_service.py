@@ -61,8 +61,10 @@ def process_answer(
     user_question: str,
     chat_history: list[dict[str, str]],
 ) -> RagAnswer:
-
-    # Get a list of relevant contexts from the database
+    """
+    Process the user's question and return a response based on the context of the documents and chat history.
+    """
+    # Retrieve relevant contexts for the provided documents
     curriculum: list[Citation] = []
     for document_id in document_ids:
         curriculum.extend(get_context(document_id, user_question))
@@ -76,8 +78,6 @@ def process_answer(
         answer_content = response_formulation(
             user_question, curriculum, chat_history)
 
+    # Create a response object
     answer = RagAnswer(content=answer_content, citations=curriculum)
     return answer
-
-
-
