@@ -13,7 +13,7 @@ from rest_framework.validators import UniqueValidator
 from learning_materials.serializer import CardsetSerializer, QuizModelSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from accounts.models import Document, Feedback, Subscription, SubscriptionHistory
+from accounts.models import Feedback, Subscription, SubscriptionHistory
 
 
 User = get_user_model()
@@ -58,7 +58,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "subscription")
+        fields = ("username", "email", "password",
+                  "password_confirm", "subscription")
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
@@ -71,7 +72,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop("password_confirm")
         subscription = validated_data.pop("subscription", None)
 
-        user = User.objects.create_user(subscription=subscription, **validated_data)
+        user = User.objects.create_user(
+            subscription=subscription, **validated_data)
 
         # Send welcome email
         send_mail(
@@ -97,13 +99,16 @@ class LoginSerializer(TokenObtainPairSerializer):
 
         if user and user.check_password(password):
             if not user.is_active:
-                raise AuthenticationFailed("User is inactive.", code="authorization")
-            data = super().validate({"username": user.username, "password": password})
+                raise AuthenticationFailed(
+                    "User is inactive.", code="authorization")
+            data = super().validate(
+                {"username": user.username, "password": password})
             user.last_login = timezone.now()
             user.save()
             return data
         else:
-            raise AuthenticationFailed("Invalid credentials", code="authorization")
+            raise AuthenticationFailed(
+                "Invalid credentials", code="authorization")
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -139,7 +144,8 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({"uid": "Invalid UID"})
 
         if not default_token_generator.check_token(user, token):
-            raise serializers.ValidationError({"token": "Invalid or expired token"})
+            raise serializers.ValidationError(
+                {"token": "Invalid or expired token"})
 
         attrs["user"] = user
         return attrs
@@ -164,47 +170,6 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
         model = SubscriptionHistory
         fields = ["id", "subscription", "start_date", "end_date"]
         read_only_fields = ["id", "subscription", "start_date", "end_date"]
-
-
-class DocumentSerializer(serializers.ModelSerializer):
-    id = serializers.UUIDField(
-        help_text="The ID of the document",
-    )
-
-    name = serializers.CharField(
-        help_text="The name of the document",
-        required=False,
-    )
-
-    subject = serializers.CharField(
-        help_text="The subject of the quiz",
-    )
-
-    # The learning goals
-    learning_goals = serializers.ListField(
-        child=serializers.CharField(),
-        help_text="The learning goals",
-        required=False,  # Make the field optional
-    )
-
-    start_page = serializers.IntegerField(
-        help_text="The start page of the document",
-    )
-    end_page = serializers.IntegerField(
-        help_text="The end page of the document",
-    )
-
-    class Meta:
-        model = Document
-        fields = ["id", "name", "start_page", "end_page", "subject", "learning_goals"]
-        read_only_fields = ["id"]
-
-    def validate(self, data: dict) -> dict:
-        if data["start_page"] > data["end_page"]:
-            raise serializers.ValidationError(
-                "The start index must be less than the end index"
-            )
-        return data
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -235,7 +200,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-    documents = DocumentSerializer(many=True, required=False)
 
     cardsets = CardsetSerializer(many=True, read_only=True)
     quizzes = QuizModelSerializer(many=True, read_only=True)
@@ -270,19 +234,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # Save the user instance
         instance.save()
 
-        # Handle documents
-        if documents_data:
-            for doc_data in documents_data:
-                Document.objects.create(user=instance, **doc_data)
-
         return instance
+
 
 def validate_image_size(image):
     max_size_in_mb = 4
     max_size_in_bytes = max_size_in_mb * 1024 * 1024  # Convert MB to bytes
     if image.size > max_size_in_bytes:
-        raise ValidationError(f"Image size should not exceed {max_size_in_mb} MB.")
-    
+        raise ValidationError(f"Image size should not exceed { max_size_in_mb} MB.")
+
+
 class UserFeedbackSerializer(serializers.Serializer):
     feedbackType = serializers.CharField(
         help_text="The type of feedback",
@@ -297,11 +258,11 @@ class UserFeedbackSerializer(serializers.Serializer):
         allow_null=True,
         required=False,
         validators=[
-            FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png']),
+            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"]),
             validate_image_size,
-            ],
+        ],
     )
+
     class Meta:
         model = Feedback
-        fields = ('feedbackType', 'feedbackText', 'feedbackScreenshot')
-         
+        fields = ("feedbackType", "feedbackText", "feedbackScreenshot")

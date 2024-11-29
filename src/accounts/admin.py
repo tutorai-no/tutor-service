@@ -2,11 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from accounts.models import (
     CustomUser,
-    Document,
     Feedback,
     Subscription,
     SubscriptionHistory,
 )
+from learning_materials.models import UserFile
 
 
 @admin.register(CustomUser)
@@ -16,20 +16,21 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + ((None, {"fields": ("subscription",)}),)
 
 
-@admin.register(Document)
+@admin.register(UserFile)
 class DocumentAdmin(admin.ModelAdmin):
-    model = Document
+    model = UserFile
     list_display = [
         "name",
-        "created_at",
-        "updated_at",
+        "file_url",
+        "num_pages",
+        "uploaded_at",
+        "content_type",
+        "file_size",
         "user",
-        "subject",
-        "id",
     ]
-    readonly_fields = ["created_at", "updated_at", "id"]
-    list_filter = ["created_at", "updated_at"]
-    search_fields = ["name", "subject"]
+    readonly_fields = ["uploaded_at", "id"]
+    list_filter = ["uploaded_at"]
+    search_fields = ["name"]
 
 
 @admin.register(Feedback)

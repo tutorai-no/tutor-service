@@ -1,6 +1,6 @@
 """ This module contains the Pydantic models for the learning resources. """
 
-from typing import Union
+from typing import Union, Optional
 from pydantic import BaseModel, Field, PrivateAttr
 
 
@@ -18,8 +18,11 @@ class MultipleChoiceQuestion(BaseModel):
 class Quiz(BaseModel):
     # Metadata
     document_name: str = Field(description="The name of the document")
-    start_page: int = Field(description="The starting page of the quiz")
-    end_page: int = Field(description="The ending page of the quiz")
+    start_page: Optional[int] = Field(description="The starting page of the quiz")
+    end_page: Optional[int] = Field(description="The ending page of the quiz")
+    subject: Optional[str] = Field(
+        description="The subject of the quiz", default="Unknown"
+    )
 
     # The list of questions
     questions: list[Union[QuestionAnswer, MultipleChoiceQuestion]] = Field(
