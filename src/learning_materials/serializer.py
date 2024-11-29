@@ -49,6 +49,11 @@ class ContextSerializer(serializers.Serializer):
         required=False,
     )
 
+    course_id = serializers.UUIDField(
+        help_text="The ID of the course",
+        required=False,
+    )
+
     # The learning goals
     learning_goals = serializers.ListField(
         child=serializers.CharField(),
