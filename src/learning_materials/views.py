@@ -510,6 +510,8 @@ class ChatResponseView(APIView):
                 )
 
             except Exception as e:
+                # TODO: In case of model not being able to process the answer
+                # Choose another model to process the answer
                 logging.error(f"Error processing answer: {e}")
                 return Response(
                     {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR

@@ -1,5 +1,5 @@
-import uuid
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 
 from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAINER_NAME
 from learning_materials.models import (
@@ -135,10 +135,10 @@ class ChatRequestSerializer(serializers.Serializer):
 
         if chat_id:
             if not Chat.objects.filter(id=chat_id, user=user).exists():
-                raise serializers.ValidationError({"chatId": "Invalid chatId."})
+                raise NotFound({"chatId": "Chat not found."})
         elif course_id:
             if not Course.objects.filter(id=course_id, user=user).exists():
-                raise serializers.ValidationError({"courseId": "Invalid courseId."})
+                raise NotFound({"courseId": "Course not found."})
         else:
             # Allow chats without a course
             pass
@@ -154,13 +154,13 @@ class ChatMessageSerializer(serializers.Serializer):
 class ChatSerializer(serializers.ModelSerializer):
     messages = ChatMessageSerializer(many=True)
     id = serializers.UUIDField(read_only=True)
-    course_id = serializers.UUIDField(source='course.id', required=False)
+    course_id = serializers.UUIDField(source="course.id", required=False)
     title = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Chat
-        fields = ['id', 'course_id', 'messages', 'created_at', 'updated_at', 'title']
-        read_only_fields = ['created_at', 'updated_at']
+        fields = ["id", "course_id", "messages", "created_at", "updated_at", "title"]
+        read_only_fields = ["created_at", "updated_at"]
 
 
 class ReviewFlashcardSerializer(serializers.Serializer):
