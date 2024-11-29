@@ -23,8 +23,7 @@ from learning_materials.models import (
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Citation
 from learning_materials.knowledge_base.rag_service import post_context
-from accounts.models import CustomUser, Document
-
+from accounts.models import CustomUser
 base = "/api/"
 
 User = get_user_model()
@@ -59,11 +58,6 @@ class FlashcardGenerationTest(TestCase):
                 self.context, i, self.valid_document_name, self.valid_document_id
             )
 
-        Document.objects.create(
-            id=self.valid_document_id,
-            name=self.valid_document_name,
-            user=self.user,
-        )
 
     def test_generate_flashcards(self):
         page = Citation(
@@ -969,17 +963,10 @@ class ChatAssistantTest(TestCase):
         post_context(
             self.context,
             page_num=1,
-            document_name=self.document_name,
+            document_name=self.document_name,                                                                            
             document_id=self.valid_document_id,
         )
 
-        Document.objects.create(
-            id=self.valid_document_id,
-            name=self.document_name,
-            start_page=1,
-            end_page=1,
-            user=self.user,
-        )
 
     def test_authenticated_access_required(self):
         # Log out the user
