@@ -125,6 +125,7 @@ class MongoDB(Database):
                         text=match[0]["text"],
                         page_num=match[0]["pageNum"],
                         document_name=match[0]["documentName"],
+                        document_id=match[0]["documentId"]
                     )
                 )
 
@@ -152,6 +153,7 @@ class MongoDB(Database):
                     text=document["text"],
                     page_num=document["pageNum"],
                     document_name=document["documentName"],
+                    document_id=document["documentId"]
                 )
             )
 
