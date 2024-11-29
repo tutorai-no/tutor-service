@@ -30,6 +30,7 @@ def translate_quiz_to_orm_model(quiz: Quiz, users: list[CustomUser]) -> QuizMode
         document_name=quiz.document_name,
         start_page=quiz.start_page,
         end_page=quiz.end_page,
+        subject=quiz.subject,
     )
 
     # Associate the quiz with multiple users

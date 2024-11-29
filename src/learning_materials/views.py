@@ -4,7 +4,12 @@ import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.generics import GenericAPIView, ListAPIView, ListCreateAPIView, RetrieveAPIView
+from rest_framework.generics import (
+    GenericAPIView,
+    ListAPIView,
+    ListCreateAPIView,
+    RetrieveAPIView,
+)
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
@@ -19,7 +24,8 @@ from learning_materials.files.file_service import (
     upload_file_to_blob,
 )
 from learning_materials.learning_material_service import (
-    process_flashcards,
+    process_flashcards_by_page_range,
+    process_flashcards_by_subject,
     process_answer,
 )
 from learning_materials.quizzes.quiz_service import (
@@ -27,7 +33,15 @@ from learning_materials.quizzes.quiz_service import (
     grade_quiz,
 )
 from learning_materials.flashcards.flashcards_service import parse_for_anki
-from learning_materials.models import Cardset, Course, FlashcardModel, Chat, QuizModel, UserFile
+from learning_materials.models import (
+    Cardset,
+    Course,
+    FlashcardModel,
+    Chat,
+    QuizModel,
+    UserFile,
+)
+
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -44,10 +58,9 @@ from learning_materials.serializer import (
     FlashcardSerializer,
     ReviewFlashcardSerializer,
     QuizModelSerializer,
+    ContextSerializer,
     QuizStudentAnswer,
 )
-from accounts.serializers import DocumentSerializer
-from accounts.models import Document
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +75,8 @@ class CoursesView(ListCreateAPIView):
 
     @swagger_auto_schema(
         operation_description="List all courses",
-        responses={200: openapi.Response(description="Courses retrieved successfully")},
+        responses={200: openapi.Response(
+            description="Courses retrieved successfully")},
         tags=["Courses"],
     )
     def get(self, request, *args, **kwargs):
@@ -71,12 +85,13 @@ class CoursesView(ListCreateAPIView):
     @swagger_auto_schema(
         operation_description="Create a new course",
         request_body=CourseSerializer,
-        responses={201: openapi.Response(description="Course created successfully")},
+        responses={201: openapi.Response(
+            description="Course created successfully")},
         tags=["Courses"],
     )
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
-    
+
 
 # View for retrieving a single course and its related files
 class CourseDetailView(RetrieveAPIView):
@@ -93,21 +108,29 @@ class FileUploadView(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request, *args, **kwargs):
-        file = request.FILES.get('file')
-        course_id = request.data.get('course_id')
-        auth_header = request.headers.get('Authorization')
+        file = request.FILES.get("file")
+        course_id = request.data.get("course_id")
+        auth_header = request.headers.get("Authorization")
 
         if not auth_header:
-            return Response({"detail": "Authorization header is required"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "Authorization header is required"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         if not file or not course_id:
-            return Response({"detail": "File and course_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "File and course_id are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             user = request.user
             course = Course.objects.get(id=course_id, user=user)
             file_uuid = uuid.uuid4()
-            blob_name, file_url = upload_file_to_blob(file, user.id, course.id, file_uuid)
+            blob_name, file_url = upload_file_to_blob(
+                file, user.id, course.id, file_uuid
+            )
             sas_url = generate_sas_url(blob_name)
 
             file_metadata = {
@@ -116,7 +139,7 @@ class FileUploadView(APIView):
                 "blob_name": blob_name,  # Store blob_name
                 "file_url": file_url,
                 "sas_url": sas_url,
-                "num_pages": request.data.get('num_pages', 0),
+                "num_pages": request.data.get("num_pages", 0),
                 "content_type": file.content_type,
                 "file_size": file.size,
             }
@@ -132,10 +155,15 @@ class FileUploadView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Course.DoesNotExist:
-            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             logging.error(f"Error uploading file: {e}")
-            return Response({"detail": "Error uploading file"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"detail": "Error uploading file"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class UserFilesListView(ListAPIView):
@@ -144,7 +172,7 @@ class UserFilesListView(ListAPIView):
 
     def get_queryset(self):
         return UserFile.objects.filter(user=self.request.user)
-    
+
 
 class CourseFilesView(APIView):
     permission_classes = [IsAuthenticated]
@@ -160,19 +188,24 @@ class CourseFilesView(APIView):
             return Response({"files": serializer.data}, status=status.HTTP_200_OK)
 
         except Course.DoesNotExist:
-            return Response({"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             logging.error(f"Error retrieving files: {e}")
-            return Response({"detail": "Error retrieving files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"detail": "Error retrieving files"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class FlashcardCreationView(GenericAPIView):
-    serializer_class = DocumentSerializer
+    serializer_class = ContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Generate flashcards from a given document",
-        request_body=DocumentSerializer,
+        request_body=ContextSerializer,
         responses={
             200: openapi.Response(
                 description="Flashcards generated successfully",
@@ -206,9 +239,16 @@ class FlashcardCreationView(GenericAPIView):
             subject = serializer.validated_data.get("subject")
             user = request.user
 
-            flashcards = process_flashcards(document_id, start, end)
-            document = Document.objects.get(id=document_id)
-            cardset_name = f"{document.name}_{start}_{end}"
+            if start is not None and end is not None:       
+                flashcards = process_flashcards_by_page_range(
+                    document_id, start, end)
+                cardset_name = f"{document_id}_{start}_{end}"
+
+            elif subject:
+                flashcards = process_flashcards_by_subject(
+                    document_id, subject)
+
+                cardset_name = f"{document_id}_subject"
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
@@ -294,19 +334,22 @@ class ReviewFlashcardView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            answer_was_correct = serializer.validated_data.get("answer_was_correct")
+            answer_was_correct = serializer.validated_data.get(
+                "answer_was_correct")
             flashcard_id = serializer.validated_data.get("id")
             try:
                 flashcard = FlashcardModel.objects.get(id=flashcard_id)
             except FlashcardModel.DoesNotExist:
                 return Response("Flashcard not found", status=status.HTTP_404_NOT_FOUND)
 
-            valid_user = flashcard.review(answer_was_correct, user=request.user)
+            valid_user = flashcard.review(
+                answer_was_correct, user=request.user)
             flashcard.save()
 
             if valid_user:
                 return Response(
-                    data=FlashcardSerializer(flashcard).data, status=status.HTTP_200_OK
+                    data=FlashcardSerializer(
+                        flashcard).data, status=status.HTTP_200_OK
                 )
             else:
                 return Response("Invalid user", status=status.HTTP_400_BAD_REQUEST)
@@ -465,12 +508,12 @@ class ChatResponseView(APIView):
 
 
 class QuizCreationView(GenericAPIView):
-    serializer_class = DocumentSerializer
+    serializer_class = ContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
-        request_body=DocumentSerializer,
+        request_body=ContextSerializer,
         responses={
             200: openapi.Response(
                 description="Quiz created successfully",
@@ -504,12 +547,15 @@ class QuizCreationView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             document_id = serializer.validated_data.get("id")
-            start = serializer.validated_data.get("start_page")
-            end = serializer.validated_data.get("end_page")
-            learning_goals = serializer.validated_data.get("learning_goals", [])
+            start = serializer.validated_data.get("start_page", None)
+            end = serializer.validated_data.get("end_page", None)
+            subject = serializer.validated_data.get("subject", None)
+            learning_goals = serializer.validated_data.get(
+                "learning_goals", [])
 
-            # Generate the quiz data (Assuming generate_quiz returns a structured dict)
-            quiz_data = generate_quiz(document_id, start, end, learning_goals)
+            # Generate the quiz data
+            quiz_data = generate_quiz(
+                document_id, start, end, subject, learning_goals)
 
             # Retrieve the authenticated user
             user = request.user
@@ -563,11 +609,11 @@ class QuizGradingView(GenericAPIView):
 
 
 class CompendiumCreationView(GenericAPIView):
-    serializer_class = DocumentSerializer
+    serializer_class = ContextSerializer
 
     @swagger_auto_schema(
         operation_description="Create a compendium from a given document",
-        request_body=DocumentSerializer,
+        request_body=ContextSerializer,
         responses={
             200: openapi.Response(
                 description="Compendium created successfully",
