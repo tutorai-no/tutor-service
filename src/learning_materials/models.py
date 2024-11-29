@@ -54,6 +54,15 @@ class Cardset(models.Model):
     subject = models.CharField(
         max_length=1000, help_text="The subject of the cardset", default="Unknown"
     )
+    course = models.ForeignKey(
+        Course,
+        related_name="cardsets",
+        on_delete=models.CASCADE,
+        help_text="The course to which the cardset belongs",
+        default=None,
+        blank=True,
+        null=True,
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="cardsets",

@@ -235,6 +235,7 @@ class FlashcardCreationView(GenericAPIView):
             start = serializer.validated_data.get("start_page")
             end = serializer.validated_data.get("end_page")
             subject = serializer.validated_data.get("subject")
+            course_id = serializer.validated_data.get("course_id")
             user = request.user
 
             if start is not None and end is not None:       
@@ -247,10 +248,11 @@ class FlashcardCreationView(GenericAPIView):
                     document_id, subject)
 
                 cardset_name = f"{document_id}_subject"
+            course = Course.objects.get(id=course_id)
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
-                name=cardset_name, subject=subject, user=user
+                name=cardset_name, subject=subject, course=course, user=user
             )
             flashcard_models = [
                 translate_flashcard_to_orm_model(flashcard, cardset)

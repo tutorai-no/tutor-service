@@ -16,6 +16,7 @@ from learning_materials.models import (
     ChatHistory,
     FlashcardModel,
     Cardset,
+    Course,
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
@@ -42,7 +43,7 @@ class FlashcardGenerationTest(TestCase):
         self.context = """
             Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. 
             The Jedi are spread across the galaxy in a full-scale war against the Separatists. 
-            The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to defeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. 
+            The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to dfefeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. 
             Meanwhile, after having visions of his wife Padmé Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic and, secretly, a Sith Lord.
             Palpatine manipulates Anakin into turning to the dark side of the Force and becoming his apprentice, Darth Vader, with wide-ranging consequences for the galaxy."""
 
@@ -57,6 +58,9 @@ class FlashcardGenerationTest(TestCase):
             post_context(
                 self.context, i, self.valid_document_name, self.valid_document_id
             )
+        self.course = Course.objects.create(
+            name="Test Course", user=self.user
+        )
 
 
     def test_generate_flashcards(self):
@@ -99,6 +103,7 @@ class FlashcardGenerationTest(TestCase):
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": "Some subject",
+            "course_id": self.course.id,
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -139,6 +144,7 @@ class FlashcardGenerationTest(TestCase):
         valid_request = {
             "id": self.valid_document_id,
             "subject": self.subject,
+            "course_id": self.course.id,
         }
         response = self.client.post(self.url, valid_request, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
