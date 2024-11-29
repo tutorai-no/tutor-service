@@ -973,6 +973,7 @@ class ChatAssistantTest(TestCase):
             self.assertIn("text", citation)
             self.assertIn("page_num", citation)
             self.assertIn("document_id", citation)
+            self.assertEquals(citation["document_id"], self.valid_document_id)
 
     def test_chat_persistence_and_timestamps(self):
         # Start a new chat
