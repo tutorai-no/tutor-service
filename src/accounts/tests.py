@@ -560,13 +560,11 @@ class UserProfileTests(APITestCase):
         self.access_token = str(refresh.access_token)
         self.valid_document_1 = {
             "id": str(uuid.uuid4()),
-            "start_page": 1,
-            "end_page": 5,
+            "num_pages": 5,
         }
         self.valid_document_2 = {
             "id": str(uuid.uuid4()),
-            "start_page": 6,
-            "end_page": 10,
+            "num_pages": 10,
         }
 
     def authenticate(self):
@@ -583,7 +581,7 @@ class UserProfileTests(APITestCase):
         self.authenticate()
         self.client.patch(
             self.profile_url,
-            {"documents": [self.valid_document_1]},
+            {"uploaded_files": [self.valid_document_1]},
             format="json",
         )
         self.user.refresh_from_db()
@@ -591,7 +589,7 @@ class UserProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["username"], self.user.username)
         self.assertEqual(response.data["email"], self.user.email)
-        self.assertEqual(len(response.data["documents"]), 1)
+        self.assertEqual(len(response.data["uploaded_files"]), 1)
 
     def test_retrieve_profile_without_authentication(self):
         response = self.client.get(self.profile_url, format="json")
@@ -621,16 +619,16 @@ class UserProfileTests(APITestCase):
 
     def test_partial_update_profile_with_document(self):
         self.authenticate()
-        data = {"documents": [self.valid_document_1]}
+        data = {"uploaded_files": [self.valid_document_1]}
         response = self.client.patch(self.profile_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.documents.count(), 1)
+        self.assertEqual(self.user.uploaded_files.count(), 1)
 
     def test_partial_update_profile_with_several_documents(self):
         self.authenticate()
         data = {
-            "documents": [
+            "uploaded_files": [
                 self.valid_document_1,
                 self.valid_document_2,
             ]
@@ -638,28 +636,28 @@ class UserProfileTests(APITestCase):
         response = self.client.patch(self.profile_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.documents.count(), 2)
+        self.assertEqual(self.user.uploaded_files.count(), 2)
 
     def test_partial_update_profile_with_documents_does_not_overwrite(self):
         self.authenticate()
         data = {
-            "documents": [
+            "uploaded_files": [
                 self.valid_document_1,
             ]
         }
         response = self.client.patch(self.profile_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.documents.count(), 1)
+        self.assertEqual(self.user.uploaded_files.count(), 1)
 
         self.authenticate()
         # Update with new document
-        data = {"documents": [self.valid_document_2]}
+        data = {"uploaded_files": [self.valid_document_2]}
         response = self.client.patch(self.profile_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.user.refresh_from_db()
-        self.assertEqual(self.user.documents.count(), 2)
+        self.assertEqual(self.user.uploaded_files.count(), 2)
 
     def test_access_profile_without_authentication(self):
         response = self.client.get(self.profile_url, format="json")
@@ -750,7 +748,7 @@ class UserFeedbackTests(APITestCase):
         response = self.client.post(self.feedback_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertFalse(Feedback.objects.exists())
-    
+
     def test_feedback_missing_fields(self):
         self.assertFalse(Feedback.objects.exists())
         self.authenticate()
@@ -761,7 +759,7 @@ class UserFeedbackTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("feedbackText", response.data)
         self.assertFalse(Feedback.objects.exists())
-        
+
     def test_feedback_without_feedbackType(self):
         self.assertFalse(Feedback.objects.exists())
         self.authenticate()
@@ -772,9 +770,7 @@ class UserFeedbackTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("feedbackType", response.data)
         self.assertFalse(Feedback.objects.exists())
-    
-        
-    
+
     def test_feedback_with_screenshot(self):
         self.assertFalse(Feedback.objects.exists())
         self.authenticate()
@@ -782,9 +778,7 @@ class UserFeedbackTests(APITestCase):
         # Create the in-memory image as before
         img_io = self.create_test_image()
         uploaded_file = SimpleUploadedFile(
-            name='test_image.jpg',
-            content=img_io.read(),
-            content_type='image/jpeg'
+            name="test_image.jpg", content=img_io.read(), content_type="image/jpeg"
         )
 
         data = {
@@ -793,7 +787,7 @@ class UserFeedbackTests(APITestCase):
             "feedbackScreenshot": uploaded_file,
         }
 
-        response = self.client.post(self.feedback_url, data, format='multipart')
+        response = self.client.post(self.feedback_url, data, format="multipart")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Feedback.objects.exists())
@@ -801,12 +795,12 @@ class UserFeedbackTests(APITestCase):
         self.assertTrue(feedback.feedback_screenshot)
 
     def create_test_image(self):
-        image = Image.new('RGB', (100, 100), color='red')
+        image = Image.new("RGB", (100, 100), color="red")
         img_io = BytesIO()
-        image.save(img_io, format='JPEG')
+        image.save(img_io, format="JPEG")
         img_io.seek(0)
         return img_io
- 
+
     def test_feedback_with_invalid_screenshot(self):
         self.assertFalse(Feedback.objects.exists())
         self.authenticate()
@@ -816,9 +810,7 @@ class UserFeedbackTests(APITestCase):
         img_io.write(b"invalid image data")
         img_io.seek(0)
         uploaded_file = SimpleUploadedFile(
-            name='test_image.jpg',
-            content=img_io.read(),
-            content_type='image/jpeg'
+            name="test_image.jpg", content=img_io.read(), content_type="image/jpeg"
         )
 
         data = {
@@ -827,23 +819,23 @@ class UserFeedbackTests(APITestCase):
             "feedbackScreenshot": uploaded_file,
         }
 
-        response = self.client.post(self.feedback_url, data, format='multipart')
+        response = self.client.post(self.feedback_url, data, format="multipart")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("feedbackScreenshot", response.data)
         self.assertFalse(Feedback.objects.exists())
-        
+
     def test_screenshot_with_too_large_image(self):
-        #max_size = 5 * 1024 * 1024
-        image = Image.new('RGB', (2*1024, 3*1024), color='red')
+        # max_size = 5 * 1024 * 1024
+        image = Image.new("RGB", (2 * 1024, 3 * 1024), color="red")
         img_io = BytesIO()
-        image.save(img_io, format='JPEG')
+        image.save(img_io, format="JPEG")
         img_io.seek(0)
-        
+
         uploaded_file = SimpleUploadedFile(
-            name='test_image_too_large.jpg',
+            name="test_image_too_large.jpg",
             content=img_io.read(),
-            content_type='image/jpeg'
+            content_type="image/jpeg",
         )
 
         data = {
@@ -852,10 +844,7 @@ class UserFeedbackTests(APITestCase):
             "feedbackScreenshot": uploaded_file,
         }
 
-        response = self.client.post(self.feedback_url, data, format='multipart')
+        response = self.client.post(self.feedback_url, data, format="multipart")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertFalse(Feedback.objects.exists())
-        
-        
-     

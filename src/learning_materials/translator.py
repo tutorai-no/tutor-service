@@ -23,7 +23,7 @@ def translate_flashcard_to_orm_model(
     )
 
 
-def translate_quiz_to_orm_model(quiz: Quiz, users: list[CustomUser]) -> QuizModel:
+def translate_quiz_to_orm_model(quiz: Quiz, user: CustomUser) -> QuizModel:
     """Translate a Quiz Pydantic model to an ORM model and associate with users."""
     # Create all the questions and answers for the quiz
     quiz_model = QuizModel.objects.create(
@@ -31,10 +31,8 @@ def translate_quiz_to_orm_model(quiz: Quiz, users: list[CustomUser]) -> QuizMode
         start_page=quiz.start_page,
         end_page=quiz.end_page,
         subject=quiz.subject,
+        user=user,
     )
-
-    # Associate the quiz with multiple users
-    quiz_model.users.set(users)
 
     # Prepare lists to bulk create questions
     qa_models = []

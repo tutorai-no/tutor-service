@@ -30,6 +30,7 @@ from learning_materials.views import (
     FlashcardViewSet,
     QuizCreationView,
     QuizGradingView,
+    QuizViewSet,
     ReviewFlashcardView,
 )
 
@@ -37,53 +38,64 @@ from learning_materials.views import (
 router = routers.DefaultRouter()
 router.register(r"cardsets", CardsetViewSet, basename="cardset")
 router.register(r"flashcards", FlashcardViewSet, basename="flashcard")
+router.register(r"quizzes", QuizViewSet, basename="quiz")
 
 urlpatterns = [
     # Health check
     path("health-check/", health_check, name="health-check"),
-
     # Authentication & Profile
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("password-reset/", PasswordResetView.as_view(), name="password-reset"),
-    path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path(
+        "password-reset-confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
     path("profile/", UserProfileView.as_view(), name="profile"),
-    
     # Subscriptions
     path("subscriptions/", SubscriptionListView.as_view(), name="subscriptions"),
-    path("subscription-history/", SubscriptionHistoryView.as_view(), name="subscription-history"),
-    
+    path(
+        "subscription-history/",
+        SubscriptionHistoryView.as_view(),
+        name="subscription-history",
+    ),
     # Courses
     path("courses/", CoursesView.as_view(), name="courses-list-create"),
     path("courses/<uuid:pk>/", CourseDetailView.as_view(), name="course-detail"),
-    path("courses/<uuid:course_id>/files/", CourseFilesView.as_view(), name="course-files"),
-
+    path(
+        "courses/<uuid:course_id>/files/",
+        CourseFilesView.as_view(),
+        name="course-files",
+    ),
     # Files
     path("files/upload/", FileUploadView.as_view(), name="upload-file"),
     path("files/", UserFilesListView.as_view(), name="user-files"),
-
     # Chat
     path("chat/response/", ChatResponseView.as_view(), name="chat-response"),
     path("chat/history/", ChatListView.as_view(), name="chat-history-list"),
     path("chat/history/<uuid:chatId>/", ChatView.as_view(), name="chat-history"),
-
     # Flashcards
-    path("flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"),
+    path(
+        "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"
+    ),
     path("flashcards/review/", ReviewFlashcardView.as_view(), name="review-flashcards"),
-    path("flashcards/export/<int:pk>/", CardsetExportView.as_view(), name="export-flashcards"),
-
+    path(
+        "flashcards/export/<int:pk>/",
+        CardsetExportView.as_view(),
+        name="export-flashcards",
+    ),
     # Quizzes
     path("quiz/create/", QuizCreationView.as_view(), name="create-quiz"),
     path("quiz/grade/", QuizGradingView.as_view(), name="grade-quiz"),
-
     # Compendiums
-    path("compendium/create/", CompendiumCreationView.as_view(), name="create-compendium"),
-
+    path(
+        "compendium/create/", CompendiumCreationView.as_view(), name="create-compendium"
+    ),
     # Feedback
     path("feedback/", UserFeedback.as_view(), name="feedback"),
-
     # Router URLs
     path("", include(router.urls)),
 ]

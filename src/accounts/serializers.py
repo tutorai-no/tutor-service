@@ -10,7 +10,12 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
-from learning_materials.serializer import CardsetSerializer, QuizModelSerializer
+from learning_materials.serializer import (
+    CardsetSerializer,
+    QuizModelSerializer,
+    UserFileSerializer,
+    UserFile,
+)
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from accounts.models import Feedback, Subscription, SubscriptionHistory
@@ -58,8 +63,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "email", "password",
-                  "password_confirm", "subscription")
+        fields = ("username", "email", "password", "password_confirm", "subscription")
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:
@@ -72,8 +76,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop("password_confirm")
         subscription = validated_data.pop("subscription", None)
 
-        user = User.objects.create_user(
-            subscription=subscription, **validated_data)
+        user = User.objects.create_user(subscription=subscription, **validated_data)
 
         # Send welcome email
         send_mail(
@@ -99,16 +102,13 @@ class LoginSerializer(TokenObtainPairSerializer):
 
         if user and user.check_password(password):
             if not user.is_active:
-                raise AuthenticationFailed(
-                    "User is inactive.", code="authorization")
-            data = super().validate(
-                {"username": user.username, "password": password})
+                raise AuthenticationFailed("User is inactive.", code="authorization")
+            data = super().validate({"username": user.username, "password": password})
             user.last_login = timezone.now()
             user.save()
             return data
         else:
-            raise AuthenticationFailed(
-                "Invalid credentials", code="authorization")
+            raise AuthenticationFailed("Invalid credentials", code="authorization")
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -144,8 +144,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({"uid": "Invalid UID"})
 
         if not default_token_generator.check_token(user, token):
-            raise serializers.ValidationError(
-                {"token": "Invalid or expired token"})
+            raise serializers.ValidationError({"token": "Invalid or expired token"})
 
         attrs["user"] = user
         return attrs
@@ -192,6 +191,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ],
     )
 
+    uploaded_files = UserFileSerializer(many=True, required=False)
+
     subscription = SubscriptionSerializer(read_only=True)
     subscription_id = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
@@ -213,7 +214,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "last_name",
             "subscription",
             "subscription_id",
-            "documents",
+            "uploaded_files",
             "cardsets",
             "quizzes",
         )
@@ -221,7 +222,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extract subscription_id and documents from validated_data
         subscription = validated_data.pop("subscription", None)
-        documents_data = validated_data.pop("documents", None)
+        documents_data = validated_data.pop("uploaded_files", None)
 
         # Update user fields
         for attr, value in validated_data.items():
@@ -230,6 +231,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # Update subscription if provided
         if subscription is not None:
             instance.subscription = subscription
+
+        # Update uploaded_files if provided
+        if documents_data is not None:
+            # instance.uploaded_files.clear()  # Clear existing files if any
+            for document_data in documents_data:
+                # Assuming `document_data` contains enough data to create a UserFile instance
+                document = UserFile.objects.create(user=instance, **document_data)
+                instance.uploaded_files.add(document)
 
         # Save the user instance
         instance.save()
