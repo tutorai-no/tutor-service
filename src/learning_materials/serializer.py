@@ -15,8 +15,8 @@ from learning_materials.models import (
 
 
 class UserFileSerializer(serializers.ModelSerializer):
-    sas_url = serializers.SerializerMethodField()
     id = serializers.UUIDField(required=False)
+    sas_url = serializers.SerializerMethodField()
     course_ids = serializers.PrimaryKeyRelatedField(
         source="courses", many=True, read_only=True
     )
