@@ -33,7 +33,7 @@ jobs:
           docker compose run backend python manage.py makemigrations learning_materials
           docker compose run backend python manage.py makemigrations
           docker compose run backend python manage.py migrate
-          docker compose run backend python manage.py test
+          docker compose run backend python manage.py test --parallel
           docker compose up -d backend
           docker compose down
 
