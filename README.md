@@ -21,6 +21,7 @@
     - [Clone the repository](#clone-the-repository)
     - [Configuration](#configuration)
     - [Usage](#usage)
+  - [Testing](#testing)
   - [📖 Documentations](#-documentations)
 
 </details>
@@ -74,6 +75,12 @@ docker compose up --build
 ```
 
 To access the backend, navigate to `http://localhost:8000` in your browser.
+
+## Testing
+To run all the tests, execute the following command in the root directory of the project:
+```bash
+docker compose run backend python manage.py test --parallel
+```
 
 ## 📖 Documentations
 
