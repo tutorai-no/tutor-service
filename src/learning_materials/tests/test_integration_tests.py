@@ -1314,6 +1314,8 @@ class ChatAPITest(APITestCase):
         response = self.client.post(self.chat_response_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("chatId", response.data)
+        self.assertIn("title", response.data)
+
         self.assertEqual(response.data["content"], "Assistant's reply")
         self.assertEqual(response.data["role"], "assistant")
 
@@ -1346,7 +1348,6 @@ class ChatAPITest(APITestCase):
         # Verify that the chat was updated and our message was added and the assistant's response
         self.chat1.refresh_from_db()
         self.assertEqual(len(self.chat1.messages), 3)
-        print(self.chat1.messages, flush=True)
         self.assertEqual(self.chat1.messages[-2]["content"], "Can you elaborate?")
         self.assertEqual(self.chat1.messages[-1]["content"], "Assistant's follow-up")
 
