@@ -46,7 +46,6 @@ def process_flashcards_by_subject(
     document_id: uuid.UUID, subject: str
 ) -> list[Flashcard]:
     pages = get_context(document_id, subject)
-    print("Point Subject", flush=True)
     flashcards = _process_flashcards_by_pages(pages)
 
     return flashcards
