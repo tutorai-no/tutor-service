@@ -487,9 +487,10 @@ class ChatResponseView(APIView):
                 )
 
                 # Create a title for the chat
-                title = generate_title_of_chat(message, assistant_response)
+                if not chat.title:
+                    title = generate_title_of_chat(message, assistant_response)
+                    chat.title = title
 
-                chat.title = title
                 chat.messages.append(
                     {
                         "role": "assistant",
@@ -506,7 +507,7 @@ class ChatResponseView(APIView):
                 return Response(
                     {
                         "chatId": str(chat.id),
-                        "title": title,
+                        "title": chat.title,
                         "role": "assistant",
                         "content": assistant_response.content,
                         "citations": [
