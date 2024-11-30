@@ -30,7 +30,7 @@ def generate_title_of_chat(user_question: str, answer: RagAnswer) -> str:
     llm = create_llm_model()
     title = llm.invoke(prompt)
 
-    return title.content
+    return title.content.strip('"')
 
 
 def response_formulation(
