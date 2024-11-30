@@ -33,8 +33,7 @@ def _process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
     # Use ThreadPoolExecutor to parallelize the API calls
     with ThreadPoolExecutor() as executor:
         # Schedule the execution of each page processing and hold the future objects
-        futures = [executor.submit(generate_flashcards, page)
-                   for page in pages]
+        futures = [executor.submit(generate_flashcards, page) for page in pages]
 
         # As each future completes, gather the results
         for future in as_completed(futures):
@@ -43,18 +42,23 @@ def _process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
     return flashcards
 
 
-def process_flashcards_by_subject(document_id: uuid.UUID, subject: str) -> list[Flashcard]:
+def process_flashcards_by_subject(
+    document_id: uuid.UUID, subject: str
+) -> list[Flashcard]:
     pages = get_context(document_id, subject)
     print("Point Subject", flush=True)
     flashcards = _process_flashcards_by_pages(pages)
 
     return flashcards
 
-def process_flashcards_by_page_range(document_id: uuid.UUID, page_num_start: int, page_num_end: int) -> list[Flashcard]:
+
+def process_flashcards_by_page_range(
+    document_id: uuid.UUID, page_num_start: int, page_num_end: int
+) -> list[Flashcard]:
     pages = get_page_range(document_id, page_num_start, page_num_end)
     flashcards = _process_flashcards_by_pages(pages)
-
     return flashcards
+
 
 def process_answer(
     document_ids: list[uuid.UUID],
@@ -75,8 +79,7 @@ def process_answer(
             "I'm sorry, but I don't have enough information to answer your question."
         )
     else:
-        answer_content = response_formulation(
-            user_question, curriculum, chat_history)
+        answer_content = response_formulation(user_question, curriculum, chat_history)
 
     # Create a response object
     answer = RagAnswer(content=answer_content, citations=curriculum)
