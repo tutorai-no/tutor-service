@@ -1,13 +1,36 @@
 import logging
+
 import openai
 
 from config import Config
+from learning_materials.learning_resources import RagAnswer
+from learning_materials.knowledge_base.llm import create_llm_model
 
-# The api_key:
-api_key = Config().API_KEY
-openai.api_key = api_key
 
 logger = logging.getLogger(__name__)
+
+
+def generate_title_of_chat(user_question: str, answer: RagAnswer) -> str:
+    """
+    Generate the title of the chat based on the user question and the answer
+
+    Args:
+        user_question (str): The user question
+        answer (RagAnswer): The answer to the user question
+
+    Returns:
+        str: The title of the chat
+    """
+
+    logger.info("Generating title of chat")
+    prompt = (
+        f"Generate the title of the chat based on the user question and the answer. The title should be engaging and concise. Here is the user question and the answer:\n\nUser Question: {user_question}\n\nAnswer: {answer} The title should be engaging and concise no more then 5 words.",
+    )
+
+    llm = create_llm_model()
+    title = llm.invoke(prompt)
+
+    return title.content
 
 
 def response_formulation(
@@ -32,8 +55,6 @@ def response_formulation(
         system_prompt=_template_system_prompt(),
     )
     return response
-
-    # Send template to chatGPT and return response
 
 
 def _request_chat_completion(
@@ -64,6 +85,7 @@ def _request_chat_completion(
             messages.append(chat)
         messages.append({"role": role, "content": str(message)})
         # Send request to OpenAI
+        openai.api_key = Config().API_KEY
         response = openai.chat.completions.create(
             model=Config().GPT_MODEL,
             messages=messages,

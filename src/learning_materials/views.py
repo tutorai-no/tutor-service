@@ -28,6 +28,9 @@ from learning_materials.learning_material_service import (
     process_flashcards_by_subject,
     process_answer,
 )
+from learning_materials.knowledge_base.response_formulation import (
+    generate_title_of_chat,
+)
 from learning_materials.quizzes.quiz_service import (
     generate_quiz,
     grade_quiz,
@@ -483,6 +486,10 @@ class ChatResponseView(APIView):
                     document_ids, message, chat.messages
                 )
 
+                # Create a title for the chat
+                title = generate_title_of_chat(message, assistant_response)
+
+                chat.title = title
                 chat.messages.append(
                     {
                         "role": "assistant",
@@ -499,6 +506,7 @@ class ChatResponseView(APIView):
                 return Response(
                     {
                         "chatId": str(chat.id),
+                        "title": title,
                         "role": "assistant",
                         "content": assistant_response.content,
                         "citations": [

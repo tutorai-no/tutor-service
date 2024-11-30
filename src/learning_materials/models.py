@@ -58,7 +58,9 @@ class Chat(models.Model):
         null=True,
         blank=True,
     )
-    messages = models.JSONField(default=list)  # List of {role: str, content: str, ...}
+    title = models.CharField(max_length=255)
+    # List of {role: str, content: str, ...}
+    messages = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
