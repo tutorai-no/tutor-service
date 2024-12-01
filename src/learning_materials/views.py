@@ -249,7 +249,10 @@ class FlashcardCreationView(GenericAPIView):
                 flashcards = process_flashcards_by_subject(document_id, subject)
 
                 cardset_name = f"{document_id}_subject"
-            course = Course.objects.get(id=course_id)
+
+            course: Course = None
+            if course_id:
+                course = Course.objects.get(id=course_id)
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
