@@ -10,6 +10,7 @@ from learning_materials.models import (
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
+    Course,
 )
 from accounts.models import CustomUser
 
@@ -23,7 +24,9 @@ def translate_flashcard_to_orm_model(
     )
 
 
-def translate_quiz_to_orm_model(quiz: Quiz, user: CustomUser) -> QuizModel:
+def translate_quiz_to_orm_model(
+    quiz: Quiz, user: CustomUser, course: Course
+) -> QuizModel:
     """Translate a Quiz Pydantic model to an ORM model and associate with users."""
     # Create all the questions and answers for the quiz
     quiz_model = QuizModel.objects.create(
@@ -32,6 +35,7 @@ def translate_quiz_to_orm_model(quiz: Quiz, user: CustomUser) -> QuizModel:
         end_page=quiz.end_page,
         subject=quiz.subject,
         user=user,
+        course=course,
     )
 
     # Prepare lists to bulk create questions
