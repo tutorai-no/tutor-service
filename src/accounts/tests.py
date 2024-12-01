@@ -732,7 +732,6 @@ class UserFeedbackTests(APITestCase):
         data = {
             "feedbackType": "Bug Report",
             "feedbackText": "Test Feedback",
-            "feedbackScreenshot": None,
         }
         response = self.client.post(self.feedback_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -743,7 +742,6 @@ class UserFeedbackTests(APITestCase):
         data = {
             "feedbackType": "Bug Report",
             "feedbackText": "Test Feedback",
-            "feedbackScreenshot": None,
         }
         response = self.client.post(self.feedback_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
