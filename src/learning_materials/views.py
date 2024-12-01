@@ -572,10 +572,11 @@ class QuizCreationView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             document_id = serializer.validated_data.get("id")
-            start = serializer.validated_data.get("start_page", None)
-            end = serializer.validated_data.get("end_page", None)
-            subject = serializer.validated_data.get("subject", None)
+            start = serializer.validated_data.get("start_page")
+            end = serializer.validated_data.get("end_page")
+            subject = serializer.validated_data.get("subject")
             learning_goals = serializer.validated_data.get("learning_goals", [])
+            course_id = serializer.validated_data.get("course_id")
 
             # Generate the quiz data
             quiz_data = generate_quiz(document_id, start, end, subject, learning_goals)
@@ -583,8 +584,12 @@ class QuizCreationView(GenericAPIView):
             # Retrieve the authenticated user
             user = request.user
 
+            course: Course = None
+            if course_id:
+                course = Course.objects.get(id=course_id)
+
             # Translate the quiz data into ORM models and associate with the user
-            quiz_model = translate_quiz_to_orm_model(quiz_data, user)
+            quiz_model = translate_quiz_to_orm_model(quiz_data, user, course)
 
             # Serialize the created quiz
             response_serializer = QuizModelSerializer(quiz_model)

@@ -158,6 +158,7 @@ class FlashcardGenerationTest(TestCase):
         cardset = Cardset.objects.first()
         flashcards = FlashcardModel.objects.filter(cardset=cardset)
         self.assertGreater(flashcards.count(), 0)
+        self.assertEqual(cardset.course, self.course)
 
         # Validate Response Cardset Data
         self.assertIn("id", response.data)
@@ -699,6 +700,8 @@ class QuizGenerationTest(TestCase):
                 self.context, i, self.valid_document_name, self.valid_document_id
             )
 
+        self.course = Course.objects.create(name="Test Course", user=self.user)
+
     def test_invalid_request(self):
         """
         Test that an invalid request (empty payload) returns a 400 Bad Request
@@ -790,6 +793,49 @@ class QuizGenerationTest(TestCase):
 
         self.assertIn("questions", response.data)
         self.assertIsInstance(response.data["questions"], list)
+        self.assertGreater(len(response.data["questions"]), 0)
+
+        # Check that questions are created and associated with the quiz
+        self.assertTrue(
+            QuestionAnswerModel.objects.filter(quiz=quiz).exists()
+            or MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
+        )
+
+    def test_valid_request_with_course_id(self):
+        """
+        Test that a valid request creates a QuizModel instance and returns a 200 OK.
+        """
+        # Ensure no quizzes exist before the test
+        self.assertFalse(QuizModel.objects.exists())
+
+        valid_payload = {
+            "id": self.valid_document_id,
+            "start_page": self.valid_page_num_start,
+            "end_page": self.valid_page_num_end,
+            "subject": "Some subject",
+            "course_id": self.course.id,
+        }
+        response = self.client.post(self.url, valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Ensure a quiz is created
+        self.assertTrue(QuizModel.objects.exists())
+
+        # Retrieve the created quiz
+        quiz = QuizModel.objects.first()
+        self.assertEqual(quiz.document_name, self.valid_document_name)
+        self.assertEqual(quiz.start_page, self.valid_page_num_start)
+        self.assertEqual(quiz.end_page, self.valid_page_num_end)
+        self.assertEqual(quiz.course, self.course)
+
+        # Verify the response data
+        self.assertIn("id", response.data)
+        self.assertIn("document_name", response.data)
+        self.assertEqual(response.data["start_page"], self.valid_page_num_start)
+        self.assertEqual(response.data["end_page"], self.valid_page_num_end)
+        self.assertIn("questions", response.data)
+        self.assertIsInstance(response.data["questions"], list)
+        # Ensure questions are present
         self.assertGreater(len(response.data["questions"]), 0)
 
         # Check that questions are created and associated with the quiz
