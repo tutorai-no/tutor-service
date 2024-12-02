@@ -7,14 +7,17 @@ from environment files. It also supports fetching test cases
 ifthe configuration is loaded from a test environment file.
 """
 
-#a class for defining the config variables
-class Config():
-    def __init__(self, path='.env', gpt_model="gpt-3.5-turbo"):
+# a class for defining the config variables
+load_dotenv("../.env")
+
+
+class Config:
+    def __init__(self, path=".env", gpt_model="gpt-4o-mini"):
         self.path = path
-        self.GPT_MODEL = os.getenv(key='GPT_MODEL', default=gpt_model)
-        load_dotenv(dotenv_path=path)
-        self.API_KEY = os.getenv('OPENAI_API_KEY')
-        self.MONGODB_URI = os.getenv('MONGODB_URI')
-        self.RAG_DATABASE_SYSTEM = os.getenv('RAG_DATABASE_SYSTEM', 'mongodb')
-    
-        
+        self.GPT_MODEL = os.getenv(key="GPT_MODEL", default=gpt_model)
+        self.API_KEY = os.getenv("OPENAI_API_KEY")
+        self.MONGODB_URI = os.getenv("MONGODB_URI")
+        self.RAG_DATABASE_SYSTEM = os.getenv("RAG_DATABASE_SYSTEM", "mongodb")
+        self.AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+        self.AZURE_STORAGE_CONTAINER_NAME = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
+        self.BASE_URL_SCRAPER = os.getenv("BASE_URL_SCRAPER")

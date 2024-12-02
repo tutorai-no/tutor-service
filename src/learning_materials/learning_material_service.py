@@ -3,6 +3,7 @@
 import logging
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import uuid
 
 from learning_materials.knowledge_base.response_formulation import (
     response_formulation,
@@ -14,20 +15,20 @@ from learning_materials.knowledge_base.rag_service import (
 from learning_materials.flashcards.flashcards_service import generate_flashcards
 from learning_materials.learning_resources import (
     Flashcard,
-    Page,
+    Citation,
     RagAnswer,
 )
 
 logger = logging.getLogger(__name__)
 
-def process_flashcards(document_name: str, start: int, end: int) -> list[Flashcard]:
+
+def _process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
     """
     Generate flashcards for a specific page range and file
     """
     logger.info("Trying to find relevant document")
-    pages = get_page_range(document_name, start, end)
+    logger.info(f"Found {len(pages)} pages in the document")
     flashcards: list[Flashcard] = []
-    logger.info(f"Generating flashcards for {document_name} from page {start} to {end}")
 
     # Use ThreadPoolExecutor to parallelize the API calls
     with ThreadPoolExecutor() as executor:
@@ -41,19 +42,44 @@ def process_flashcards(document_name: str, start: int, end: int) -> list[Flashca
     return flashcards
 
 
+def process_flashcards_by_subject(
+    document_id: uuid.UUID, subject: str
+) -> list[Flashcard]:
+    pages = get_context(document_id, subject)
+    flashcards = _process_flashcards_by_pages(pages)
+
+    return flashcards
+
+
+def process_flashcards_by_page_range(
+    document_id: uuid.UUID, page_num_start: int, page_num_end: int
+) -> list[Flashcard]:
+    pages = get_page_range(document_id, page_num_start, page_num_end)
+    flashcards = _process_flashcards_by_pages(pages)
+    return flashcards
+
 
 def process_answer(
-    documents: list[str], user_question: str, chat_history: list[dict[str, str]]
+    document_ids: list[uuid.UUID],
+    user_question: str,
+    chat_history: list[dict[str, str]],
 ) -> RagAnswer:
+    """
+    Process the user's question and return a response based on the context of the documents and chat history.
+    """
+    # Retrieve relevant contexts for the provided documents
+    curriculum: list[Citation] = []
+    for document_id in document_ids:
+        curriculum.extend(get_context(document_id, user_question))
 
-    # Get a list of relevant contexts from the database
-    curriculum: list[Page] = []
-    for document_name in documents:
-        curriculum.extend(get_context(document_name, user_question))
+    # Handle case when no context is available
+    if len(curriculum) == 0:
+        answer_content = (
+            "I'm sorry, but I don't have enough information to answer your question."
+        )
+    else:
+        answer_content = response_formulation(user_question, curriculum, chat_history)
 
-    # Use this list to generate a response
-    answer_GPT = response_formulation(user_question, curriculum, chat_history)
-
-    answer = RagAnswer(answer=answer_GPT, citations=curriculum)
+    # Create a response object
+    answer = RagAnswer(content=answer_content, citations=curriculum)
     return answer
-

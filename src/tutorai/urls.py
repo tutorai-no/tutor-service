@@ -14,12 +14,16 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, re_path, include
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
+# Swagger schema view configuration
 schema_view = get_schema_view(
     openapi.Info(
         title="TutorAI API",
@@ -28,12 +32,20 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
+    authentication_classes=(SessionAuthentication, JWTAuthentication),
+    # Define the security schemes
 )
 
 urlpatterns = [
+    # Admin panel route
     path("admin/", admin.site.urls),
+    # Authentication URLs (using Django's built-in auth views)
+    path(
+        "accounts/", include("django.contrib.auth.urls")
+    ),  # Includes login/logout views
+    # API routes
     path("api/", include("api.urls"), name="api"),
-    # Swagger URLs
+    # Swagger routes
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
         schema_view.without_ui(cache_timeout=0),
@@ -44,5 +56,9 @@ urlpatterns = [
         schema_view.with_ui("swagger", cache_timeout=0),
         name="schema-swagger-ui",
     ),
-    path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
+    path(
+        "redoc/",
+        schema_view.with_ui("redoc", cache_timeout=0),
+        name="schema-redoc",
+    ),
 ]

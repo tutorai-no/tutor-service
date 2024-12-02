@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/SverreNystad/TutorAI/django.yml)
+[![CI](https://github.com/The-TutorAI-project/tutor-service/actions/workflows/ci.yml/badge.svg)](https://github.com/The-TutorAI-project/tutor-service/actions/workflows/ci.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/SverreNystad/TutorAI)
 ![GitHub language count](https://img.shields.io/github/languages/count/SverreNystad/TutorAI)
 [![Project Version](https://img.shields.io/badge/version-1.0.0-blue)](https://img.shields.io/badge/version-1.0.0-blue)
@@ -21,8 +21,8 @@
     - [Clone the repository](#clone-the-repository)
     - [Configuration](#configuration)
     - [Usage](#usage)
+  - [Testing](#testing)
   - [📖 Documentations](#-documentations)
-  - [Contributors](#contributors)
 
 </details>
 
@@ -75,6 +75,12 @@ docker compose up --build
 ```
 
 To access the backend, navigate to `http://localhost:8000` in your browser.
+
+## Testing
+To run all the tests, execute the following command in the root directory of the project:
+```bash
+docker compose run backend python manage.py test --parallel
+```
 
 ## 📖 Documentations
 

@@ -1,30 +1,48 @@
 import logging
-from typing import List, Union
+from typing import List, Union, Optional
 
-from langchain.output_parsers import PydanticOutputParser
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
-from learning_materials.learning_resources import Quiz, GradedQuiz
-from learning_materials.knowledge_base.rag_service import get_page_range
-from learning_materials.learning_resources import GradedQuiz, Page, QuestionAnswer, Quiz, MultipleChoiceQuestion
+from learning_materials.learning_resources import Quiz
+from learning_materials.learning_resources import GradedQuiz
+from learning_materials.knowledge_base.rag_service import get_page_range, get_context
+from learning_materials.learning_resources import (
+    Citation,
+    QuestionAnswer,
+    MultipleChoiceQuestion,
+)
 
 logger = logging.getLogger(__name__)
 
 llm = ChatOpenAI(temperature=0.0)
 
+
 def generate_quiz(
-    document: str, start: int, end: int, learning_goals: list[str] = []
+    document_id: str,
+    start: Optional[int],
+    end: Optional[int],
+    subject: Optional[str],
+    learning_goals: list[str] = [],
 ) -> Quiz:
     """
     Generates a quiz for the specified document and page range based on learning goals.
     """
 
-    logger.info(f"Generating quiz for document {document}")
-    if start > end:
+    logger.info(f"Generating quiz for document {document_id}")
+    citations: list[Citation]
+    if start is not None and end is not None:
+        if start > end:
+            raise ValueError(
+                "The start index of the document cannot be after the end index!"
+            )
+        citations = get_page_range(document_id, start, end)
+    elif subject is not None:
+        citations = get_context(document_id, subject)
+    else:
         raise ValueError(
-            "The start index of the document cannot be after the end index!"
+            "Either start and end page numbers or a subject must be provided."
         )
 
     # Initialize the parser for Quiz
@@ -33,6 +51,7 @@ def generate_quiz(
     # Define the prompt template for generating quiz questions
     quiz_prompt_template = """
         You are a teacher AI tasked with creating a quiz based on the following content and learning goals.
+        The quiz must have a good variety of multiple-choice, short answer questions.
 
         Content:
         {page_content}
@@ -43,17 +62,17 @@ def generate_quiz(
         Number of questions: {num_questions}
 
         Please format your response as a JSON object matching the Quiz model with these exact keys:
-        - "document": (string) The name of the document.
-        - "start": (integer) The starting page number of the quiz.
-        - "end": (integer) The ending page number of the quiz.
+        - "document_name": (string) The name of the document.
+        - "start_page": (integer) The starting page number of the quiz.
+        - "end_page": (integer) The ending page number of the quiz.
         - "questions": (list) A list of questions, where each question is either:
-            - A QuestionAnswer object with:
-                - "question": (string) The question text.
-                - "answer": (string) The answer text.
             - A MultipleChoiceQuestion object with:
                 - "question": (string) The question text.
                 - "options": (list of strings) The list of options to choose from.
                 - "answer": (string) The correct answer.
+            - A QuestionAnswer object with:
+                - "question": (string) The question text.
+                - "answer": (string) The answer text.
     """
     prompt = PromptTemplate(
         template=quiz_prompt_template,
@@ -64,13 +83,14 @@ def generate_quiz(
 
     # Generate the quiz questions
     questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
-    pages: List[Page] = get_page_range(document, start, end)
 
-    for page in pages:
+    document_name = ""
+    for citation in citations:
+        document_name = citation.document_name
         # Chain to determine the quiz questions for each page
         quiz_data = chain.invoke(
             {
-                "page_content": page.text,
+                "page_content": citation.text,
                 "learning_goals": learning_goals,
                 "num_questions": 5,
             }
@@ -78,22 +98,22 @@ def generate_quiz(
         questions.extend(quiz_data.questions)
 
     return Quiz(
-        document=document,
-        start=start,
-        end=end,
-        questions=questions
+        document_name=document_name,
+        start_page=start,
+        end_page=end,
+        subject=subject,
+        questions=questions,
     )
 
-def grade_quiz(
-    quiz: Quiz, student_answers: list[str]
-) -> GradedQuiz:
+
+def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
     """
     Grades the quiz based on the student answers.
     """
     if not (len(quiz.questions) == len(student_answers)):
         raise ValueError("All input lists must have the same length.")
 
-    logger.info(f"Grading quiz")
+    logger.info("Grading quiz")
 
     # Initialize the parser for GradedQuiz
     parser = PydanticOutputParser(pydantic_object=GradedQuiz)
@@ -137,7 +157,7 @@ def grade_quiz(
         - `answers_was_correct`: A boolean list indicating if the student's answer is correct (e.g., `[true]` or `[false]`).
         - `feedback`: A list of strings providing constructive feedback for the student's answer and explanations for all options.
     """
-    
+
     short_answer_prompt = PromptTemplate(
         template=short_text_grading_prompt_template,
         input_variables=["question", "correct_answer", "student_answer"],
@@ -147,7 +167,6 @@ def grade_quiz(
         template=multiple_choice_grading_prompt_template,
         input_variables=["question", "correct_answer", "options", "student_answer"],
     )
-
 
     short_answer_chain = short_answer_prompt | llm | parser
     multiple_choice_chain = multiple_choice_prompt | llm | parser

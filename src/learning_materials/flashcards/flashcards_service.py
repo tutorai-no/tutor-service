@@ -4,7 +4,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
-from learning_materials.learning_resources import Flashcard, Page
+from learning_materials.learning_resources import Flashcard, Citation
 from config import Config
 
 
@@ -15,12 +15,15 @@ class FlashcardWrapper(BaseModel):
 model = ChatOpenAI(temperature=0, api_key=Config().API_KEY)
 flashcard_parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
 
-def generate_flashcards(page: Page) -> list[Flashcard]:
+
+def generate_flashcards(page: Citation) -> list[Flashcard]:
     template = _generate_template(page.text)
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n",
         input_variables=["query"],
-        partial_variables={"format_instructions": flashcard_parser.get_format_instructions()},
+        partial_variables={
+            "format_instructions": flashcard_parser.get_format_instructions()
+        },
     )
 
     # Creating the LangChain with prompt, model, and parser
@@ -30,17 +33,18 @@ def generate_flashcards(page: Page) -> list[Flashcard]:
     wrapper = chain.invoke({"query": template})
     flashcards = wrapper.flashcards
 
-    # Ensuring page_num and pdf_name are set correctly
+    # Ensuring page_num and document_name are set correctly
     for flashcard in flashcards:
         flashcard.page_num = page.page_num
-        flashcard.pdf_name = page.pdf_name
+        flashcard.document_name = page.document_name
 
     return flashcards
+
 
 def _generate_template(context: str) -> str:
     """
     Returns a template with the correct flashcard and prompt format which can be used to generate flashcards using the context.
-    
+
     Args:
         context (str): The sample text to be used
 
@@ -75,9 +79,8 @@ def _generate_template(context: str) -> str:
         """
         f"\n\nText:\n{context}"
     )
-    
-    return template
 
+    return template
 
 
 def parse_for_anki(flashcards: list[Flashcard]) -> str:

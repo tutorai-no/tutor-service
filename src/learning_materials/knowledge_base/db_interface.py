@@ -1,8 +1,17 @@
 from abc import ABC, abstractmethod
-from .embeddings import OpenAIEmbedding, cosine_similarity
+import uuid
 from config import Config
 from pymongo import MongoClient
-from learning_materials.learning_resources import Page
+import logging
+
+from learning_materials.learning_resources import Citation
+from learning_materials.knowledge_base.embeddings import (
+    OpenAIEmbedding,
+)
+
+from sklearn.metrics.pairwise import cosine_similarity
+
+logger = logging.getLogger(__name__)
 
 
 class Database(ABC):
@@ -23,13 +32,15 @@ class Database(ABC):
         )
 
     @abstractmethod
-    def get_curriculum(self, pdf_name: str, embedding: list[float]) -> list[Page]:
+    def get_curriculum(
+        self, document_id: uuid.UUID, embedding: list[float]
+    ) -> list[Citation]:
         """
         Get the curriculum from the database
 
         Args:
+            document_id (str): The id of the document to use
             embedding (list[float]): The embedding of the question
-            pdf_name (str): The name of the pdf to use
 
         Returns:
             list[str]: The curriculum related to the question
@@ -38,12 +49,13 @@ class Database(ABC):
 
     @abstractmethod
     def get_page_range(
-        self, pdf_name: str, page_num_start: int, page_num_end: int
-    ) -> list[Page]:
+        self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
+    ) -> list[Citation]:
         """
         Retrieves a range of pages from the knowledge base.
 
         Args:
+            document_id (str): The ID of the document to retrieve the pages from.
             page_num_start (int): The starting page number (inclusive).
             page_num_end (int): The ending page number (inclusive).
 
@@ -54,7 +66,12 @@ class Database(ABC):
 
     @abstractmethod
     def post_curriculum(
-        self, curriculum: str, page_num: int, pdf_name: str, embedding: list[float]
+        self,
+        curriculum: str,
+        page_num: int,
+        document_name: str,
+        embedding: list[float],
+        document_id: uuid.UUID,
     ) -> bool:
         """
         Post the curriculum to the database
@@ -74,64 +91,53 @@ class MongoDB(Database):
         self.client = MongoClient(Config().MONGODB_URI)
         self.db = self.client["test-curriculum-database"]
         self.collection = self.db["test-curriculum-collection"]
-        self.similarity_threshold = 0.7
+        self.similarity_threshold = 0.2
         self.embeddings = OpenAIEmbedding()
 
-    def get_curriculum(self, pdf_name: str, embedding: list[float]) -> list[Page]:
-        # Checking if embedding consists of decimals or "none"
-        if not embedding:
-            raise ValueError("Embedding cannot be None")
-
-        # Define the MongoDB query that utilizes the search index "embeddings".
-        query = {
-            "$vectorSearch": {
-                "index": "embeddings",
-                "path": "embedding",
-                "queryVector": embedding,
-                # MongoDB suggests using numCandidates=10*limit or numCandidates=20*limit
-                "numCandidates": 30,
-                "limit": 3,
-            }
-        }
-
-        # Execute the query
-        documents = self.collection.aggregate([query])
-
-        if not documents:
+    def get_curriculum(self, document_id: uuid.UUID, embedding: list[float]) -> list[Citation]:
+        # Step 1: Filter by documentId first
+        cursor = self.collection.find({"documentId": str(document_id)})
+        if not cursor:
             raise ValueError("No documents found")
-
-        # Convert the documents to a list
-        documents = list(documents)
-
+        
         results = []
 
-        # Filter out the documents with low similarity
-        for document in documents:
-            threshold = self.similarity_threshold
-            if document["pdfName"] != pdf_name:
-                continue
+        # Compute cosine similarities
+        similarities = []
+        for doc in cursor:
+            similarity = cosine_similarity(
+                [doc["embedding"]],
+                [embedding]
+            )[0][0]
+            similarities.append((doc, similarity))
 
-            if (
-                cosine_similarity(embedding, document["embedding"])
-                > self.similarity_threshold
-            ):
+        # Sort documents by similarity in descending order
+        similarities.sort(key=lambda x: x[1], reverse=True)
+
+        # Retrieve top 5 matches
+        top_5_matches = similarities[:5]
+
+        # Return those of the top 5 matches that are above the similarity threshold
+        for match in top_5_matches:
+            if match[1] > self.similarity_threshold:
                 results.append(
-                    Page(
-                        text=document["text"],
-                        page_num=document["pageNum"],
-                        pdf_name=document["pdfName"],
+                    Citation(
+                        text=match[0]["text"],
+                        page_num=match[0]["pageNum"],
+                        document_name=match[0]["documentName"],
+                        document_id=match[0]["documentId"]
                     )
                 )
 
         return results
 
     def get_page_range(
-        self, pdf_name: str, page_num_start: int, page_num_end: int
-    ) -> list[Page]:
+        self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
+    ) -> list[Citation]:
         # Get the curriculum from the database
         cursor = self.collection.find(
             {
-                "pdfName": pdf_name,
+                "documentId": str(document_id),
                 "pageNum": {"$gte": page_num_start, "$lte": page_num_end},
             }
         )
@@ -143,32 +149,41 @@ class MongoDB(Database):
 
         for document in cursor:
             results.append(
-                Page(
+                Citation(
                     text=document["text"],
                     page_num=document["pageNum"],
-                    pdf_name=document["pdfName"],
+                    document_name=document["documentName"],
+                    document_id=document["documentId"]
                 )
             )
 
         return results
 
     def post_curriculum(
-        self, curriculum: str, page_num: int, pdf_name: str, embedding: list[float]
+        self,
+        curriculum: str,
+        page_num: int,
+        document_name: str,
+        embedding: list[float],
+        document_id: uuid.UUID,
     ) -> bool:
         if not curriculum:
             raise ValueError("Curriculum cannot be None")
 
-        if page_num == None:
+        if page_num is None:
             raise ValueError("Page number cannot be None")
 
-        if pdf_name == None:
+        if document_name is None:
             raise ValueError("Paragraph number cannot be None")
 
         if not embedding:
             raise ValueError("Embedding cannot be None")
 
-        if not pdf_name:
-            raise ValueError("PDF name cannot be None")
+        if not document_name:
+            raise ValueError("Document name cannot be None")
+
+        if not document_id:
+            raise ValueError("Document ID cannot be None")
 
         try:
             # Insert the curriculum into the database with metadata
@@ -176,72 +191,99 @@ class MongoDB(Database):
                 {
                     "text": curriculum,
                     "pageNum": page_num,
-                    "pdfName": pdf_name,
+                    "documentName": document_name,
                     "embedding": embedding,
-                    "pdfName": pdf_name,
+                    "documentId": str(document_id),
                 }
             )
             return True
-        except:
+        except Exception as e:
+            logger.error(f"Error posting curriculum: {e}")
             return False
 
 
 class MockDatabase(Database):
     """
     A mock database for testing purposes, storing data in memory.
+    Singleton implementation to ensure only one instance exists.
     """
-    def __init__(self):
-        # In-memory storage for mock data
-        self.data = []
-        self.similarity_threshold = 0.7
 
-    def get_curriculum(self, pdf_name: str, embedding: list[float]) -> list[Page]:
+    _instance = None  # Class variable to hold the singleton instance
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            # If no instance exists, create one
+            cls._instance = super(MockDatabase, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def __init__(self):
+        # Initialize only once (avoiding resetting on subsequent calls)
+        if not hasattr(self, "initialized"):
+            self.data = []  # In-memory storage for mock data
+            self.similarity_threshold = 0.7
+            self.initialized = True
+
+    def get_curriculum(
+        self, document_id: uuid.UUID, embedding: list[float]
+    ) -> list[Citation]:
         if not embedding:
             raise ValueError("Embedding cannot be None")
 
         results = []
 
-        # Filter documents based on similarity and pdf_name
+        # Filter documents based on similarity and document_name
         for document in self.data:
-            if document["pdf_name"] == pdf_name:
+            if document["documentId"] == str(document_id):
                 similarity = cosine_similarity(embedding, document["embedding"])
                 if similarity > self.similarity_threshold:
                     results.append(
-                        Page(
+                        Citation(
                             text=document["text"],
-                            page_num=document["page_num"],
-                            pdf_name=document["pdf_name"]
+                            page_num=document["pageNum"],
+                            document_name=document["documentName"],
                         )
                     )
         return results
 
-    def get_page_range(self, pdf_name: str, page_num_start: int, page_num_end: int) -> list[Page]:
+    def get_page_range(
+        self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
+    ) -> list[Citation]:
         results = []
 
-        # Filter documents based on pdf_name and page range
+        # Filter documents based on document_name and page range
         for document in self.data:
             if (
-                document["pdf_name"] == pdf_name and 
-                page_num_start <= document["page_num"] <= page_num_end
+                document["documentId"] == str(document_id)
+                and page_num_start <= document["pageNum"] <= page_num_end
             ):
                 results.append(
-                    Page(
+                    Citation(
                         text=document["text"],
-                        page_num=document["page_num"],
-                        pdf_name=document["pdf_name"]
+                        page_num=document["pageNum"],
+                        document_name=document["documentName"],
                     )
                 )
         return results
 
-    def post_curriculum(self, curriculum: str, page_num: int, pdf_name: str, embedding: list[float]) -> bool:
-        if not curriculum or not pdf_name or page_num is None or not embedding:
+    def post_curriculum(
+        self,
+        curriculum: str,
+        page_num: int,
+        document_name: str,
+        embedding: list[float],
+        document_id: str,
+    ) -> bool:
+        if not curriculum or not document_name or page_num is None or not embedding:
             raise ValueError("All parameters are required and must be valid")
 
         # Append a new document to the in-memory storage
-        self.data.append({
-            "text": curriculum,
-            "page_num": page_num,
-            "pdf_name": pdf_name,
-            "embedding": embedding
-        })
+        self.data.append(
+            {
+                "text": curriculum,
+                "pageNum": page_num,
+                "documentName": document_name,
+                "embedding": embedding,
+                "documentId": str(document_id),
+            }
+        )
         return True

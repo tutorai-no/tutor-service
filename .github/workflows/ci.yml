@@ -23,13 +23,17 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           RAG_DATABASE_SYSTEM: ${{ secrets.RAG_DATABASE_SYSTEM }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.AZURE_STORAGE_CONTAINER_NAME }}
         run: |
+          docker network create tutorai_network
           docker compose down -v
           docker compose build backend
           docker compose run backend python manage.py makemigrations accounts
+          docker compose run backend python manage.py makemigrations learning_materials
           docker compose run backend python manage.py makemigrations
           docker compose run backend python manage.py migrate
-          docker compose run backend python manage.py test
+          docker compose run backend python manage.py test --parallel
           docker compose up -d backend
           docker compose down
 

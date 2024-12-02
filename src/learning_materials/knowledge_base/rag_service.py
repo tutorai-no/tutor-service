@@ -1,6 +1,7 @@
 """ Retrieval Augmented Generation Service """
 
-from learning_materials.learning_resources import Page
+import uuid
+from learning_materials.learning_resources import Citation
 from learning_materials.knowledge_base.db_interface import Database
 from learning_materials.knowledge_base.embeddings import EmbeddingsModel
 from learning_materials.knowledge_base.factory import create_database
@@ -12,7 +13,7 @@ db: Database = create_database(db_system)
 embeddings: EmbeddingsModel = create_embeddings_model()
 
 
-def get_context(pdf_name: str, query: str) -> list[Page]:
+def get_context(document_id: uuid.UUID, query: str) -> list[Citation]:
     """
     Get the context of the query
 
@@ -23,32 +24,33 @@ def get_context(pdf_name: str, query: str) -> list[Page]:
         list[str]: The context of the query
     """
     embedding = embeddings.get_embedding(query)
-    context = db.get_curriculum(pdf_name, embedding)
+    context = db.get_curriculum(document_id, embedding)
     return context
 
 
 def get_page_range(
-    pdf_name: str,
+    document_id: uuid.UUID,
     page_num_start: int,
     page_num_end: int,
-) -> list[Page]:
+) -> list[Citation]:
     """
     Get the context of the query
 
     Args:
-        pdf_name (str): The name of the pdf
+        document_id (str): The id of the document
         page_num_start (int): The start page number
         page_num_end (int): The end page number
     Returns:
         list[str]: The context of the query
     """
-    return db.get_page_range(pdf_name, page_num_start, page_num_end)
+    return db.get_page_range(document_id, page_num_start, page_num_end)
 
 
 def post_context(
     context: str,
     page_num: int,
-    pdf_name: str,
+    document_name: str,
+    document_id: uuid.UUID,
 ) -> bool:
     """
     Post the context to the database
@@ -56,11 +58,12 @@ def post_context(
     Args:
         context (str): The context to be posted
         page_num (int): The page number of the context
-        paragraph_num (int): The paragraph number of the context
+        document_name (str): The name of the document
+        document_id (str): The id of the document
 
     Returns:
         bool: True if the context was posted, False otherwise
     """
 
     embedding = embeddings.get_embedding(context)
-    return db.post_curriculum(context, page_num, pdf_name, embedding)
+    return db.post_curriculum(context, page_num, document_name, embedding, document_id)

@@ -1,17 +1,28 @@
+from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.core.validators import FileExtensionValidator
+from django.core.validators import MaxValueValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
+from learning_materials.serializer import (
+    CardsetSerializer,
+    QuizModelSerializer,
+    UserFileSerializer,
+    UserFile,
+)
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from accounts.models import Subscription, SubscriptionHistory
+from accounts.models import Feedback, Subscription, SubscriptionHistory
 
 
 User = get_user_model()
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
@@ -20,84 +31,84 @@ class RegisterSerializer(serializers.ModelSerializer):
         max_length=30,
         validators=[
             RegexValidator(
-                regex=r'^[\w.@+-]+$',
-                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
+                regex=r"^[\w.@+-]+$",
+                message="Username may contain only letters, numbers, and @/./+/-/_ characters.",
             ),
-            UniqueValidator(queryset=User.objects.all())
-        ]
+            UniqueValidator(queryset=User.objects.all()),
+        ],
     )
 
     password = serializers.CharField(
         write_only=True,
         required=True,
         validators=[validate_password],
-        style={'input_type': 'password'}
+        style={"input_type": "password"},
     )
     password_confirm = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        write_only=True, required=True, style={"input_type": "password"}
     )
 
     email = serializers.EmailField(
-        required=True, 
+        required=True,
         validators=[
             UniqueValidator(queryset=User.objects.all()),
-        ]
+        ],
     )
 
     subscription = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
         required=False,
-        allow_null=True
+        allow_null=True,
     )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'password_confirm', 'subscription')
+        fields = ("username", "email", "password", "password_confirm", "subscription")
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError(
                 {"password": "Password fields didn't match."}
             )
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        subscription = validated_data.pop('subscription', None)
+        validated_data.pop("password_confirm")
+        subscription = validated_data.pop("subscription", None)
 
-        user = User.objects.create_user(
-            subscription=subscription,
-            **validated_data
-        )
+        user = User.objects.create_user(subscription=subscription, **validated_data)
 
         # Send welcome email
         send_mail(
-            subject='Welcome to Our Site',
-            message='Thank you for registering.',
-            from_email='no-reply@example.com',
+            subject="Welcome to Our Site",
+            message="Thank you for registering.",
+            from_email="no-reply@example.com",
             recipient_list=[user.email],
             fail_silently=False,
         )
         return user
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+class LoginSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        username_or_email = attrs.get('username')
-        password = attrs.get('password')
+        username_or_email = attrs.get("username")
+        password = attrs.get("password")
 
         # Allow login with username or email
-        user = User.objects.filter(email=username_or_email).first() or User.objects.filter(username=username_or_email).first()
+        user = (
+            User.objects.filter(email=username_or_email).first()
+            or User.objects.filter(username=username_or_email).first()
+        )
 
         if user and user.check_password(password):
             if not user.is_active:
-                raise AuthenticationFailed('User is inactive.', code='authorization')
-            data = super().validate({'username': user.username, 'password': password})
+                raise AuthenticationFailed("User is inactive.", code="authorization")
+            data = super().validate({"username": user.username, "password": password})
+            user.last_login = timezone.now()
+            user.save()
             return data
         else:
-            raise AuthenticationFailed('Invalid credentials', code='authorization')
-
+            raise AuthenticationFailed("Invalid credentials", code="authorization")
 
 
 class PasswordResetSerializer(serializers.Serializer):
@@ -106,6 +117,7 @@ class PasswordResetSerializer(serializers.Serializer):
     def validate_email(self, value):
         # Optionally, prevent email enumeration by not indicating whether the email exists
         return value
+
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
@@ -116,29 +128,30 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     password_confirm = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
-        uid = attrs.get('uid')
-        token = attrs.get('token')
-        password = attrs.get('password')
-        password_confirm = attrs.get('password_confirm')
+        uid = attrs.get("uid")
+        token = attrs.get("token")
+        password = attrs.get("password")
+        password_confirm = attrs.get("password_confirm")
 
         if password != password_confirm:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
+            raise serializers.ValidationError(
+                {"password": "Password fields didn't match."}
+            )
 
         try:
             user = User.objects.get(pk=uid)
         except (ValueError, User.DoesNotExist):
-            raise serializers.ValidationError({'uid': 'Invalid UID'})
+            raise serializers.ValidationError({"uid": "Invalid UID"})
 
         if not default_token_generator.check_token(user, token):
-            raise serializers.ValidationError({'token': 'Invalid or expired token'})
+            raise serializers.ValidationError({"token": "Invalid or expired token"})
 
-        attrs['user'] = user
+        attrs["user"] = user
         return attrs
 
-
     def save(self, **kwargs):
-        user = self.validated_data['user']
-        user.set_password(self.validated_data['password'])
+        user = self.validated_data["user"]
+        user.set_password(self.validated_data["password"])
         user.save()
         return user
 
@@ -146,7 +159,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
-        fields = ['id', 'name', 'description', 'price', 'active']
+        fields = ["id", "name", "description", "price", "active"]
 
 
 class SubscriptionHistorySerializer(serializers.ModelSerializer):
@@ -154,8 +167,8 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SubscriptionHistory
-        fields = ['id', 'subscription', 'start_date', 'end_date']
-        read_only_fields = ['id', 'subscription', 'start_date', 'end_date']
+        fields = ["id", "subscription", "start_date", "end_date"]
+        read_only_fields = ["id", "subscription", "start_date", "end_date"]
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -165,46 +178,100 @@ class UserProfileSerializer(serializers.ModelSerializer):
         max_length=30,
         validators=[
             RegexValidator(
-                regex=r'^[\w.@+-]+$',
-                message='Username may contain only letters, numbers, and @/./+/-/_ characters.'
+                regex=r"^[\w.@+-]+$",
+                message="Username may contain only letters, numbers, and @/./+/-/_ characters.",
             ),
             UniqueValidator(queryset=User.objects.all()),
-        ]
+        ],
     )
     email = serializers.EmailField(
         required=True,
         validators=[
             UniqueValidator(queryset=User.objects.all()),
-        ]
+        ],
     )
+
+    uploaded_files = UserFileSerializer(many=True, required=False)
 
     subscription = SubscriptionSerializer(read_only=True)
     subscription_id = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
-        source='subscription',
+        source="subscription",
         write_only=True,
         required=False,
-        allow_null=True
+        allow_null=True,
     )
 
+    cardsets = CardsetSerializer(many=True, read_only=True)
+    quizzes = QuizModelSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name', 'subscription', 'subscription_id')
-
+        fields = (
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "subscription",
+            "subscription_id",
+            "uploaded_files",
+            "cardsets",
+            "quizzes",
+        )
 
     def update(self, instance, validated_data):
-        # Extract subscription_id from validated_data
-        subscription_id = validated_data.pop('subscription_id', None)
+        # Extract subscription_id and documents from validated_data
+        subscription = validated_data.pop("subscription", None)
+        documents_data = validated_data.pop("uploaded_files", None)
 
-        # Update other fields
+        # Update user fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         # Update subscription if provided
-        if subscription_id is not None:
-            instance.subscription = subscription_id
+        if subscription is not None:
+            instance.subscription = subscription
 
-        # Save the instance
+        # Update uploaded_files if provided
+        if documents_data is not None:
+            # instance.uploaded_files.clear()  # Clear existing files if any
+            for document_data in documents_data:
+                # Assuming `document_data` contains enough data to create a UserFile instance
+                document = UserFile.objects.create(user=instance, **document_data)
+                instance.uploaded_files.add(document)
+
+        # Save the user instance
         instance.save()
+
         return instance
+
+
+def validate_image_size(image):
+    max_size_in_mb = 4
+    max_size_in_bytes = max_size_in_mb * 1024 * 1024  # Convert MB to bytes
+    if image.size > max_size_in_bytes:
+        raise ValidationError(f"Image size should not exceed { max_size_in_mb} MB.")
+
+
+class UserFeedbackSerializer(serializers.Serializer):
+    feedbackType = serializers.CharField(
+        help_text="The type of feedback",
+        required=True,
+    )
+    feedbackText = serializers.CharField(
+        help_text="The feedback text",
+        required=True,
+    )
+    feedbackScreenshot = serializers.ImageField(
+        help_text="The feedback screenshot",
+        allow_null=True,
+        required=False,
+        validators=[
+            FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"]),
+            validate_image_size,
+        ],
+    )
+
+    class Meta:
+        model = Feedback
+        fields = ("feedbackType", "feedbackText", "feedbackScreenshot")

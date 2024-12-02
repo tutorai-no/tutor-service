@@ -14,6 +14,8 @@ COPY requirements.txt /code/requirements.txt
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
+# Install PostgreSQL client
+RUN apt-get update && apt-get install -y postgresql-client
 
 # Copy the rest of the application code
 COPY . /code/
@@ -22,4 +24,4 @@ COPY . /code/
 EXPOSE 8000
 
 # Run the application:
-CMD gunicorn --bind :8000 tutorai.wsgi --workers 1 --timeout 120
+CMD ["gunicorn", "--bind", ":8000", "tutorai.wsgi", "--workers", "1", "--timeout", "120"]
