@@ -174,7 +174,7 @@ class QuizModel(models.Model):
         max_length=100, help_text="The name of the document", default="unknown"
     )
     subject = models.CharField(
-        max_length=1000, help_text="The subject of the quiz", default="Unknown"
+        max_length=1000, help_text="The subject of the cardset", blank=True, null=True
     )
     course = models.ForeignKey(
         Course,

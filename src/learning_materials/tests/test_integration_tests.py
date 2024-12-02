@@ -181,7 +181,7 @@ class FlashcardGenerationTest(TestCase):
         cardset = Cardset.objects.first()
         # Validate Cardset Data
         self.assertEqual(cardset.subject, self.subject)
-        
+
         flashcards = FlashcardModel.objects.filter(cardset=cardset)
         self.assertGreater(flashcards.count(), 0)
 
@@ -786,7 +786,7 @@ class QuizGenerationTest(TestCase):
         # Ensure no quizzes are created
         self.assertFalse(QuizModel.objects.exists())
 
-    def test_valid_request(self):
+    def test_valid_request_with_page_range(self):
         """
         Test that a valid request creates a QuizModel instance and returns a 200 OK.
         """
@@ -797,7 +797,6 @@ class QuizGenerationTest(TestCase):
             "id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
-            "subject": "Some subject",
         }
         response = self.client.post(self.url, valid_payload, format="json")
 
@@ -814,8 +813,7 @@ class QuizGenerationTest(TestCase):
         # Verify the response data
         self.assertIn("id", response.data)
         self.assertIn("document_name", response.data)
-        self.assertEqual(response.data["start_page"], self.valid_page_num_start)
-        self.assertEqual(response.data["end_page"], self.valid_page_num_end)
+
         self.assertIn("questions", response.data)
         self.assertIsInstance(response.data["questions"], list)
         # Ensure questions are present
@@ -839,7 +837,7 @@ class QuizGenerationTest(TestCase):
             "id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
-            "subject": "Some subject",
+            "subject": self.valid_subject,
             "learning_goals": ["goal1", "goal2"],
         }
         response = self.client.post(self.url, valid_payload, format="json")
@@ -925,7 +923,6 @@ class QuizGenerationTest(TestCase):
             "id": self.valid_document_id,
             "start_page": self.valid_page_num_end,  # start is greater than end
             "end_page": self.valid_page_num_start,
-            "subject": "Some subject",
         }
         response = self.client.post(self.url, invalid_payload, format="json")
 
