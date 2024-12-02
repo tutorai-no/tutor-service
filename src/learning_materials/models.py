@@ -75,7 +75,17 @@ class Cardset(models.Model):
     name = models.CharField(max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
     subject = models.CharField(
-        max_length=1000, help_text="The subject of the cardset", default="Unknown"
+        max_length=1000, help_text="The subject of the cardset", blank=True, null=True
+    )
+    start_page = models.IntegerField(
+        help_text="The starting page of the quiz",
+        null=True,
+        blank=True,
+    )
+    end_page = models.IntegerField(
+        help_text="The ending page of the quiz",
+        null=True,
+        blank=True,
     )
     course = models.ForeignKey(
         Course,
