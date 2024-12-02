@@ -256,7 +256,12 @@ class FlashcardCreationView(GenericAPIView):
 
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
-                name=cardset_name, subject=subject, course=course, user=user
+                name=cardset_name,
+                subject=subject,
+                course=course,
+                user=user,
+                start_page=start,
+                end_page=end,
             )
             flashcard_models = [
                 translate_flashcard_to_orm_model(flashcard, cardset)
