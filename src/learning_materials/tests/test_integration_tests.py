@@ -99,13 +99,13 @@ class FlashcardGenerationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Cardset.objects.exists())
 
-    def test_valid_request(self):
+    def test_valid_request_with_page_range_and_subject(self):
         self.assertFalse(Cardset.objects.exists())
         valid_response = {
             "id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
-            "subject": "Some subject",
+            "subject": self.subject,
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -113,6 +113,75 @@ class FlashcardGenerationTest(TestCase):
 
         self.assertTrue(Cardset.objects.exists())
         cardset = Cardset.objects.first()
+        # Validate Cardset Data
+        self.assertEqual(cardset.subject, self.subject)
+        self.assertEqual(cardset.start_page, self.valid_page_num_start)
+        self.assertEqual(cardset.end_page, self.valid_page_num_end)
+
+        flashcards = FlashcardModel.objects.filter(cardset=cardset)
+        self.assertGreater(flashcards.count(), 0)
+
+        # Validate Response Cardset Data
+        self.assertIn("id", response.data)
+        self.assertIn("flashcards", response.data)
+
+        # Validate flashcards data
+        flashcards_data = response.data["flashcards"]
+        self.assertIsInstance(flashcards_data, list)
+        self.assertGreater(len(flashcards_data), 0)
+        self.assertIsInstance(flashcards_data[0], dict)
+        self.assertIn("front", flashcards_data[0])
+        self.assertIn("back", flashcards_data[0])
+        self.assertIn("id", flashcards_data[0])
+
+    def test_valid_request_with_page_range(self):
+        self.assertFalse(Cardset.objects.exists())
+        valid_response = {
+            "id": self.valid_document_id,
+            "start_page": self.valid_page_num_start,
+            "end_page": self.valid_page_num_end,
+        }
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data)
+
+        self.assertTrue(Cardset.objects.exists())
+        cardset = Cardset.objects.first()
+        # Validate Cardset Data
+        self.assertEqual(cardset.start_page, self.valid_page_num_start)
+        self.assertEqual(cardset.end_page, self.valid_page_num_end)
+
+        flashcards = FlashcardModel.objects.filter(cardset=cardset)
+        self.assertGreater(flashcards.count(), 0)
+
+        # Validate Response Cardset Data
+        self.assertIn("id", response.data)
+        self.assertIn("flashcards", response.data)
+
+        # Validate flashcards data
+        flashcards_data = response.data["flashcards"]
+        self.assertIsInstance(flashcards_data, list)
+        self.assertGreater(len(flashcards_data), 0)
+        self.assertIsInstance(flashcards_data[0], dict)
+        self.assertIn("front", flashcards_data[0])
+        self.assertIn("back", flashcards_data[0])
+        self.assertIn("id", flashcards_data[0])
+
+    def test_valid_request_with_subject(self):
+        self.assertFalse(Cardset.objects.exists())
+        valid_response = {
+            "id": self.valid_document_id,
+            "subject": self.subject,
+        }
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data)
+
+        self.assertTrue(Cardset.objects.exists())
+        cardset = Cardset.objects.first()
+        # Validate Cardset Data
+        self.assertEqual(cardset.subject, self.subject)
+        
         flashcards = FlashcardModel.objects.filter(cardset=cardset)
         self.assertGreater(flashcards.count(), 0)
 
