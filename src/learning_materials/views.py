@@ -494,6 +494,10 @@ class ChatResponseView(APIView):
                     document_ids, message, chat.messages
                 )
 
+                # Sanitize the response
+                assistant_response.content = assistant_response.content.replace(
+                    "\u0000", ""
+                )
                 # Create a title for the chat
                 if not chat.title:
                     title = generate_title_of_chat(message, assistant_response)
