@@ -246,6 +246,7 @@ class QuizModelSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "document_name",
+            "subject",
             "start_page",
             "end_page",
             "questions",
