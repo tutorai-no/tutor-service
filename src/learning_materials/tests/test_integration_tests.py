@@ -1642,3 +1642,27 @@ class ChatAPITest(APITestCase):
         self.assertEqual(chat.course, self.course1)
         self.assertEqual(len(chat.messages), 2)
         self.assertEqual(chat.messages[0]["content"], "Hello, assistant!")
+
+    @patch("learning_materials.views.process_answer")
+    def test_chat_producing_new_line_characters(self, mock_process_answer):
+        """Test that last_used_at is updated when a new message is posted in the same chat."""
+        self.authenticate()
+
+        # Mock the LLM response
+        mock_process_answer.return_value.content = (
+            "Assistant's reply with escape characters" + "\n"
+        )
+        mock_process_answer.return_value.citations = []
+
+        # Start a new chat
+        payload = {"courseId": str(self.course1.id), "message": "Hello, assistant!"}
+        response = self.client.post(self.chat_response_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify that the chat was created
+        chat_id = response.data["chatId"]
+        chat = Chat.objects.get(id=chat_id)
+        self.assertEqual(chat.user, self.user1)
+        self.assertEqual(chat.course, self.course1)
+        self.assertEqual(len(chat.messages), 2)
+        self.assertEqual(chat.messages[0]["content"], "Hello, assistant!")
