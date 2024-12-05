@@ -945,6 +945,7 @@ class QuizGenerationTest(TestCase):
         # Verify the response data
         self.assertIn("id", response.data)
         self.assertEqual(response.data["document_name"], self.valid_document_name)
+        self.assertEqual(response.data["subject"], self.valid_subject)
 
         self.assertIn("questions", response.data)
         self.assertIsInstance(response.data["questions"], list)
