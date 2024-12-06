@@ -1,3 +1,4 @@
+import io
 import time
 import uuid
 import re
@@ -1666,3 +1667,122 @@ class ChatAPITest(APITestCase):
         self.assertEqual(chat.course, self.course1)
         self.assertEqual(len(chat.messages), 2)
         self.assertEqual(chat.messages[0]["content"], "Hello, assistant!")
+
+
+class FileUploadTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@example.com", password="Str0ngP@ss"
+        )
+        self.client.force_authenticate(user=self.user)
+
+        self.course = Course.objects.create(name="Test Course", user=self.user)
+        self.url = f"{base}files/upload/"
+        refresh = RefreshToken.for_user(self.user)
+        self.refresh_token = str(refresh)
+        self.access_token = str(refresh.access_token)
+
+    def authenticate(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+
+    def test_upload_no_auth_header(self):
+        """Test uploading without the Authorization header should fail."""
+        response = self.client.post(self.url, {}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "Authorization header is required")
+
+    def test_upload_missing_params(self):
+        """Test uploading without required params (file or course_id) returns 400."""
+        self.authenticate()
+        response = self.client.post(self.url, {}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "File and course_id are required")
+
+    def test_upload_non_existent_course(self):
+        """Test uploading a file for a non-existent course returns 404."""
+        # Create a dummy file
+        self.authenticate()
+        file_content = b"Dummy PDF content"
+        file_obj = io.BytesIO(file_content)
+        file_obj.name = "test.pdf"
+
+        data = {
+            "file": file_obj,
+            "course_id": uuid.uuid4(),  # Random UUID that doesn't exist
+        }
+        response = self.client.post(self.url, data, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["detail"], "Course not found")
+
+
+class UserFilesListTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@example.com", password="Str0ngP@ss"
+        )
+        self.course = Course.objects.create(name="Test Course", user=self.user)
+        self.url = f"{base}files/"
+        refresh = RefreshToken.for_user(self.user)
+        self.refresh_token = str(refresh)
+        self.access_token = str(refresh.access_token)
+
+        # Create another user to ensure filtering by user works
+        self.other_user = User.objects.create_user(
+            username="otheruser", email="other@example.com", password="Str0ngP@ss"
+        )
+
+        # Create UserFiles for current user
+        self.file1 = UserFile.objects.create(
+            user=self.user,
+            name="File 1",
+            blob_name="blob1",
+            file_url="http://example.com/file1.pdf",
+            content_type="application/pdf",
+            file_size=1234,
+            num_pages=10,
+        )
+        self.file1.courses.add(self.course)
+
+        self.file2 = UserFile.objects.create(
+            user=self.user,
+            name="File 2",
+            blob_name="blob2",
+            file_url="http://example.com/file2.pdf",
+            content_type="application/pdf",
+            file_size=2345,
+            num_pages=10,
+        )
+
+        # File owned by another user
+        self.other_file = UserFile.objects.create(
+            user=self.other_user,
+            name="Other File",
+            blob_name="blob_other",
+            file_url="http://example.com/otherfile.pdf",
+            content_type="application/pdf",
+            file_size=999,
+            num_pages=10,
+        )
+
+    def authenticate(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+
+    def test_list_user_files_authenticated(self):
+        """Test listing files for authenticated user returns only that user's files."""
+        self.authenticate()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Only self.user's files
+        self.assertEqual(len(response.data), 2)
+        returned_names = [f["name"] for f in response.data]
+        self.assertIn("File 1", returned_names)
+        self.assertIn("File 2", returned_names)
+        self.assertNotIn("Other File", returned_names)
+
+    def test_list_user_files_no_authentication(self):
+        """Test that an unauthenticated user cannot list files."""
+        self.client.force_authenticate(user=None)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
