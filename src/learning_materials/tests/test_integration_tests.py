@@ -1047,6 +1047,21 @@ class QuizGradingTest(TestCase):
         # Ensure that all wrong answers have feedback
         self.assertTrue(all(response.data["feedback"]))
 
+    def test_quiz_with_skipped_questions(self):
+        self.authenticate()
+        answers = [
+            self.question1.answer,
+            "",  # Skipped question
+        ]
+        valid_response = {
+            "quiz_id": self.quiz.id,
+            "student_answers": answers,
+        }
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["answers_was_correct"][1])
+        self.assertTrue(response.data["feedback"][1])
+
 
 class QuizCRUDTest(TestCase):
     def setUp(self):
