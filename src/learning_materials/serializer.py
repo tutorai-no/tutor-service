@@ -179,7 +179,7 @@ class QuizStudentAnswer(serializers.Serializer):
     )
     # Answers: The list of answers
     student_answers = serializers.ListField(
-        child=serializers.CharField(),
+        child=serializers.CharField(allow_blank=True),
         help_text="The list of answers",
     )
 
