@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 
+from config import Config
 from accounts.serializers import (
     RegisterSerializer,
     LoginSerializer,
@@ -70,9 +71,8 @@ class PasswordResetView(generics.GenericAPIView):
         if user:
             uid = user.pk  # Using raw UID to match tests
             token = default_token_generator.make_token(user)
-            reset_link = (
-                f"http://localhost:8080/password-reset-confirm/?uid={uid}&token={token}"
-            )
+            base_url = Config().BASE_URL_FRONTEND
+            reset_link = f"{base_url}/password-reset-confirm/?uid={uid}&token={token}"
             # Send password reset email
             send_mail(
                 subject="Password Reset Request",
