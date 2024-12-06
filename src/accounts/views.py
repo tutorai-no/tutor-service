@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -20,6 +22,9 @@ from accounts.serializers import (
     UserProfileSerializer,
 )
 from accounts.models import Feedback, Subscription
+
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -66,7 +71,7 @@ class PasswordResetView(generics.GenericAPIView):
             uid = user.pk  # Using raw UID to match tests
             token = default_token_generator.make_token(user)
             reset_link = (
-                f"http://example.com/password-reset-confirm/?uid={uid}&token={token}"
+                f"http://localhost:8080/password-reset-confirm/?uid={uid}&token={token}"
             )
             # Send password reset email
             send_mail(
@@ -76,6 +81,10 @@ class PasswordResetView(generics.GenericAPIView):
                 recipient_list=[user.email],
                 fail_silently=False,
             )
+            logger.info(
+                f"Password reset email sent to {user.email} with link {reset_link}"
+            )
+
         # Always respond with 200 to prevent email enumeration
         return Response(
             {
