@@ -714,8 +714,7 @@ class CardsetExportTest(TestCase):
         url = f"/api/flashcards/export/{self.cardset.id}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("exportable_flashcards", response.data)
-        exportable_flashcards = response.data["exportable_flashcards"]
+        exportable_flashcards = response.data
         # Verify that the exportable flashcards content is correct
         expected_content = (
             f"{self.flashcard1.front}:{self.flashcard1.back}\n"
