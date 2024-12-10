@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.utils.html import format_html
+import json
 
 from learning_materials.models import (
     FlashcardModel,
@@ -6,6 +8,7 @@ from learning_materials.models import (
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
+    Chat,
 )
 
 
@@ -98,3 +101,37 @@ class MultipleChoiceQuestionAdmin(admin.ModelAdmin):
     search_fields = ["question", "quiz__document_name"]
     list_filter = ["quiz"]
     ordering = ["id"]
+
+
+@admin.register(Chat)
+class ChatAdmin(admin.ModelAdmin):
+    list_display = ["id", "user", "course", "title", "created_at", "updated_at"]
+    search_fields = ["title", "user__username", "course__name"]
+    list_filter = ["course", "created_at", "updated_at"]
+    readonly_fields = ["id", "formatted_messages", "created_at", "updated_at"]
+    ordering = ["-created_at"]
+
+    def formatted_messages(self, obj):
+        """
+        Prettify the JSONField content for display in the admin interface.
+        """
+        try:
+            # Ensure the messages field is a list
+            if isinstance(obj.messages, list):
+                # Format the JSON list with indentation
+                formatted = json.dumps(obj.messages, indent=4, ensure_ascii=False)
+                # Wrap it in a preformatted HTML block for display
+                return format_html("<pre>{}</pre>", formatted)
+            else:
+                return "Invalid format: Expected a list of JSON objects"
+        except (ValueError, TypeError) as e:
+            # Handle invalid JSON gracefully
+            return f"Invalid JSON: {str(e)} " + str(obj.messages)
+
+    formatted_messages.short_description = "Formatted Messages"
+
+    fieldsets = (
+        ("Chat Details", {"fields": ("id", "user", "course", "title")}),
+        ("Messages", {"fields": ("formatted_messages",)}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
