@@ -1730,6 +1730,25 @@ class FileUploadTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["detail"], "Course not found")
 
+    @patch("learning_materials.files.file_embeddings.create_file_embeddings")
+    def test_upload_when_tango_is_down(self, mock_create_file_embeddings):
+        # The Mock will raise an exception when called
+        mock_create_file_embeddings.side_effect = Exception("Tango is down")
+
+        # Create a dummy file
+        self.authenticate()
+        file_content = b"Dummy PDF content"
+        file_obj = io.BytesIO(file_content)
+        file_obj.name = "test.pdf"
+
+        data = {
+            "file": file_obj,
+            "course_id": str(self.course.id),
+        }
+        response = self.client.post(self.url, data, format="multipart")
+        # Check that no UserFile was created
+        self.assertFalse(UserFile.objects.exists())
+
 
 class UserFilesListTest(TestCase):
     def setUp(self):
