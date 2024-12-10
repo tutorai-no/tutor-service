@@ -27,7 +27,7 @@ User = get_user_model()
 class RegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,
-        min_length=6,
+        min_length=3,
         max_length=30,
         validators=[
             RegexValidator(

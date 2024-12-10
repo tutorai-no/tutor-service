@@ -65,6 +65,17 @@ class RegistrationTests(APITestCase):
         email = mail.outbox[0]
         self.assertEqual(email.to, ["testuser@example.com"])
 
+    def test_user_registration_success_with_short_username(self):
+        data = {
+            "username": "Ada",
+            "email": "testuser@example.com",
+            "password": "StrongP@ssw0rd!",
+            "password_confirm": "StrongP@ssw0rd!",
+        }
+        response = self.client.post(self.register_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username="Ada").exists())
+
     def test_user_registration_username_too_short(self):
         data = {
             "username": "ab",  # Too short
