@@ -85,6 +85,16 @@ class Database(ABC):
         """
         pass
 
+    @abstractmethod
+    def is_reachable(self) -> bool:
+        """
+        Check if the database is reachable
+
+        Returns:
+            bool: True if the database is reachable, False otherwise
+        """
+        pass
+
 
 class MongoDB(Database):
     def __init__(self):
@@ -94,21 +104,20 @@ class MongoDB(Database):
         self.similarity_threshold = 0.2
         self.embeddings = OpenAIEmbedding()
 
-    def get_curriculum(self, document_id: uuid.UUID, embedding: list[float]) -> list[Citation]:
+    def get_curriculum(
+        self, document_id: uuid.UUID, embedding: list[float]
+    ) -> list[Citation]:
         # Step 1: Filter by documentId first
         cursor = self.collection.find({"documentId": str(document_id)})
         if not cursor:
             raise ValueError("No documents found")
-        
+
         results = []
 
         # Compute cosine similarities
         similarities = []
         for doc in cursor:
-            similarity = cosine_similarity(
-                [doc["embedding"]],
-                [embedding]
-            )[0][0]
+            similarity = cosine_similarity([doc["embedding"]], [embedding])[0][0]
             similarities.append((doc, similarity))
 
         # Sort documents by similarity in descending order
@@ -125,7 +134,7 @@ class MongoDB(Database):
                         text=match[0]["text"],
                         page_num=match[0]["pageNum"],
                         document_name=match[0]["documentName"],
-                        document_id=match[0]["documentId"]
+                        document_id=match[0]["documentId"],
                     )
                 )
 
@@ -153,7 +162,7 @@ class MongoDB(Database):
                     text=document["text"],
                     page_num=document["pageNum"],
                     document_name=document["documentName"],
-                    document_id=document["documentId"]
+                    document_id=document["documentId"],
                 )
             )
 
@@ -199,6 +208,16 @@ class MongoDB(Database):
             return True
         except Exception as e:
             logger.error(f"Error posting curriculum: {e}")
+            return False
+
+    def is_reachable(self) -> bool:
+        try:
+            # Send a ping to confirm a successful connection
+            self.client.admin.command("ping")
+            logger.info("Successfully pinged MongoDB")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to ping MongoDB: {e}")
             return False
 
 
@@ -286,4 +305,7 @@ class MockDatabase(Database):
                 "documentId": str(document_id),
             }
         )
+        return True
+
+    def is_reachable(self) -> bool:
         return True
