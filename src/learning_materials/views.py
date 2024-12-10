@@ -312,8 +312,7 @@ class CardsetExportView(GenericAPIView):
         flashcards_model = cardset.flashcards.all()
         flashcards = translate_flashcards_to_pydantic_model(flashcards_model)
         exportable_flashcard = parse_for_anki(flashcards)
-        response = {"exportable_flashcards": exportable_flashcard}
-        return Response(data=response, status=status.HTTP_200_OK)
+        return Response(data=exportable_flashcard, status=status.HTTP_200_OK)
 
 
 class ReviewFlashcardView(GenericAPIView):
