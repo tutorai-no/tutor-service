@@ -99,8 +99,8 @@ class Database(ABC):
 class MongoDB(Database):
     def __init__(self):
         self.client = MongoClient(Config().MONGODB_URI)
-        self.db = self.client["test-curriculum-database"]
-        self.collection = self.db["test-curriculum-collection"]
+        self.db = self.client[Config().MONGODB_DATABASE]
+        self.collection = self.db[Config().MONGODB_COLLECTION]
         self.similarity_threshold = 0.2
         self.embeddings = OpenAIEmbedding()
 
