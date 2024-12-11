@@ -1,7 +1,6 @@
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator
-from django.core.validators import MaxValueValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -17,11 +16,58 @@ from learning_materials.serializer import (
     UserFile,
 )
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
-from accounts.models import Feedback, Subscription, SubscriptionHistory
+from accounts.models import Feedback, Subscription, SubscriptionHistory, UserApplication
 
 
 User = get_user_model()
+
+
+class UserApplicationSerializer(serializers.ModelSerializer):
+    heard_about_us = serializers.CharField(required=True)
+
+    other_heard_about_us = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
+
+    class Meta:
+        model = UserApplication
+        fields = [
+            "id",
+            "username",
+            "email",
+            "phone_number",
+            "heard_about_us",
+            "other_heard_about_us",
+            "inspiration",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "status", "created_at", "updated_at"]
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists.")
+        if UserApplication.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists.")
+        if UserApplication.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["heard_about_us"] == "Other" and not attrs.get("other_heard_about_us"):
+            raise serializers.ValidationError(
+                {
+                    "other_heard_about_us": "This field is required when 'Other' is selected."
+                }
+            )
+
+        return attrs
 
 
 class RegisterSerializer(serializers.ModelSerializer):

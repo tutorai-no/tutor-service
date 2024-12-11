@@ -33,6 +33,9 @@ class CustomUser(AbstractUser):
     )
     phone_number = models.CharField(max_length=15, blank=True, null=True, default="N/A")
 
+    heard_about_us = models.CharField(max_length=100, blank=True, null=True)
+    other_heard_about_us = models.CharField(max_length=255, blank=True, null=True)
+
     def __str__(self):
         return self.username
 
@@ -69,3 +72,37 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"{self.feedback_type} - {self.user.username}"
+
+
+class UserApplication(models.Model):
+    """
+    Model representing a user's request to access TutorAI.
+    """
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    username = models.CharField(max_length=150, unique=True)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=15)
+    heard_about_us = models.CharField(max_length=100)
+    other_heard_about_us = models.CharField(max_length=255, blank=True, null=True)
+    inspiration = models.TextField(max_length=250)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    reviewed_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_applications",
+    )
+    review_comments = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.username} - {self.status}"
