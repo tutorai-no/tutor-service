@@ -191,7 +191,20 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
             }
             grade_data = multiple_choice_chain.invoke(data)
 
-        graded_quiz.answers_was_correct.append(grade_data.answers_was_correct[0])
-        graded_quiz.feedback.append(grade_data.feedback[0])
+        # Append the grading results to the GradedQuiz object
+        if not grade_data:
+            graded_quiz.answers_was_correct.append(False)
+            graded_quiz.feedback.append("Error grading question")
+            logger.error(f"Error grading question: {question}")
+            continue
+
+        elif not grade_data.answers_was_correct or not grade_data.feedback:
+            graded_quiz.answers_was_correct.append(False)
+            graded_quiz.feedback.append("Error grading question")
+            logger.error(f"Error grading question: {question}")
+            continue
+        else:
+            graded_quiz.answers_was_correct.append(grade_data.answers_was_correct[0])
+            graded_quiz.feedback.append(grade_data.feedback[0])
 
     return graded_quiz

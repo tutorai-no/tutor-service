@@ -991,6 +991,20 @@ class QuizGradingTest(TestCase):
 
         self.amount_of_questions = 2
 
+        self.long_quiz = QuizModel.objects.create(
+            document_name=self.valid_document_name,
+            start_page=0,
+            end_page=100,
+            user=self.user,
+        )
+        self.amount_of_questions_long_quiz = 50
+        for i in range(self.amount_of_questions_long_quiz):
+            QuestionAnswerModel.objects.create(
+                question=f"What is the sum of {i} + {1}?",
+                answer=f"{i + 1}",
+                quiz=self.long_quiz,
+            )
+
     def authenticate(self):
         self.client.force_authenticate(user=self.user)
 
@@ -1060,6 +1074,17 @@ class QuizGradingTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["answers_was_correct"][1])
         self.assertTrue(response.data["feedback"][1])
+
+    def test_quiz_grading_of_long_quiz(self):
+        self.authenticate()
+        answers = [str(i + 1) for i in range(self.amount_of_questions_long_quiz)]
+        valid_response = {
+            "quiz_id": self.long_quiz.id,
+            "student_answers": answers,
+        }
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(response.data["answers_was_correct"]))
 
 
 class QuizCRUDTest(TestCase):
