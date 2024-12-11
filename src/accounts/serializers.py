@@ -55,6 +55,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         ],
     )
 
+    phone_regex = RegexValidator(
+        regex=r"^\+?1?\d{9,15}$",
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+    )
+
+    phone_number = serializers.CharField(
+        required=False,
+        max_length=17,
+        validators=[phone_regex],
+    )
+
     subscription = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
         required=False,
@@ -63,7 +74,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password_confirm", "subscription")
+        fields = (
+            "username",
+            "email",
+            "password",
+            "password_confirm",
+            "subscription",
+            "phone_number",
+        )
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:

@@ -21,6 +21,7 @@ class CustomUser(AbstractUser):
     """
     Custom user model with UUID as primary key.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     subscription = models.ForeignKey(
@@ -30,6 +31,7 @@ class CustomUser(AbstractUser):
         blank=True,
         related_name="subscribers",
     )
+    phone_number = models.CharField(max_length=15, blank=True, null=True, default="N/A")
 
     def __str__(self):
         return self.username
@@ -61,7 +63,9 @@ class Feedback(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     feedback_type = models.CharField(max_length=100)
     feedback_text = models.TextField()
-    feedback_screenshot = models.ImageField(upload_to='feedback_screenshots', blank=True, null=True)
-    
+    feedback_screenshot = models.ImageField(
+        upload_to="feedback_screenshots", blank=True, null=True
+    )
+
     def __str__(self):
         return f"{self.feedback_type} - {self.user.username}"

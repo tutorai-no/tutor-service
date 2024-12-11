@@ -38,6 +38,7 @@ class RegistrationTests(APITestCase):
             "password": "StrongP@ssw0rd!",
             "password_confirm": "StrongP@ssw0rd!",
             "subscription": self.subscription.id,  # Include subscription if desired
+            "phone_number": "+1234567890",
         }
         response = self.client.post(self.register_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -50,6 +51,24 @@ class RegistrationTests(APITestCase):
 
     @patch("django.core.mail.send_mail")
     def test_user_registration_success(self, mock_send_mail):
+        data = {
+            "username": "testuser",
+            "email": "testuser@example.com",
+            "password": "StrongP@ssw0rd!",
+            "password_confirm": "StrongP@ssw0rd!",
+            "phone_number": "+1234567890",
+        }
+        response = self.client.post(self.register_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username="testuser").exists())
+
+        # Check that one email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ["testuser@example.com"])
+
+    @patch("django.core.mail.send_mail")
+    def test_user_registration_success_without_phone_number(self, mock_send_mail):
         data = {
             "username": "testuser",
             "email": "testuser@example.com",
