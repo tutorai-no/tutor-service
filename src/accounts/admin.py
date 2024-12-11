@@ -5,8 +5,95 @@ from accounts.models import (
     Feedback,
     Subscription,
     SubscriptionHistory,
+    UserApplication,
 )
 from learning_materials.models import UserFile
+from uuid import uuid4
+from django.core.mail import send_mail
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+@admin.register(UserApplication)
+class UserApplicationAdmin(admin.ModelAdmin):
+    list_display = ("username", "email", "heard_about_us", "status", "created_at")
+    list_filter = ("status", "heard_about_us", "created_at")
+    search_fields = ("username", "email", "phone_number")
+    ordering = ("-created_at",)
+    readonly_fields = ("id", "created_at", "updated_at")
+
+    actions = ["approve_applications", "reject_applications"]
+
+    def approve_applications(self, request, queryset):
+        print("Approving applications...", flush=True)
+        for application in queryset.filter(status="pending"):
+            # Create a new user
+            password = str(uuid4())
+            user = User.objects.create(
+                username=application.username,
+                email=application.email,
+                phone_number=application.phone_number,
+                password=password,
+                heard_about_us=application.heard_about_us,
+                other_heard_about_us=application.other_heard_about_us,
+                # Add other fields as necessary
+            )
+            # Update application status
+            application.status = "approved"
+            application.reviewed_by = request.user
+            application.save()
+            # Notify the user via email
+            self.send_approval_email(application, password)
+
+        self.message_user(request, "Selected applications have been approved.")
+
+    approve_applications.short_description = "Approve selected applications"
+
+    def reject_applications(self, request, queryset):
+        queryset.update(status="rejected", reviewed_by=request.user)
+        # Optionally, notify users about rejection
+        for application in queryset.filter(status="rejected"):
+            self.send_rejection_email(application)
+        self.message_user(request, "Selected applications have been rejected.")
+
+    reject_applications.short_description = "Reject selected applications"
+
+    def send_approval_email(self, application, password):
+        subject = "Your TutorAI Access Request Approved"
+        message = (
+            f"Hello {application.username},\n\n"
+            "Congratulations! Your request to access TutorAI has been approved.\n\n"
+            "You can now log in using your credentials.\n\n"
+            f"Username: {application.username}\n"
+            f"Temporary password: {password}\n\n"
+            "Best regards,\n"
+            "TutorAI Team"
+        )
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email="no-reply@tutorai.no",
+            recipient_list=[application.email],
+            fail_silently=False,
+        )
+
+    def send_rejection_email(self, application):
+        subject = "Your TutorAI Access Request Rejected"
+        message = (
+            f"Hello {application.username},\n\n"
+            "We regret to inform you that your request to access TutorAI has been rejected.\n\n"
+            "If you believe this is a mistake, please contact our support team.\n\n"
+            "Best regards,\n"
+            "TutorAI Team"
+        )
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email="no-reply@tutorai.no",
+            recipient_list=[application.email],
+            fail_silently=False,
+        )
 
 
 @admin.register(CustomUser)

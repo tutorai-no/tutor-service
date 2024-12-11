@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -19,6 +20,7 @@ from accounts.serializers import (
     PasswordResetConfirmSerializer,
     SubscriptionHistorySerializer,
     SubscriptionSerializer,
+    UserApplicationSerializer,
     UserFeedbackSerializer,
     UserProfileSerializer,
 )
@@ -28,6 +30,45 @@ from accounts.models import Feedback, Subscription
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+class RequestAccessView(generics.CreateAPIView):
+    """
+    Endpoint for users to request access to TutorAI.
+    """
+
+    serializer_class = UserApplicationSerializer
+    permission_classes = [AllowAny]
+
+    def perform_create(self, serializer):
+        application = serializer.save()
+        # Notify administrators about the new application
+        self.notify_admin(application)
+
+    def notify_admin(self, application):
+        subject = f"New Access Request from {application.username}"
+        message = (
+            f"User '{application.username}' has requested access to TutorAI.\n\n"
+            f"Details:\n"
+            f"Username: {application.username}\n"
+            f"Email: {application.email}\n"
+            f"Phone Number: {application.phone_number}\n"
+            f"Heard About Us: {application.heard_about_us}\n"
+        )
+        if application.heard_about_us == "Other":
+            message += f"Other Source: {application.other_heard_about_us}\n"
+        message += f"Inspiration: {application.inspiration}\n\n"
+        message += "Please review the application in the admin panel."
+
+        admin_emails = [admin[1] for admin in settings.ADMINS]
+        if admin_emails:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=admin_emails,
+                fail_silently=False,
+            )
 
 
 class RegisterView(generics.CreateAPIView):
@@ -77,7 +118,7 @@ class PasswordResetView(generics.GenericAPIView):
             send_mail(
                 subject="Password Reset Request",
                 message=f"Please click the link to reset your password: {reset_link}",
-                from_email="no-reply@example.com",
+                from_email="no-reply@tutorai.no",
                 recipient_list=[user.email],
                 fail_silently=False,
             )

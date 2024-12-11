@@ -8,6 +8,7 @@ from accounts.views import (
     PasswordResetConfirmView,
     PasswordResetView,
     RegisterView,
+    RequestAccessView,
     SubscriptionListView,
     SubscriptionHistoryView,
     UserFeedback,
@@ -44,6 +45,7 @@ urlpatterns = [
     # Health check
     path("health-check/", health_check, name="health-check"),
     # Authentication & Profile
+    path("request-access/", RequestAccessView.as_view(), name="request_access"),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
