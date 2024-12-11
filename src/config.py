@@ -17,6 +17,8 @@ class Config:
         self.GPT_MODEL = os.getenv(key="GPT_MODEL", default=gpt_model)
         self.API_KEY = os.getenv("OPENAI_API_KEY")
         self.MONGODB_URI = os.getenv("MONGODB_URI")
+        self.MONGODB_COLLECTION = os.getenv("MONGODB_COLLECTION")
+        self.MONGODB_DATABASE = os.getenv("MONGODB_DATABASE")
         self.RAG_DATABASE_SYSTEM = os.getenv("RAG_DATABASE_SYSTEM", "mongodb")
         self.AZURE_STORAGE_CONNECTION_STRING = os.getenv(
             "AZURE_STORAGE_CONNECTION_STRING"
