@@ -29,8 +29,9 @@ class UserApplicationAdmin(admin.ModelAdmin):
         print("Approving applications...", flush=True)
         for application in queryset.filter(status="pending"):
             # Create a new user
-            password = str(uuid4())
-            user = User.objects.create(
+            password = str(uuid4().hex[:18])
+
+            user = User.objects.create_user(
                 username=application.username,
                 email=application.email,
                 phone_number=application.phone_number,
