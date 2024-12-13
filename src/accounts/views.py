@@ -118,7 +118,7 @@ class PasswordResetView(generics.GenericAPIView):
             send_mail(
                 subject="Password Reset Request",
                 message=f"Please click the link to reset your password: {reset_link}",
-                from_email="no-reply@tutorai.no",
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
             )
