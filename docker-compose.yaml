@@ -29,6 +29,7 @@ services:
       - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
       - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME}
       - BASE_URL_SCRAPER=http://scraper-service:8080
+      - BASE_URL_FRONTEND=${BASE_URL_FRONTEND}
       - DEBUG=${DEBUG}
     networks:
       - tutorai_network
