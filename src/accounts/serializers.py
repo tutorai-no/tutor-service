@@ -17,7 +17,14 @@ from learning_materials.serializer import (
     UserFile,
 )
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from accounts.models import Feedback, Subscription, SubscriptionHistory, UserApplication, Streak
+from accounts.models import (
+    Feedback,
+    Subscription,
+    SubscriptionHistory,
+    UserApplication,
+    Streak,
+    Activity,
+)
 
 
 User = get_user_model()
@@ -235,12 +242,43 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
         fields = ["id", "subscription", "start_date", "end_date"]
         read_only_fields = ["id", "subscription", "start_date", "end_date"]
 
+
 class StreakSerializer(serializers.ModelSerializer):
+    last_activity = serializers.SerializerMethodField()
+
     class Meta:
         model = Streak
-        fields = ["start_date", "end_date", "current_streak", "longest_streak", "user"]
+        fields = [
+            "start_date",
+            "end_date",
+            "current_streak",
+            "longest_streak",
+            "user",
+            "last_activity",
+        ]
 
-        
+    def get_last_activity(self, obj):
+        last_activity = (
+            Activity.objects.filter(user=obj.user).order_by("-timestamp").first()
+        )
+        return last_activity.timestamp if last_activity else None
+
+
+class ActivitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Activity
+        fields = ["activity_type", "metadata"]
+        extra_kwargs = {
+            "metadata": {"required": False},
+        }
+
+
+class ActivityLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Activity
+        fields = ["activity_type", "timestamp", "metadata"]
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,

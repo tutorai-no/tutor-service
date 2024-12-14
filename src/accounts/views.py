@@ -23,8 +23,11 @@ from accounts.serializers import (
     UserApplicationSerializer,
     UserFeedbackSerializer,
     UserProfileSerializer,
+    StreakSerializer,
+    ActivitySerializer,
+    ActivityLogSerializer,
 )
-from accounts.models import Feedback, Subscription
+from accounts.models import Feedback, Subscription, Streak, Activity
 
 
 logger = logging.getLogger(__name__)
@@ -184,6 +187,7 @@ class UserFeedback(generics.GenericAPIView):
         if serializer.is_valid():
             feedback_type = serializer.validated_data["feedbackType"]
             feedback_text = serializer.validated_data["feedbackText"]
+
             # optional field
             feedback_screenshot = serializer.validated_data.get("feedbackScreenshot")
             # Save feedback to database
@@ -195,3 +199,36 @@ class UserFeedback(generics.GenericAPIView):
             )
             return Response(status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StreakRetrieveView(generics.RetrieveAPIView):
+    serializer_class = StreakSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        streak, created = Streak.objects.get_or_create(user=self.request.user)
+        return streak
+
+
+class ActivityCreateView(generics.CreateAPIView):
+    serializer_class = ActivitySerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer: ActivitySerializer):
+        activity_type = serializer.validated_data.get("activity_type")
+        user = self.request.user
+
+        # Create Activity record
+        activity = serializer.save(user=user)
+
+        # Update Streak
+        streak, created = Streak.objects.get_or_create(user=user)
+        streak.increment_streak()
+
+
+class ActivityLogView(generics.ListAPIView):
+    serializer_class = ActivityLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Activity.objects.filter(user=self.request.user).order_by("-timestamp")

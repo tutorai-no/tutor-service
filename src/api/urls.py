@@ -13,6 +13,9 @@ from accounts.views import (
     SubscriptionHistoryView,
     UserFeedback,
     UserProfileView,
+    StreakRetrieveView,
+    ActivityCreateView,
+    ActivityLogView,
 )
 from api.views import health_check
 from learning_materials.views import (
@@ -56,6 +59,11 @@ urlpatterns = [
         PasswordResetConfirmView.as_view(),
         name="password-reset-confirm",
     ),
+    # Streaks
+    path("streak/", StreakRetrieveView.as_view(), name="streak-retrieve"),
+    # Activities
+    path("activities/", ActivityCreateView.as_view(), name="activity-create"),
+    path("activity-log/", ActivityLogView.as_view(), name="activity-log"),
     path("profile/", UserProfileView.as_view(), name="profile"),
     # Subscriptions
     path("subscriptions/", SubscriptionListView.as_view(), name="subscriptions"),
