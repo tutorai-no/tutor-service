@@ -1,6 +1,32 @@
 # Database Backup and Recovery
 This document describes how to backup and restore the database of tutor-service.
 
+## Automated Backup and Recovery scripts
+
+The backup and recovery scripts are available in the `automation-service/scripts` directory. The scripts are:
+
+- `backup-tutor-service-database.sh`: This script takes the backup of the database and stores it in the `tutor-service/backup` directory.
+- `restore-tutor-service-database.sh`: This script restores the database from the backup file.
+These must be run from the `automation-service` `root` folder.
+
+
+You need for both scripts to provide the container id of the database container as an argument. You can get the container id by running the following command:
+
+```bash
+docker ps
+```
+Then choose the container id of the database container. The image should be postgres:latest. So choose the container id of the postgres:latest image.
+
+Example:
+```bash
+source scripts/backup-tutor-service-database.sh database-container-id
+```
+
+For the restore script, you need to provide the container id of the database container and the name of the dump file as an argument. The dump file should be in the `tutor-service/backup` directory.
+```bash
+source scripts/restore-tutor-service-database.sh database-container-id dump-timestamp.sql
+```
+
 ## Backup
 
 To get the backup of the database, you can use the following commands:
