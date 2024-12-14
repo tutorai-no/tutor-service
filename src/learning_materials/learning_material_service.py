@@ -75,7 +75,7 @@ def process_answer(
     # Handle case when no context is available
     if len(curriculum) == 0:
         answer_content = (
-            "I'm sorry, but I don't have enough information to answer your question."
+            "I need a bit more information to help you. Please select some files, and I'll provide you with a detailed answer."
         )
     else:
         answer_content = response_formulation(user_question, curriculum, chat_history)
