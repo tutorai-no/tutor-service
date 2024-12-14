@@ -11,6 +11,7 @@ from accounts.models import (
     SubscriptionHistory,
     UserApplication,
     Streak,
+    Activity,
 )
 from learning_materials.models import UserFile
 
@@ -136,9 +137,23 @@ class FeedbackAdmin(admin.ModelAdmin):
     search_fields = ["feedback_type", "feedback_text", "user__username"]
     list_filter = ["created_at"]
 
+
 @admin.register(Streak)
 class StreakAdmin(admin.ModelAdmin):
-    list_display = ["user", "current_streak", "longest_streak", "start_date", "end_date"]
+    list_display = [
+        "user",
+        "current_streak",
+        "longest_streak",
+        "start_date",
+        "end_date",
+    ]
+
+
+@admin.register(Activity)
+class ActivityAdmin(admin.ModelAdmin):
+    list_display = ["user", "activity_type", "timestamp"]
+    search_fields = ["user__username", "activity_type"]
+    list_filter = ["timestamp"]
 
 
 @admin.register(Subscription)
