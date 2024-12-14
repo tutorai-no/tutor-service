@@ -16,7 +16,7 @@ from learning_materials.serializer import (
     UserFile,
 )
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from accounts.models import Feedback, Subscription, SubscriptionHistory, UserApplication
+from accounts.models import Feedback, Subscription, SubscriptionHistory, UserApplication, Streak
 
 
 User = get_user_model()
@@ -234,7 +234,12 @@ class SubscriptionHistorySerializer(serializers.ModelSerializer):
         fields = ["id", "subscription", "start_date", "end_date"]
         read_only_fields = ["id", "subscription", "start_date", "end_date"]
 
+class StreakSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Streak
+        fields = ["start_date", "end_date", "current_streak", "longest_streak", "user"]
 
+        
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,

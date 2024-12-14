@@ -1,6 +1,7 @@
 import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from datetime import datetime, timedelta
 
 
 class Subscription(models.Model):
@@ -39,7 +40,6 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
-
 class SubscriptionHistory(models.Model):
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="subscription_history"
@@ -51,6 +51,39 @@ class SubscriptionHistory(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.subscription.name}"
 
+class Streak(models.Model):
+    user = models.OneToOneField(
+        CustomUser, on_delete=models.CASCADE, related_name="streak"
+    )
+    start_date = models.DateField(auto_now_add=True)
+    end_date = models.DateField(auto_now=True)
+    current_streak = models.PositiveIntegerField(default=0)
+    longest_streak = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.current_streak}"
+    
+    def check_if_broken_streak(self):    
+        if (datetime.now().date() - self.end_date).hours > 36:
+            self.current_streak = 0
+            self.start_date = datetime.now().date()
+            self.end_date = datetime.now().date()
+            self.save()
+    
+    def increment_streak(self):
+        today_date = datetime.now().date()
+        
+        if not (today_date.month == self.end_date.month and today_date.year == self.end_date.year):
+            self.current_streak += 1
+            self.end_date = today_date
+            if self.current_streak > self.longest_streak:
+                self.longest_streak = self.current_streak
+            self.save()
+
+
+
+        
+        
 
 class Feedback(models.Model):
     """
