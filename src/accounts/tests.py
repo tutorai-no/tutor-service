@@ -2,6 +2,9 @@ import uuid
 from io import BytesIO
 from PIL import Image
 
+from datetime import datetime, timedelta, timezone
+
+
 from django.core import mail
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -18,7 +21,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from rest_framework_simplejwt.exceptions import TokenError
 from unittest.mock import patch
 
-from accounts.models import Feedback, Subscription
+from accounts.models import Activity, Feedback, Subscription
 
 User = get_user_model()
 
@@ -876,3 +879,624 @@ class UserFeedbackTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertFalse(Feedback.objects.exists())
+
+
+class StreakTests(APITestCase):
+    def setUp(self):
+        # Create a subscription tier if necessary
+        self.subscription = Subscription.objects.create(
+            name="Premium",
+            description="Premium subscription tier",
+            price=19.99,
+            active=True,
+        )
+
+        # Create a user with the subscription
+        self.user = User.objects.create_user(
+            username="streakuser",
+            email="streak@example.com",
+            password="StrongP@ss1",
+            subscription=self.subscription,
+            phone_number="+1234567890",
+        )
+
+        # Obtain JWT tokens for authentication
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+
+        # Define the URLs
+        self.activities_url = reverse(
+            "activity-create"
+        )  # Ensure this name matches your URL configuration
+        self.streak_url = reverse(
+            "streak-retrieve"
+        )  # Ensure this name matches your URL configuration
+
+    def authenticate(self):
+        """Helper method to set the JWT authentication header."""
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+
+    @patch("django.utils.timezone.now")
+    def test_initial_streak_is_zero_and_increments(self, mock_now):
+        """
+        When a user first starts, their streak should be 0.
+        After posting an activity, it should increment to 1.
+        """
+        self.authenticate()
+
+        # Set the current time
+        initial_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = initial_time
+
+        # Check initial streak
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("current_streak", response.data)
+        self.assertEqual(response.data["current_streak"], 0)
+        self.assertIsNone(response.data["last_activity"])
+
+        # Post an activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check streak after posting activity
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["current_streak"], 1)
+        self.assertIsNotNone(response.data["last_activity"])
+
+    @patch("django.utils.timezone.now")
+    def test_subsequent_activities_increment_streak(self, mock_now):
+        """
+        Posting multiple activities on the same day should increment the streak count.
+        """
+        self.authenticate()
+
+        # Set initial time
+        initial_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = initial_time
+
+        # First activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 1 now
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Second activity on the same day
+        mock_now.return_value = initial_time + timedelta(hours=2)  # 2 hours later
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2 now
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["current_streak"], 2)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_resets_after_a_day_break(self, mock_now):
+        """
+        If the user does an activity, then waits more than 36 hours before the next one,
+        the streak should reset to 0.
+        """
+        self.authenticate()
+
+        # Set initial time
+        initial_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = initial_time
+
+        # Post an activity today
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 1 now
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Advance time by 2 days (48 hours)
+        mock_now.return_value = initial_time + timedelta(days=2)
+
+        # Post another activity after a break
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # After a break, streak should reset to 1
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_continues_across_days(self, mock_now):
+        """
+        Ensure that streak continues correctly when activities are performed each day without breaks.
+        """
+        self.authenticate()
+
+        # Define a sequence of days
+        days = [
+            datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc),
+            datetime(2024, 12, 15, 10, 0, 0, tzinfo=timezone.utc),
+            datetime(2024, 12, 16, 10, 0, 0, tzinfo=timezone.utc),
+        ]
+
+        for count, day in enumerate(days, start=1):
+            mock_now.return_value = day
+            response = self.client.post(
+                self.activities_url,
+                {"activity_type": "lesson_completed"},
+                format="json",
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+            # Check streak after each activity
+            response = self.client.get(self.streak_url, format="json")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["current_streak"], count)
+
+    @patch("django.utils.timezone.now")
+    def test_retrieving_streak_info(self, mock_now):
+        """
+        Ensure that retrieving streak returns the last activity date and the current count.
+        """
+        self.authenticate()
+
+        # Initially no activities
+        initial_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = initial_time
+
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["current_streak"], 0)
+        self.assertIsNone(response.data["last_activity"])
+
+        # Add an activity
+        mock_now.return_value = initial_time
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["current_streak"], 1)
+        self.assertIsNotNone(response.data["last_activity"])
+
+    def test_increment_streak_unauthenticated(self):
+        """
+        Ensure that unauthenticated requests cannot post activities or fetch streaks.
+        """
+        # Attempt to log an activity without auth
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Attempt to retrieve streak without auth
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch("django.utils.timezone.now")
+    def test_multiple_activities_same_day_only_increment_once(self, mock_now):
+        """
+        If the streak should only increment once per day regardless of multiple activities,
+        adjust the test accordingly. This depends on your streak logic.
+        """
+        self.authenticate()
+
+        # Set current time
+        current_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = current_time
+
+        # Post first activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Attempt to post second activity on the same day
+        mock_now.return_value = current_time + timedelta(hours=1)
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(response.data["current_streak"], 1)
+
+    @patch("django.utils.timezone.now")
+    def test_custom_activity_types_increment_streak(self, mock_now):
+        """
+        Ensure that custom activity types are handled correctly.
+        """
+        self.authenticate()
+
+        # Set current time
+        current_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = current_time
+
+        # Post a custom activity
+        response = self.client.post(
+            self.activities_url,
+            {
+                "activity_type": "custom_activity",
+                "metadata": {"detail": "Test custom activity"},
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be incremented
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+    @patch("django.utils.timezone.now")
+    def test_activity_with_metadata_is_logged_correctly(self, mock_now):
+        """
+        Ensure that activities with metadata are logged and do not interfere with streaks.
+        """
+        self.authenticate()
+
+        # Set current time
+        current_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = current_time
+
+        # Post an activity with metadata
+        activity_data = {
+            "activity_type": "lesson_completed",
+            "metadata": {"lesson_id": "12345", "duration": 30},  # minutes
+        }
+        response = self.client.post(self.activities_url, activity_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check streak
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Verify that the activity was logged with metadata
+        activity = Activity.objects.filter(user=self.user).first()
+        self.assertIsNotNone(activity)
+        self.assertEqual(activity.activity_type, "lesson_completed")
+        self.assertEqual(activity.metadata, activity_data["metadata"])
+
+    @patch("django.utils.timezone.now")
+    def test_streak_does_not_reset_if_activity_within_day_gap(self, mock_now):
+        """
+        Ensure that streak does not reset if the activity is performed within the allowed time frame.
+        """
+        self.authenticate()
+
+        # Set initial time
+        initial_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = initial_time
+
+        # Post first activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Advance time by 23 hours (within 36-hour threshold)
+        within_day_time = initial_time + timedelta(hours=23)
+        mock_now.return_value = within_day_time
+
+        # Post second activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 2)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_increment_multiple_users_independently(self, mock_now):
+        """
+        Ensure that streaks are tracked independently for different users.
+        """
+        # Create another user
+        other_subscription = Subscription.objects.create(
+            name="Basic", description="Basic subscription tier", price=9.99, active=True
+        )
+        other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="StrongP@ss2",
+            subscription=other_subscription,
+            phone_number="+0987654321",
+        )
+        refresh_other = RefreshToken.for_user(other_user)
+        access_token_other = str(refresh_other.access_token)
+
+        # Authenticate as self.user
+        self.authenticate()
+
+        # Set current time
+        current_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = current_time
+
+        # self.user posts an activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check self.user's streak
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Authenticate as other_user
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + access_token_other)
+
+        # other_user should have initial streak 0
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 0)
+
+        # other_user posts an activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check other_user's streak
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # self.user's streak remains unchanged
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_with_custom_timezones(self, mock_now):
+        """
+        Ensure that streak logic correctly handles user-specific timezones.
+        This test assumes that your application correctly handles timezone-aware datetimes.
+        """
+        self.authenticate()
+
+        # Initial activity in UTC
+        initial_time_utc = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = initial_time_utc
+
+        # Post first activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check streak
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Next activity in UTC+5 timezone
+        next_activity_time = initial_time_utc + timedelta(
+            hours=5, days=1
+        )  # Next day in user's timezone
+        mock_now.return_value = next_activity_time
+
+        # Post second activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 2)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_with_activity_at_midnight(self, mock_now):
+        """
+        Ensure that activities posted exactly at midnight are handled correctly.
+        """
+        self.authenticate()
+
+        # Set time to just before midnight
+        before_midnight = datetime(2024, 12, 14, 23, 59, 59, tzinfo=timezone.utc)
+        mock_now.return_value = before_midnight
+
+        # Post activity before midnight
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 1
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Post activity at midnight
+        midnight = datetime(2024, 12, 15, 0, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = midnight
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 2)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_with_edge_case_times(self, mock_now):
+        """
+        Test edge cases such as leap years and daylight saving time changes.
+        """
+        self.authenticate()
+
+        # Leap year date
+        leap_year_time = datetime(2020, 2, 28, 23, 59, 59, tzinfo=timezone.utc)
+        mock_now.return_value = leap_year_time
+
+        # Post activity on Feb 28
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Advance to Feb 29 (leap day)
+        leap_day_time = leap_year_time + timedelta(days=1)
+        mock_now.return_value = leap_day_time
+
+        # Post activity on Feb 29
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 2)
+
+        # Advance to March 1
+        march_first_time = leap_day_time + timedelta(days=1)
+        mock_now.return_value = march_first_time
+
+        # Post activity on March 1
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 3
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 3)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_with_activity_on_leap_second(self, mock_now):
+        """
+        Ensure that activities posted during a leap second are handled correctly.
+        Note: Python's datetime does not support 60 seconds, so this is a hypothetical test.
+        """
+        self.authenticate()
+
+        # Define a leap second datetime (hypothetical, since Python doesn't support 60 seconds)
+        leap_second_time = datetime(2016, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+        mock_now.return_value = leap_second_time
+
+        # Post activity during leap second
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Advance time by 1 second to simulate leap second
+        next_time = leap_second_time + timedelta(seconds=1)
+        mock_now.return_value = next_time
+
+        # Post another activity after leap second
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 2)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_increment_multiple_activity_types(self, mock_now):
+        """
+        Ensure that different valid activity types correctly increment the streak.
+        """
+        self.authenticate()
+
+        # Define a sequence of activity types
+        activity_types = [
+            "lesson_completed",
+            "quiz_taken",
+            "custom_activity",
+            "forum_posted",
+            "video_watched",
+        ]
+
+        # Set initial time
+        current_time = datetime(2024, 12, 14, 10, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = current_time
+
+        for count, activity_type in enumerate(activity_types, start=1):
+            mock_now.return_value = current_time + timedelta(minutes=count)
+            response = self.client.post(
+                self.activities_url, {"activity_type": activity_type}, format="json"
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+            # Check streak after each activity
+            response = self.client.get(self.streak_url, format="json")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data["current_streak"], count)
+
+        # Post a valid activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 1
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Post an invalid activity
+        response = self.client.post(
+            self.activities_url, {"activity_type": "invalid_activity"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Streak should remain 1
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Post another valid activity
+        mock_now.return_value = current_time + timedelta(hours=1)
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 2)
+
+    @patch("django.utils.timezone.now")
+    def test_streak_with_activity_at_midnight(self, mock_now):
+        """
+        Ensure that activities posted exactly at midnight are handled correctly.
+        """
+        self.authenticate()
+
+        # Set time to just before midnight
+        before_midnight = datetime(2024, 12, 14, 23, 59, 59, tzinfo=timezone.utc)
+        mock_now.return_value = before_midnight
+
+        # Post activity before midnight
+        response = self.client.post(
+            self.activities_url, {"activity_type": "lesson_completed"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 1
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 1)
+
+        # Post activity at midnight
+        midnight = datetime(2024, 12, 15, 0, 0, 0, tzinfo=timezone.utc)
+        mock_now.return_value = midnight
+        response = self.client.post(
+            self.activities_url, {"activity_type": "quiz_taken"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Streak should be 2
+        response = self.client.get(self.streak_url, format="json")
+        self.assertEqual(response.data["current_streak"], 2)
