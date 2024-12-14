@@ -27,6 +27,17 @@ For the restore script, you need to provide the container id of the database con
 source scripts/restore-tutor-service-database.sh database-container-id dump-timestamp.sql
 ```
 
+## Secure Copy of Backup
+
+To securely copy the backup file to another machine, you can use the following command on the local machine:
+
+```bash
+scp -i ~/.ssh/tutorai azureuser@51.120.0.165:tutor-service/backups/dump_name prod-dump
+```
+
+This command will copy the dump file from the remote machine to the local machine with the name `prod-dump`. You will need to provide the backup file and have ssh
+
+
 ## Backup
 
 To get the backup of the database, you can use the following commands:
