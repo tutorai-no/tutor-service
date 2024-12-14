@@ -6,6 +6,7 @@ from accounts.models import (
     Subscription,
     SubscriptionHistory,
     UserApplication,
+    Streak,
 )
 from learning_materials.models import UserFile
 from uuid import uuid4
@@ -133,6 +134,10 @@ class FeedbackAdmin(admin.ModelAdmin):
     ]
     search_fields = ["feedback_type", "feedback_text", "user__username"]
     list_filter = ["created_at"]
+
+@admin.register(Streak)
+class StreakAdmin(admin.ModelAdmin):
+    list_display = ["user", "current_streak", "longest_streak", "start_date", "end_date"]
 
 
 @admin.register(Subscription)
