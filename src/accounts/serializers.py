@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator
 from django.contrib.auth.password_validation import validate_password
@@ -144,9 +145,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         # Send welcome email
         send_mail(
-            subject="Welcome to Our Site",
-            message="Thank you for registering.",
-            from_email="no-reply@example.com",
+            subject="Welcome to TutorAI",
+            message="Thank you for registering at TutorAI. We're excited to have you on board",
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
             fail_silently=False,
         )

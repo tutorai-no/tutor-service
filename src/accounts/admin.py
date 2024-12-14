@@ -1,5 +1,9 @@
+from uuid import uuid4
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.core.mail import send_mail
 from accounts.models import (
     CustomUser,
     Feedback,
@@ -9,9 +13,6 @@ from accounts.models import (
     Streak,
 )
 from learning_materials.models import UserFile
-from uuid import uuid4
-from django.core.mail import send_mail
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -75,7 +76,7 @@ class UserApplicationAdmin(admin.ModelAdmin):
         send_mail(
             subject=subject,
             message=message,
-            from_email="no-reply@tutorai.no",
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[application.email],
             fail_silently=False,
         )
@@ -92,7 +93,7 @@ class UserApplicationAdmin(admin.ModelAdmin):
         send_mail(
             subject=subject,
             message=message,
-            from_email="no-reply@tutorai.no",
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[application.email],
             fail_silently=False,
         )
