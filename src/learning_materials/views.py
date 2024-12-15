@@ -30,6 +30,7 @@ from learning_materials.learning_material_service import (
 )
 from learning_materials.knowledge_base.response_formulation import (
     generate_title_of_chat,
+    generate_title_of_flashcards,
 )
 from learning_materials.quizzes.quiz_service import (
     generate_quiz,
@@ -244,26 +245,25 @@ class FlashcardCreationView(GenericAPIView):
 
             if start is not None and end is not None:
                 flashcards = process_flashcards_by_page_range(document_id, start, end)
-                cardset_name = f"{document_id}_{start}_{end}"
 
             elif subject:
                 flashcards = process_flashcards_by_subject(document_id, subject)
-
-                cardset_name = f"{document_id}_subject"
 
             course: Course = None
             if course_id:
                 course = Course.objects.get(id=course_id)
 
+            title = generate_title_of_flashcards(flashcards)
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
-                name=cardset_name,
+                name=title,
                 subject=subject,
                 course=course,
                 user=user,
                 start_page=start,
                 end_page=end,
             )
+
             flashcard_models = [
                 translate_flashcard_to_orm_model(flashcard, cardset)
                 for flashcard in flashcards
@@ -325,7 +325,7 @@ class ReviewFlashcardView(GenericAPIView):
         request_body=FlashcardSerializer,
         responses={
             200: openapi.Response(
-                description="Flashcard reviewed successfuly",
+                description="Flashcard reviewed successfully",
                 examples={
                     "application/json": {
                         "answers_was_correct": True,
