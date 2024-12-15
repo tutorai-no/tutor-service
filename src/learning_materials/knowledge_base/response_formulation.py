@@ -3,7 +3,7 @@ import logging
 import openai
 
 from config import Config
-from learning_materials.learning_resources import RagAnswer
+from learning_materials.learning_resources import Flashcard, RagAnswer
 from learning_materials.knowledge_base.llm import create_llm_model
 
 
@@ -26,6 +26,17 @@ def generate_title_of_chat(user_question: str, answer: RagAnswer) -> str:
     prompt = (
         f"Generate the title of the chat based on the user question and the answer. The title should be engaging and concise. Here is the user question and the answer:\n\nUser Question: {user_question}\n\nAnswer: {answer} The title should be engaging and concise no more then 5 words.",
     )
+
+    llm = create_llm_model()
+    title = llm.invoke(prompt)
+
+    return title.content.strip('"')
+
+
+def generate_title_of_flashcards(flashcards: list[Flashcard]) -> str:
+
+    logger.info("Generating title of flashcards")
+    prompt = f"Generate the title of the flashcards based on the flashcards. The title should be engaging and concise. Here are the flashcards:\n\n {flashcards}"
 
     llm = create_llm_model()
     title = llm.invoke(prompt)
