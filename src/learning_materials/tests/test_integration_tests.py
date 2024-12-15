@@ -890,6 +890,7 @@ class QuizGenerationTest(TestCase):
 
         # Retrieve the created quiz
         quiz = QuizModel.objects.first()
+        self.assertTrue(quiz.name)
         self.assertEqual(quiz.document_name, self.valid_document_name)
         self.assertEqual(quiz.start_page, self.valid_page_num_start)
         self.assertEqual(quiz.end_page, self.valid_page_num_end)

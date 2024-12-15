@@ -25,11 +25,12 @@ def translate_flashcard_to_orm_model(
 
 
 def translate_quiz_to_orm_model(
-    quiz: Quiz, user: CustomUser, course: Course
+    quiz: Quiz, title: str, user: CustomUser, course: Course
 ) -> QuizModel:
     """Translate a Quiz Pydantic model to an ORM model and associate with users."""
     # Create all the questions and answers for the quiz
     quiz_model = QuizModel.objects.create(
+        name=title,
         document_name=quiz.document_name,
         start_page=quiz.start_page,
         end_page=quiz.end_page,
