@@ -103,6 +103,9 @@ class Cardset(models.Model):
         help_text="The user who created this cardset",
     )
 
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
     def get_flashcards_to_review(self):
         """Get the flashcards that need to be reviewed"""
         return FlashcardModel.objects.filter(
@@ -131,6 +134,9 @@ class FlashcardModel(models.Model):
         on_delete=models.CASCADE,
         help_text="The cardset to which the flashcard belongs",
     )
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def review(self, answer: bool, user) -> bool:
         """Update the profeciency of the flashcard based on the correctness of the answer"""
@@ -170,6 +176,9 @@ class QuizModel(models.Model):
     """Model to store quizzes"""
 
     id = models.AutoField(primary_key=True)
+    name = models.CharField(
+        max_length=100, default="Not Named", help_text="The name of the quiz"
+    )
     document_name = models.CharField(
         max_length=100, help_text="The name of the document", default="unknown"
     )
@@ -203,6 +212,9 @@ class QuizModel(models.Model):
         help_text="The user who created this quiz",
     )
 
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+
     def __str__(self):
         return f"Quiz for {self.document_name} from page {self.start_page} to {self.end_page}"
 
@@ -219,6 +231,9 @@ class QuestionAnswerModel(models.Model):
         on_delete=models.CASCADE,
         help_text="The quiz to which the question-answer pair belongs",
     )
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return self.question
@@ -239,6 +254,9 @@ class MultipleChoiceQuestionModel(models.Model):
         on_delete=models.CASCADE,
         help_text="The quiz to which the multiple-choice question belongs",
     )
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return self.question

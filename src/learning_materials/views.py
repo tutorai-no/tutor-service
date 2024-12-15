@@ -31,6 +31,7 @@ from learning_materials.learning_material_service import (
 from learning_materials.knowledge_base.response_formulation import (
     generate_title_of_chat,
     generate_title_of_flashcards,
+    generate_title_of_quiz,
 )
 from learning_materials.quizzes.quiz_service import (
     generate_quiz,
@@ -590,6 +591,7 @@ class QuizCreationView(GenericAPIView):
             # Generate the quiz data
             quiz_data = generate_quiz(document_id, start, end, subject, learning_goals)
 
+            title = generate_title_of_quiz(quiz_data)
             # Retrieve the authenticated user
             user = request.user
 
@@ -598,7 +600,7 @@ class QuizCreationView(GenericAPIView):
                 course = Course.objects.get(id=course_id)
 
             # Translate the quiz data into ORM models and associate with the user
-            quiz_model = translate_quiz_to_orm_model(quiz_data, user, course)
+            quiz_model = translate_quiz_to_orm_model(quiz_data, title, user, course)
 
             # Serialize the created quiz
             response_serializer = QuizModelSerializer(quiz_model)
