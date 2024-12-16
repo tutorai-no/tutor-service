@@ -20,6 +20,7 @@ cycler==0.12.1
 distro==1.9.0
 Django==5.1.2
 django-cors-headers==4.5.0
+django-prometheus==2.3.1
 django-rest-framework==0.1.0
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
@@ -55,6 +56,7 @@ orjson==3.10.10
 packaging==23.2
 pdfminer.six==20231228
 pillow==10.4.0
+prometheus_client==0.21.1
 propcache==0.2.0
 psycopg2-binary==2.9.10
 pycparser==2.22
