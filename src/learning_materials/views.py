@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import logging
 import uuid
 
@@ -7,8 +6,6 @@ from rest_framework.response import Response
 from rest_framework.generics import (
     GenericAPIView,
     ListAPIView,
-    ListCreateAPIView,
-    RetrieveAPIView,
     DestroyAPIView,
 )
 from rest_framework.parsers import MultiPartParser
@@ -17,7 +14,6 @@ from rest_framework import viewsets
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from uuid import UUID
 
 from learning_materials.files.file_embeddings import create_file_embeddings
 from learning_materials.files.file_service import (
@@ -71,7 +67,7 @@ from learning_materials.serializer import (
 logger = logging.getLogger(__name__)
 
 
-class CoursesView(ListCreateAPIView):
+class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CourseSerializer
 
@@ -79,32 +75,30 @@ class CoursesView(ListCreateAPIView):
         # Limit to courses belonging to the authenticated user
         return Course.objects.filter(user=self.request.user)
 
-    @swagger_auto_schema(
-        operation_description="List all courses",
-        responses={200: openapi.Response(description="Courses retrieved successfully")},
-        tags=["Courses"],
-    )
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_description="Create a new course",
-        request_body=CourseSerializer,
-        responses={201: openapi.Response(description="Course created successfully")},
-        tags=["Courses"],
-    )
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
-
-
-# View for retrieving a single course and its related files
-class CourseDetailView(RetrieveAPIView):
+class CourseFilesView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = CourseSerializer
 
-    def get_queryset(self):
-        # Limit to courses belonging to the authenticated user
-        return Course.objects.filter(user=self.request.user)
+    def get(self, request, course_id):
+        user = request.user
+
+        try:
+            course = Course.objects.get(id=course_id, user=user)
+            user_files = course.files.all()
+
+            serializer = UserFileSerializer(user_files, many=True)
+            return Response({"files": serializer.data}, status=status.HTTP_200_OK)
+
+        except Course.DoesNotExist:
+            return Response(
+                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logging.error(f"Error retrieving files: {e}")
+            return Response(
+                {"detail": "Error retrieving files"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class FileUploadView(APIView):
@@ -196,31 +190,6 @@ class UserFileDeleteView(DestroyAPIView):
             logging.error(f"Error deleting file: {e}")
             return Response(
                 {"detail": "Error deleting file"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-
-class CourseFilesView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, course_id):
-        user = request.user
-
-        try:
-            course = Course.objects.get(id=course_id, user=user)
-            user_files = course.files.all()
-
-            serializer = UserFileSerializer(user_files, many=True)
-            return Response({"files": serializer.data}, status=status.HTTP_200_OK)
-
-        except Course.DoesNotExist:
-            return Response(
-                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            logging.error(f"Error retrieving files: {e}")
-            return Response(
-                {"detail": "Error retrieving files"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

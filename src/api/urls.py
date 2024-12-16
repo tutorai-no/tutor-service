@@ -22,8 +22,7 @@ from learning_materials.views import (
     ChatResponseView,
     ChatListView,
     ChatView,
-    CourseDetailView,
-    CoursesView,
+    CourseViewSet,
     FileUploadView,
     UserFileDeleteView,
     UserFilesListView,
@@ -44,6 +43,7 @@ router = routers.DefaultRouter()
 router.register(r"cardsets", CardsetViewSet, basename="cardset")
 router.register(r"flashcards", FlashcardViewSet, basename="flashcard")
 router.register(r"quizzes", QuizViewSet, basename="quiz")
+router.register(r"courses", CourseViewSet, basename="course")
 
 urlpatterns = [
     # Health check
@@ -74,8 +74,6 @@ urlpatterns = [
         name="subscription-history",
     ),
     # Courses
-    path("courses/", CoursesView.as_view(), name="courses-list-create"),
-    path("courses/<uuid:pk>/", CourseDetailView.as_view(), name="course-detail"),
     path(
         "courses/<uuid:course_id>/files/",
         CourseFilesView.as_view(),
