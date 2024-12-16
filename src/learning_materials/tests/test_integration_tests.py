@@ -1865,3 +1865,121 @@ class UserFilesTest(TestCase):
         response = self.client.delete(f"{self.url}{self.other_file.id}/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(UserFile.objects.filter(id=self.other_file.id).exists())
+
+
+class CourseAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="testuser", email="testuser@gmail.com", password="Str0ngP@ss!23"
+        )
+
+        self.other_user = User.objects.create_user(
+            username="otherUser", email="otheruser@gmail.com", password="Str0ngP@ss!23"
+        )
+
+        self.url = f"{base}courses/"
+        self.valid_course_name = "Test Course"
+
+    def authenticate(self):
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_course(self):
+        self.authenticate()
+        data = {
+            "name": self.valid_course_name,
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], self.valid_course_name)
+        self.assertIn("id", response.data)
+        id = response.data["id"]
+        self.assertTrue(Course.objects.filter(id=id).exists())
+
+    def test_list_courses(self):
+        self.authenticate()
+        Course.objects.create(name="Course 1", user=self.user)
+        Course.objects.create(name="Course 2", user=self.user)
+        Course.objects.create(name="Other User Course", user=self.other_user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_patch_course_name(self):
+        self.authenticate()
+        course = Course.objects.create(name="Old Course Name", user=self.user)
+        data = {
+            "name": self.valid_course_name,
+        }
+        response = self.client.patch(f"{self.url}{course.id}/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], self.valid_course_name)
+
+    def test_delete_course(self):
+        self.authenticate()
+        course = Course.objects.create(name=self.valid_course_name, user=self.user)
+        response = self.client.delete(f"{self.url}{course.id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Course.objects.filter(id=course.id).exists())
+
+    def test_delete_other_users_course(self):
+        self.authenticate()
+        course = Course.objects.create(
+            name=self.valid_course_name, user=self.other_user
+        )
+        response = self.client.delete(f"{self.url}{course.id}/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Course.objects.filter(id=course.id).exists())
+
+    def test_patch_other_course_name(self):
+        self.authenticate()
+        course = Course.objects.create(name="Old Course Name", user=self.other_user)
+        data = {
+            "name": self.valid_course_name,
+        }
+        response = self.client.patch(f"{self.url}{course.id}/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_retrieve_files_for_course(self):
+        self.authenticate()
+        course = Course.objects.create(name=self.valid_course_name, user=self.user)
+        file1 = UserFile.objects.create(
+            name="File 1",
+            blob_name="blob1",
+            file_url="http://example.com/file1.pdf",
+            content_type="application/pdf",
+            file_size=1234,
+            num_pages=10,
+            user=self.user,
+        )
+        file1.courses.add(course)
+
+        file2 = UserFile.objects.create(
+            name="File 2",
+            blob_name="blob2",
+            file_url="http://example.com/file2.pdf",
+            content_type="application/pdf",
+            file_size=2345,
+            num_pages=10,
+            user=self.user,
+        )
+
+        file3 = UserFile.objects.create(
+            name="File 3",
+            blob_name="blob3",
+            file_url="http://example.com/file3.pdf",
+            content_type="application/pdf",
+            file_size=3456,
+            num_pages=10,
+            user=self.other_user,
+        )
+
+        response = self.client.get(f"{self.url}{course.id}/files/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertIn("files", response.data)
+        files = response.data["files"]
+        # Ensure the correct file is returned
+        print(response.data, flush=True)
+        self.assertEqual(files[0]["name"], file1.name)
+        self.assertEqual(files[0]["file_url"], file1.file_url)
