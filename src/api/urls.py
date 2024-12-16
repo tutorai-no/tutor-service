@@ -25,6 +25,7 @@ from learning_materials.views import (
     CourseDetailView,
     CoursesView,
     FileUploadView,
+    UserFileDeleteView,
     UserFilesListView,
     CourseFilesView,
     CardsetExportView,
@@ -83,6 +84,7 @@ urlpatterns = [
     # Files
     path("files/upload/", FileUploadView.as_view(), name="upload-file"),
     path("files/", UserFilesListView.as_view(), name="user-files"),
+    path("files/<uuid:file_id>/", UserFileDeleteView.as_view(), name="delete-file"),
     # Chat
     path("chat/response/", ChatResponseView.as_view(), name="chat-response"),
     path("chat/history/", ChatListView.as_view(), name="chat-history-list"),
