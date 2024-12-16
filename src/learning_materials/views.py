@@ -9,6 +9,7 @@ from rest_framework.generics import (
     ListAPIView,
     ListCreateAPIView,
     RetrieveAPIView,
+    DestroyAPIView,
 )
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -176,6 +177,27 @@ class UserFilesListView(ListAPIView):
 
     def get_queryset(self):
         return UserFile.objects.filter(user=self.request.user)
+
+
+class UserFileDeleteView(DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, file_id):
+        user = request.user
+        try:
+            user_file = UserFile.objects.get(id=file_id, user=user)
+            user_file.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except UserFile.DoesNotExist:
+            return Response(
+                {"detail": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logging.error(f"Error deleting file: {e}")
+            return Response(
+                {"detail": "Error deleting file"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class CourseFilesView(APIView):
