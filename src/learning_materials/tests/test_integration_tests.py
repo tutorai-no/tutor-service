@@ -1775,7 +1775,7 @@ class FileUploadTest(TestCase):
         self.assertFalse(UserFile.objects.exists())
 
 
-class UserFilesListTest(TestCase):
+class UserFilesTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(
@@ -1845,3 +1845,23 @@ class UserFilesListTest(TestCase):
         self.client.force_authenticate(user=None)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_user_file(self):
+        """Test deleting a user file."""
+        self.authenticate()
+        response = self.client.delete(f"{self.url}{self.file1.id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(UserFile.objects.filter(id=self.file1.id).exists())
+
+    def test_delete_user_file_no_authentication(self):
+        """Test deleting a user file."""
+        response = self.client.delete(f"{self.url}{self.file1.id}/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(UserFile.objects.filter(id=self.file1.id).exists())
+
+    def test_deleting_other_users_file(self):
+        """Test that a user cannot delete another user's file."""
+        self.authenticate()
+        response = self.client.delete(f"{self.url}{self.other_file.id}/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(UserFile.objects.filter(id=self.other_file.id).exists())
