@@ -1866,6 +1866,19 @@ class UserFilesTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(UserFile.objects.filter(id=self.other_file.id).exists())
 
+    def test_renaming_file(self):
+        self.authenticate()
+        new_name = "New Name"
+        data = {
+            "name": new_name,
+        }
+        response = self.client.patch(f"{self.url}{self.file1.id}/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], new_name)
+        self.assertTrue(
+            UserFile.objects.filter(id=self.file1.id, name=new_name).exists()
+        )
+
 
 class CourseAPITest(TestCase):
     def setUp(self):
