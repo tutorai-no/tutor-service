@@ -44,7 +44,7 @@ kiwisolver==1.4.7
 langchain==0.3.6
 langchain-core==0.3.15
 langchain-openai==0.2.5
-langchain-text-splitters==0.3.1
+langchain-text-splitters==0.3.3
 langsmith==0.1.139
 lxml==5.3.0
 matplotlib==3.9.2
