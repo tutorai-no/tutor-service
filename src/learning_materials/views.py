@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.generics import (
     GenericAPIView,
     ListAPIView,
+    UpdateAPIView,
     DestroyAPIView,
 )
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -45,6 +46,7 @@ from learning_materials.models import (
     Chat,
     QuizModel,
     UserFile,
+    UserURL,
 )
 
 from learning_materials.translator import (
@@ -65,6 +67,7 @@ from learning_materials.serializer import (
     QuizModelSerializer,
     ContextSerializer,
     QuizStudentAnswer,
+    UserURLSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -223,13 +226,18 @@ class UserFilesListView(ListAPIView):
         return UserFile.objects.filter(user=self.request.user)
 
 
-class UserFileDeleteView(DestroyAPIView):
+class UserFileUpdateDeleteView(UpdateAPIView, DestroyAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserFileSerializer
+    lookup_field = "id"
 
-    def delete(self, request, file_id):
+    def get_queryset(self):
+        return UserFile.objects.filter(user=self.request.user)
+
+    def delete(self, request, *args, **kwargs):
         user = request.user
         try:
-            user_file = UserFile.objects.get(id=file_id, user=user)
+            user_file = UserFile.objects.get(id=kwargs["id"], user=user)
             user_file.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except UserFile.DoesNotExist:
