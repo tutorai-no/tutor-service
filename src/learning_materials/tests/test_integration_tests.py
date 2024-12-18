@@ -981,6 +981,52 @@ class QuizGenerationTest(TestCase):
             or MultipleChoiceQuestionModel.objects.filter(quiz=quiz).exists()
         )
 
+    def test_valid_request_with_total_amount_of_questions(self):
+        self.assertFalse(QuizModel.objects.exists())
+
+        max_amount = 5
+        valid_payload = {
+            "id": self.valid_document_id,
+            "subject": self.valid_subject,
+            "max_amount_to_generate": max_amount,
+        }
+
+        response = self.client.post(self.url, valid_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data)
+
+        self.assertTrue(QuizModel.objects.exists())
+        quiz = QuizModel.objects.first()
+        self.assertEqual(quiz.subject, self.valid_subject)
+        total_questions = (
+            QuestionAnswerModel.objects.filter(quiz=quiz).count()
+            + MultipleChoiceQuestionModel.objects.filter(quiz=quiz).count()
+        )
+        self.assertLessEqual(total_questions, max_amount)
+
+    def test_valid_request_with_total_amount_of_questions_equal_zero(self):
+        self.assertFalse(QuizModel.objects.exists())
+
+        max_amount = 0
+        valid_payload = {
+            "id": self.valid_document_id,
+            "subject": self.valid_subject,
+            "max_amount_to_generate": max_amount,
+        }
+
+        response = self.client.post(self.url, valid_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data)
+
+        self.assertTrue(QuizModel.objects.exists())
+        quiz = QuizModel.objects.first()
+        self.assertEqual(quiz.subject, self.valid_subject)
+        total_questions = (
+            QuestionAnswerModel.objects.filter(quiz=quiz).count()
+            + MultipleChoiceQuestionModel.objects.filter(quiz=quiz).count()
+        )
+        self.assertLessEqual(total_questions, max_amount)
+
 
 class QuizGradingTest(TestCase):
     def setUp(self):

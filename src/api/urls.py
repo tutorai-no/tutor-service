@@ -32,7 +32,7 @@ from learning_materials.views import (
     CompendiumCreationView,
     FlashcardGenerationView,
     FlashcardViewSet,
-    QuizCreationView,
+    QuizGenerationView,
     QuizGradingView,
     QuizViewSet,
     ReviewFlashcardView,
@@ -100,7 +100,7 @@ urlpatterns = [
         name="export-flashcards",
     ),
     # Quizzes
-    path("quiz/create/", QuizCreationView.as_view(), name="create-quiz"),
+    path("quiz/create/", QuizGenerationView.as_view(), name="create-quiz"),
     path("quiz/grade/", QuizGradingView.as_view(), name="grade-quiz"),
     # Compendiums
     path(
