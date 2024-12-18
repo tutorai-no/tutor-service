@@ -148,6 +148,7 @@ class FileUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        processed_documents = []
         logger.info(f"Processing {len(files)} files and {len(urls)} URLs")
         logger.info(f"Files: {files}")
         logger.info(f"URLs: {urls}")
@@ -177,8 +178,9 @@ class FileUploadView(APIView):
                     file.seek(0)
                     create_file_embeddings(file, str(file_uuid), auth_header)
 
-                    user_file = serializer.save(user=user)
+                    user_file: UserFile = serializer.save(user=user)
                     user_file.courses.add(course)
+                    processed_documents.append(serializer.data)
                 else:
                     return Response(
                         serializer.errors, status=status.HTTP_400_BAD_REQUEST
@@ -204,6 +206,7 @@ class FileUploadView(APIView):
                     create_url_embeddings(url, str(url_uuid), auth_header)
                     user_url: UserURL = serializer.save(user=user)
                     user_url.courses.add(course)
+                    processed_documents.append(serializer.data)
                 else:
                     return Response(
                         serializer.errors, status=status.HTTP_400_BAD_REQUEST
@@ -216,7 +219,7 @@ class FileUploadView(APIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(data=processed_documents, status=status.HTTP_201_CREATED)
 
 
 class UserFilesListView(ListAPIView):
@@ -597,13 +600,13 @@ class ChatResponseView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class QuizCreationView(GenericAPIView):
-    serializer_class = ContextSerializer
+class QuizGenerationView(GenericAPIView):
+    serializer_class = AdditionalContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
-        request_body=ContextSerializer,
+        request_body=AdditionalContextSerializer,
         responses={
             200: openapi.Response(
                 description="Quiz created successfully",
@@ -642,9 +645,12 @@ class QuizCreationView(GenericAPIView):
             subject = serializer.validated_data.get("subject")
             learning_goals = serializer.validated_data.get("learning_goals", [])
             course_id = serializer.validated_data.get("course_id")
+            max_questions = serializer.validated_data.get("max_amount_to_generate")
 
             # Generate the quiz data
-            quiz_data = generate_quiz(document_id, start, end, subject, learning_goals)
+            quiz_data = generate_quiz(
+                document_id, start, end, subject, learning_goals, max_questions
+            )
 
             title = generate_title_of_quiz(quiz_data)
             # Retrieve the authenticated user

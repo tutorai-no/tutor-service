@@ -25,6 +25,7 @@ def generate_quiz(
     end: Optional[int],
     subject: Optional[str],
     learning_goals: list[str] = [],
+    max_questions: Optional[int] = None,
 ) -> Quiz:
     """
     Generates a quiz for the specified document and page range based on learning goals.
@@ -84,6 +85,7 @@ def generate_quiz(
     # Generate the quiz questions
     questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
 
+    questions_per_citation = max_questions // len(citations) if max_questions else 5
     document_name = ""
     for citation in citations:
         document_name = citation.document_name
@@ -92,18 +94,38 @@ def generate_quiz(
             {
                 "page_content": citation.text,
                 "learning_goals": learning_goals,
-                "num_questions": 5,
+                "num_questions": questions_per_citation,
             }
         )
         questions.extend(quiz_data.questions)
 
-    return Quiz(
+    # Post-process the quiz questions
+    quiz: Quiz = Quiz(
         document_name=document_name,
         start_page=start,
         end_page=end,
         subject=subject,
         questions=questions,
     )
+    quiz = _post_process_quiz(quiz, learning_goals, max_questions)
+    return quiz
+
+
+def _post_process_quiz(
+    quiz: Quiz,
+    learning_goals: list[str] = [],
+    max_questions: Optional[int] = None,
+) -> Quiz:
+    """
+    Post-process the quiz questions to ensure a good variety of question types.
+    """
+    logger.info("Post-processing quiz")
+
+    if max_questions is not None:
+        # Ensure the number of questions does not exceed the maximum
+        quiz.questions = quiz.questions[:max_questions]
+
+    return quiz
 
 
 def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
