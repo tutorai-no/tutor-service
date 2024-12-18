@@ -26,6 +26,7 @@ from learning_materials.models import (
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
+    UserURL,
 )
 from learning_materials.learning_resources import Flashcard
 from learning_materials.learning_resources import Citation
@@ -1737,7 +1738,7 @@ class FileUploadTest(TestCase):
         self.authenticate()
         response = self.client.post(self.url, {}, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["detail"], "File and course_id are required")
+        self.assertIn("course_id", response.data["detail"])
 
     def test_upload_non_existent_course(self):
         """Test uploading a file for a non-existent course returns 404."""
@@ -1773,6 +1774,66 @@ class FileUploadTest(TestCase):
         response = self.client.post(self.url, data, format="multipart")
         # Check that no UserFile was created
         self.assertFalse(UserFile.objects.exists())
+
+    def test_upload_url(self):
+        self.authenticate()
+
+        wikipedia_url = "https://en.wikipedia.org/wiki/Impeachment_of_Yoon_Suk_Yeol"
+        data = {
+            "urls": [wikipedia_url],
+            "course_id": str(self.course.id),
+        }
+        response = self.client.post(self.url, data)
+        print(f"Response: {response.data}", flush=True)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(UserURL.objects.filter(url=wikipedia_url).exists())
+
+    def test_upload_youtube_url(self):
+        self.authenticate()
+
+        youtube_url = "https://www.youtube.com/watch?v=9bZkp7q19f0"
+        data = {
+            "urls": [youtube_url],
+            "course_id": str(self.course.id),
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(UserURL.objects.filter(url=youtube_url).exists())
+
+    def test_upload_multiple_urls(self):
+        self.authenticate()
+
+        urls = [
+            "https://en.wikipedia.org/wiki/Impeachment_of_Yoon_Suk_Yeol",
+            "https://www.youtube.com/watch?v=9bZkp7q19f0",
+        ]
+        data = {
+            "urls": urls,
+            "course_id": str(self.course.id),
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(all(UserURL.objects.filter(url=url).exists() for url in urls))
+
+    def test_multiple_files_and_multiple_urls(self):
+        self.authenticate()
+
+        # Create a dummy file
+        file_content = b"Dummy PDF content"
+        file_obj = io.BytesIO(file_content)
+
+        urls = [
+            "https://en.wikipedia.org/wiki/Impeachment_of_Yoon_Suk_Yeol",
+            "https://www.youtube.com/watch?v=9bZkp7q19f0",
+        ]
+        data = {
+            "file": file_obj,
+            "urls": urls,
+            "course_id": str(self.course.id),
+        }
+        response = self.client.post(self.url, data, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(all(UserURL.objects.filter(url=url).exists() for url in urls))
 
 
 class UserFilesTest(TestCase):
@@ -1875,9 +1936,10 @@ class UserFilesTest(TestCase):
         response = self.client.patch(f"{self.url}{self.file1.id}/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], new_name)
-        self.assertTrue(
-            UserFile.objects.filter(id=self.file1.id, name=new_name).exists()
-        )
+
+        self.file1.refresh_from_db()
+        file = UserFile.objects.get(id=self.file1.id)
+        self.assertEqual(file.name, new_name)
 
 
 class CourseAPITest(TestCase):

@@ -11,6 +11,7 @@ from learning_materials.models import (
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
+    UserURL,
 )
 
 
@@ -39,6 +40,18 @@ class UserFileSerializer(serializers.ModelSerializer):
 
     def get_sas_url(self, obj):
         return generate_sas_url(obj.blob_name)
+
+
+class UserURLSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+    course_ids = serializers.PrimaryKeyRelatedField(
+        source="courses", many=True, read_only=True
+    )
+
+    class Meta:
+        model = UserURL
+        fields = ["id", "url", "uploaded_at", "course_ids"]
+        read_only_fields = ["user", "uploaded_at"]
 
 
 class ContextSerializer(serializers.Serializer):
