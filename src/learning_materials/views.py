@@ -253,7 +253,7 @@ class UserFileUpdateDeleteView(UpdateAPIView, DestroyAPIView):
             )
 
 
-class FlashcardCreationView(GenericAPIView):
+class FlashcardGenerationView(GenericAPIView):
     serializer_class = AdditionalContextSerializer
     permission_classes = [IsAuthenticated]
 
