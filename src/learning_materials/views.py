@@ -8,6 +8,7 @@ from rest_framework.generics import (
     ListAPIView,
     UpdateAPIView,
     DestroyAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
@@ -59,6 +60,7 @@ from learning_materials.compendiums.compendium_service import generate_compendiu
 from learning_materials.serializer import (
     AdditionalContextSerializer,
     CourseSerializer,
+    UserDocumentSerializer,
     UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
@@ -180,6 +182,7 @@ class FileUploadView(APIView):
 
                     user_file: UserFile = serializer.save(user=user)
                     user_file.courses.add(course)
+                    file_metadata["type"] = "file"
                     processed_documents.append(serializer.data)
                 else:
                     return Response(
@@ -198,6 +201,7 @@ class FileUploadView(APIView):
                 url_uuid = uuid.uuid4()
                 url_metadata = {
                     "id": url_uuid,
+                    "name": url,
                     "url": url,
                 }
 
@@ -206,6 +210,7 @@ class FileUploadView(APIView):
                     create_url_embeddings(url, str(url_uuid), auth_header)
                     user_url: UserURL = serializer.save(user=user)
                     user_url.courses.add(course)
+                    url_metadata["type"] = "url"
                     processed_documents.append(serializer.data)
                 else:
                     return Response(
@@ -222,38 +227,72 @@ class FileUploadView(APIView):
         return Response(data=processed_documents, status=status.HTTP_201_CREATED)
 
 
-class UserFilesListView(ListAPIView):
+class UserDocumentsListView(ListAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserFileSerializer
+    serializer_class = UserDocumentSerializer
 
     def get_queryset(self):
-        return UserFile.objects.filter(user=self.request.user)
+        user = self.request.user
+        # Combine UserFiles and UserURLs for this user
+        # We'll return a combined list that the serializer can handle
+        user_files = list(UserFile.objects.filter(user=user))
+        user_urls = list(UserURL.objects.filter(user=user))
+        # Combine and sort by uploaded_at. We assume both have uploaded_at fields.
+        combined = user_files + user_urls
+        combined.sort(key=lambda doc: doc.uploaded_at, reverse=True)
+        return combined
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
-class UserFileUpdateDeleteView(UpdateAPIView, DestroyAPIView):
+class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserFileSerializer
+    serializer_class = UserDocumentSerializer
     lookup_field = "id"
+    lookup_url_kwarg = "id"
 
-    def get_queryset(self):
-        return UserFile.objects.filter(user=self.request.user)
-
-    def delete(self, request, *args, **kwargs):
-        user = request.user
+    def get_object(self):
+        # Try to get UserFile first
+        user = self.request.user
+        doc_id = self.kwargs.get("id")
         try:
-            user_file = UserFile.objects.get(id=kwargs["id"], user=user)
-            user_file.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return UserFile.objects.get(id=doc_id, user=user)
         except UserFile.DoesNotExist:
-            return Response(
-                {"detail": "File not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            logging.error(f"Error deleting file: {e}")
-            return Response(
-                {"detail": "Error deleting file"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            pass
+
+        # If not found in UserFile, try UserURL
+        try:
+            return UserURL.objects.get(id=doc_id, user=user)
+        except UserURL.DoesNotExist:
+            # Raise a 404 if neither found
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound("Document not found")
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, *args, **kwargs):
+        # Updating might differ based on what fields you allow updates for.
+        # For simplicity, let's say we only allow updating name for UserFile and nothing for URL.
+        instance = self.get_object()
+        if isinstance(instance, UserFile):
+            # Update allowed fields for files
+            name = request.data.get("name", instance.name)
+            instance.name = name
+            instance.save()
+        else:
+            # For URL, you could potentially allow updating the 'url' field.
+            # If not, just ignore or raise an error.
+            pass
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class FlashcardGenerationView(GenericAPIView):
