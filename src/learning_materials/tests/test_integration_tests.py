@@ -285,7 +285,7 @@ class FlashcardGenerationTest(TestCase):
         self.assertTrue(Cardset.objects.exists())
         cardset = Cardset.objects.first()
         flashcards = FlashcardModel.objects.filter(cardset=cardset)
-        self.assertLess(flashcards.count(), max_amount)
+        self.assertLessEqual(flashcards.count(), max_amount)
 
 
 class FlashcardReviewTest(TestCase):
