@@ -117,6 +117,13 @@ class ContextSerializer(serializers.Serializer):
         return data
 
 
+class AdditionalContextSerializer(ContextSerializer):
+    max_amount_to_generate = serializers.IntegerField(
+        help_text="The maximum amount of a learning aid to generate",
+        required=False,
+    )
+
+
 class CourseSerializer(serializers.ModelSerializer):
     files = UserFileSerializer(
         many=True, read_only=True
