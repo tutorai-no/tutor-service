@@ -57,6 +57,7 @@ from learning_materials.translator import (
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
+    AdditionalContextSerializer,
     CourseSerializer,
     UserFileSerializer,
     CardsetSerializer,
@@ -253,12 +254,12 @@ class UserFileUpdateDeleteView(UpdateAPIView, DestroyAPIView):
 
 
 class FlashcardCreationView(GenericAPIView):
-    serializer_class = ContextSerializer
+    serializer_class = AdditionalContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Generate flashcards from a given document",
-        request_body=ContextSerializer,
+        request_body=AdditionalContextSerializer,
         responses={
             200: openapi.Response(
                 description="Flashcards generated successfully",
@@ -291,13 +292,18 @@ class FlashcardCreationView(GenericAPIView):
             end = serializer.validated_data.get("end_page")
             subject = serializer.validated_data.get("subject")
             course_id = serializer.validated_data.get("course_id")
+            max_flashcards = serializer.validated_data.get("max_amount_to_generate")
             user = request.user
 
             if start is not None and end is not None:
-                flashcards = process_flashcards_by_page_range(document_id, start, end)
+                flashcards = process_flashcards_by_page_range(
+                    document_id, start, end, max_flashcards
+                )
 
             elif subject:
-                flashcards = process_flashcards_by_subject(document_id, subject)
+                flashcards = process_flashcards_by_subject(
+                    document_id, subject, max_flashcards
+                )
 
             course: Course = None
             if course_id:
