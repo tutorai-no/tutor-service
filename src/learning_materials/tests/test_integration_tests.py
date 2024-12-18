@@ -267,6 +267,26 @@ class FlashcardGenerationTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(Cardset.objects.exists())
 
+    def test_valid_request_with_total_amount_of_flashcards(self):
+        self.assertFalse(Cardset.objects.exists())
+        max_amount = 5
+        valid_response = {
+            "id": self.valid_document_id,
+            "start_page": self.valid_page_num_start,
+            "end_page": self.valid_page_num_end,
+            "subject": "Some subject",
+            "max_amount_to_generate": max_amount,
+        }
+
+        response = self.client.post(self.url, valid_response, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data)
+
+        self.assertTrue(Cardset.objects.exists())
+        cardset = Cardset.objects.first()
+        flashcards = FlashcardModel.objects.filter(cardset=cardset)
+        self.assertLess(flashcards.count(), max_amount)
+
 
 class FlashcardReviewTest(TestCase):
     def setUp(self):
