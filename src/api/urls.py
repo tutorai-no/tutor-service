@@ -30,7 +30,7 @@ from learning_materials.views import (
     CardsetExportView,
     CardsetViewSet,
     CompendiumCreationView,
-    FlashcardCreationView,
+    FlashcardGenerationView,
     FlashcardViewSet,
     QuizCreationView,
     QuizGradingView,
@@ -89,7 +89,9 @@ urlpatterns = [
     path("chat/history/<uuid:chatId>/", ChatView.as_view(), name="chat-history"),
     # Flashcards
     path(
-        "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"
+        "flashcards/create/",
+        FlashcardGenerationView.as_view(),
+        name="create-flashcards",
     ),
     path("flashcards/review/", ReviewFlashcardView.as_view(), name="review-flashcards"),
     path(
