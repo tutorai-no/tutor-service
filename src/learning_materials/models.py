@@ -46,6 +46,7 @@ class UserFile(models.Model):
 
 class UserURL(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=255, default="URL NOT NAMED")
     url = models.URLField(max_length=1024)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(
