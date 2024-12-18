@@ -44,6 +44,25 @@ class UserFile(models.Model):
         return f"{self.name} (ID: {self.id})"
 
 
+class UserURL(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    url = models.URLField(max_length=1024)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="uploaded_urls",
+    )
+    courses = models.ManyToManyField(Course, related_name="urls")
+
+    class Meta:
+        db_table = "user_urls"
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"{self.url} (ID: {self.id})"
+
+
 class Chat(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     user = models.ForeignKey(

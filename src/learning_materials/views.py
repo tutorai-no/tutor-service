@@ -8,14 +8,17 @@ from rest_framework.generics import (
     ListAPIView,
     DestroyAPIView,
 )
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from learning_materials.files.file_embeddings import create_file_embeddings
+from learning_materials.files.file_embeddings import (
+    create_file_embeddings,
+    create_url_embeddings,
+)
 from learning_materials.files.file_service import (
     generate_sas_url,
     upload_file_to_blob,
@@ -103,66 +106,113 @@ class CourseFilesView(APIView):
 
 class FileUploadView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser]
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]
 
     def post(self, request, *args, **kwargs):
-        file = request.FILES.get("file")
-        course_id = request.data.get("course_id")
         auth_header = request.headers.get("Authorization")
-
         if not auth_header:
             return Response(
                 {"detail": "Authorization header is required"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        if not file or not course_id:
+        course_id = request.data.get("course_id")
+        if not course_id:
             return Response(
-                {"detail": "File and course_id are required"},
+                {"detail": "course_id is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
         try:
             user = request.user
             course = Course.objects.get(id=course_id, user=user)
-            file_uuid = uuid.uuid4()
-            blob_name, file_url = upload_file_to_blob(
-                file, user.id, course.id, file_uuid
-            )
-            sas_url = generate_sas_url(blob_name)
-
-            file_metadata = {
-                "id": file_uuid,
-                "name": file.name,
-                "blob_name": blob_name,  # Store blob_name
-                "file_url": file_url,
-                "sas_url": sas_url,
-                "num_pages": request.data.get("num_pages", 0),
-                "content_type": file.content_type,
-                "file_size": file.size,
-            }
-
-            serializer = UserFileSerializer(data=file_metadata)
-            if serializer.is_valid():
-                file.seek(0)
-                # When tango is down it will raise an exception and not save the file
-                create_file_embeddings(file, str(file_uuid), auth_header)
-                user_file = serializer.save(user=user)
-                user_file.courses.add(course)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         except Course.DoesNotExist:
             return Response(
                 {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
             )
-        except Exception as e:
-            logging.error(f"Error uploading file: {e}")
+
+        # Retrieve lists of files and URLs
+        files = request.FILES.getlist("files")
+        urls = request.data.getlist("urls")
+
+        # Validate input: we need at least one file or one URL
+        if not files and not urls:
             return Response(
-                {"detail": "Error uploading file"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"detail": "At least one file or one URL is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
+
+        logger.info(f"Processing {len(files)} files and {len(urls)} URLs")
+        logger.info(f"Files: {files}")
+        logger.info(f"URLs: {urls}")
+        # Process files if any
+        for file in files:
+            try:
+                file_uuid = uuid.uuid4()
+                blob_name, file_url = upload_file_to_blob(
+                    file, user.id, course.id, file_uuid
+                )
+                sas_url = generate_sas_url(blob_name)
+
+                file_metadata = {
+                    "id": file_uuid,
+                    "name": file.name,
+                    "blob_name": blob_name,
+                    "file_url": file_url,
+                    "sas_url": sas_url,
+                    "num_pages": request.data.get("num_pages", 0),
+                    "content_type": file.content_type,
+                    "file_size": file.size,
+                }
+
+                serializer = UserFileSerializer(data=file_metadata)
+                if serializer.is_valid():
+                    # Attempt to create embeddings
+                    file.seek(0)
+                    create_file_embeddings(file, str(file_uuid), auth_header)
+
+                    user_file = serializer.save(user=user)
+                    user_file.courses.add(course)
+                else:
+                    return Response(
+                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                    )
+            except Exception as e:
+                logging.error(f"Error uploading file {file.name}: {e}")
+                return Response(
+                    {"detail": f"Error uploading file {file.name}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        # Process URLs if any
+        for url in urls:
+            try:
+                url_uuid = uuid.uuid4()
+                url_metadata = {
+                    "id": url_uuid,
+                    "url": url,
+                }
+
+                serializer = UserURLSerializer(data=url_metadata)
+                if serializer.is_valid():
+                    create_url_embeddings(url, str(url_uuid), auth_header)
+                    user_url: UserURL = serializer.save(user=user)
+                    user_url.courses.add(course)
+                else:
+                    return Response(
+                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            except Exception as e:
+                logging.error(f"Error processing URLs: {e}")
+                return Response(
+                    {"detail": f"Error processing URLs"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        return Response(status=status.HTTP_201_CREATED)
 
 
 class UserFilesListView(ListAPIView):
