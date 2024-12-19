@@ -182,8 +182,10 @@ class FileUploadView(APIView):
 
                     user_file: UserFile = serializer.save(user=user)
                     user_file.courses.add(course)
-                    file_metadata["type"] = "file"
-                    processed_documents.append(serializer.data)
+
+                    processed_data = serializer.data
+                    processed_data["type"] = "file"
+                    processed_documents.append(processed_data)
                 else:
                     return Response(
                         serializer.errors, status=status.HTTP_400_BAD_REQUEST
@@ -210,8 +212,10 @@ class FileUploadView(APIView):
                     create_url_embeddings(url, str(url_uuid), auth_header)
                     user_url: UserURL = serializer.save(user=user)
                     user_url.courses.add(course)
-                    url_metadata["type"] = "url"
-                    processed_documents.append(serializer.data)
+                    processed_data = serializer.data
+                    processed_data["type"] = "url"
+                    processed_documents.append(processed_data)
+
                 else:
                     return Response(
                         serializer.errors, status=status.HTTP_400_BAD_REQUEST
