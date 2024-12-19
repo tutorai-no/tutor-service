@@ -72,6 +72,8 @@ LOGIN_URL = "/admin/login/"
 
 INSTALLED_APPS = [
     # Your apps
+    "daphne",
+    "channels",
     "accounts",
     "api",
     "learning_materials",
@@ -87,6 +89,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "drf_yasg",
+    # Monitoring
     "django_prometheus",
 ]
 MIDDLEWARE = [
@@ -120,7 +123,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "tutorai.wsgi.application"
+# WSGI_APPLICATION = "tutorai.wsgi.application"
+ASGI_APPLICATION = "tutorai.asgi.application"
 
 
 # CORS settings

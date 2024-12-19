@@ -19,6 +19,7 @@ from accounts.views import (
 )
 from api.views import health_check
 from learning_materials.views import (
+    ChatConsumer,
     ChatResponseView,
     ChatListView,
     ChatView,
@@ -108,6 +109,8 @@ urlpatterns = [
     ),
     # Feedback
     path("feedback/", UserFeedback.as_view(), name="feedback"),
+    # Websocket
+    path("ws/chat/", ChatConsumer.as_asgi()),
     # Router URLs
     path("", include(router.urls)),
 ]
