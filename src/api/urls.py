@@ -24,15 +24,15 @@ from learning_materials.views import (
     ChatView,
     CourseViewSet,
     FileUploadView,
-    UserFileDeleteView,
-    UserFilesListView,
+    UserDocumentsListView,
+    UserDocumentDetailView,
     CourseFilesView,
     CardsetExportView,
     CardsetViewSet,
     CompendiumCreationView,
-    FlashcardCreationView,
+    FlashcardGenerationView,
     FlashcardViewSet,
-    QuizCreationView,
+    QuizGenerationView,
     QuizGradingView,
     QuizViewSet,
     ReviewFlashcardView,
@@ -81,15 +81,17 @@ urlpatterns = [
     ),
     # Files
     path("files/upload/", FileUploadView.as_view(), name="upload-file"),
-    path("files/", UserFilesListView.as_view(), name="user-files"),
-    path("files/<uuid:file_id>/", UserFileDeleteView.as_view(), name="delete-file"),
+    path("files/", UserDocumentsListView.as_view(), name="user-files"),
+    path("files/<uuid:id>/", UserDocumentDetailView.as_view(), name="file-update"),
     # Chat
     path("chat/response/", ChatResponseView.as_view(), name="chat-response"),
     path("chat/history/", ChatListView.as_view(), name="chat-history-list"),
     path("chat/history/<uuid:chatId>/", ChatView.as_view(), name="chat-history"),
     # Flashcards
     path(
-        "flashcards/create/", FlashcardCreationView.as_view(), name="create-flashcards"
+        "flashcards/create/",
+        FlashcardGenerationView.as_view(),
+        name="create-flashcards",
     ),
     path("flashcards/review/", ReviewFlashcardView.as_view(), name="review-flashcards"),
     path(
@@ -98,7 +100,7 @@ urlpatterns = [
         name="export-flashcards",
     ),
     # Quizzes
-    path("quiz/create/", QuizCreationView.as_view(), name="create-quiz"),
+    path("quiz/create/", QuizGenerationView.as_view(), name="create-quiz"),
     path("quiz/grade/", QuizGradingView.as_view(), name="grade-quiz"),
     # Compendiums
     path(

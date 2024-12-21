@@ -11,6 +11,7 @@ from learning_materials.models import (
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
+    UserURL,
 )
 
 
@@ -39,6 +40,52 @@ class UserFileSerializer(serializers.ModelSerializer):
 
     def get_sas_url(self, obj):
         return generate_sas_url(obj.blob_name)
+
+
+class UserURLSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+    course_ids = serializers.PrimaryKeyRelatedField(
+        source="courses", many=True, read_only=True
+    )
+
+    class Meta:
+        model = UserURL
+        fields = ["id", "url", "name", "uploaded_at", "course_ids"]
+        read_only_fields = ["user", "uploaded_at"]
+
+
+class UserDocumentSerializer(serializers.Serializer):
+    """A unified serializer that can handle both UserFile and UserURL instances."""
+
+    # Fields common to both
+    id = serializers.UUIDField()
+    uploaded_at = serializers.DateTimeField()
+    course_ids = serializers.ListField(child=serializers.IntegerField(), read_only=True)
+    type = serializers.CharField()
+
+    # Fields specific to UserFile
+    name = serializers.CharField(required=False, allow_null=True)
+    file_url = serializers.URLField(required=False, allow_null=True)
+    sas_url = serializers.URLField(required=False, allow_null=True)
+    content_type = serializers.CharField(required=False, allow_null=True)
+    file_size = serializers.IntegerField(required=False, allow_null=True)
+    num_pages = serializers.IntegerField(required=False, allow_null=True)
+
+    # Fields specific to UserURL
+    url = serializers.URLField(required=False, allow_null=True)
+
+    def to_representation(self, instance):
+        # Identify if instance is UserFile or UserURL
+        if isinstance(instance, UserFile):
+            data = UserFileSerializer(instance).data
+            data["type"] = "file"
+        elif isinstance(instance, UserURL):
+            data = UserURLSerializer(instance).data
+            data["type"] = "url"
+        else:
+            raise TypeError("Instance is not of type UserFile or UserURL")
+
+        return data
 
 
 class ContextSerializer(serializers.Serializer):
@@ -102,6 +149,13 @@ class ContextSerializer(serializers.Serializer):
                 )
 
         return data
+
+
+class AdditionalContextSerializer(ContextSerializer):
+    max_amount_to_generate = serializers.IntegerField(
+        help_text="The maximum amount of a learning aid to generate",
+        required=False,
+    )
 
 
 class CourseSerializer(serializers.ModelSerializer):
