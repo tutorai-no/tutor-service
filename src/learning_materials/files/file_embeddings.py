@@ -4,26 +4,39 @@ from config import Config
 config = Config()
 BASE_URL_SCRAPER = config.BASE_URL_SCRAPER
 
+
 def create_file_embeddings(file, file_uuid: str, auth_header: str) -> dict:
     endpoint = f"{BASE_URL_SCRAPER}/file/"
     file.seek(0)
     file_content = file.read()
 
-    files = {
-        "files": (file.name, file_content, file.content_type)
-    }
+    files = {"files": (file.name, file_content, file.content_type)}
 
-    data = {
-        "uuids": [file_uuid]
-    }
+    data = {"uuids": [file_uuid]}
 
-    headers = {
-        "Authorization": auth_header
-    }
+    headers = {"Authorization": auth_header}
 
     response = requests.post(endpoint, headers=headers, files=files, data=data)
 
     if response.status_code != 200:
-        raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
+        raise Exception(
+            f"Request failed with status code {response.status_code}: {response.text}"
+        )
 
+    return response.json()
+
+
+def create_url_embeddings(url: str, uuid: str, auth_header: str) -> dict:
+    endpoint = f"{BASE_URL_SCRAPER}/url/"
+
+    data = {"urls": [url], "uuids": [uuid]}
+
+    headers = {"Authorization": auth_header}
+
+    response = requests.post(endpoint, headers=headers, json=data)
+
+    if response.status_code != 200:
+        raise Exception(
+            f"Request failed with status code {response.status_code}: {response.text}"
+        )
     return response.json()

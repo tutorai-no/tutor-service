@@ -22,6 +22,7 @@ from drf_yasg import openapi
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django_prometheus import urls as prometheus_urls  # Import Prometheus URLs
 
 # Swagger schema view configuration
 schema_view = get_schema_view(
@@ -61,4 +62,5 @@ urlpatterns = [
         schema_view.with_ui("redoc", cache_timeout=0),
         name="schema-redoc",
     ),
+    path("", include(prometheus_urls)),
 ]

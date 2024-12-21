@@ -6,16 +6,21 @@ from rest_framework.response import Response
 from rest_framework.generics import (
     GenericAPIView,
     ListAPIView,
+    UpdateAPIView,
     DestroyAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from learning_materials.files.file_embeddings import create_file_embeddings
+from learning_materials.files.file_embeddings import (
+    create_file_embeddings,
+    create_url_embeddings,
+)
 from learning_materials.files.file_service import (
     generate_sas_url,
     upload_file_to_blob,
@@ -42,6 +47,7 @@ from learning_materials.models import (
     Chat,
     QuizModel,
     UserFile,
+    UserURL,
 )
 
 from learning_materials.translator import (
@@ -52,7 +58,9 @@ from learning_materials.translator import (
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
+    AdditionalContextSerializer,
     CourseSerializer,
+    UserDocumentSerializer,
     UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
@@ -62,6 +70,7 @@ from learning_materials.serializer import (
     QuizModelSerializer,
     ContextSerializer,
     QuizStudentAnswer,
+    UserURLSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -103,104 +112,200 @@ class CourseFilesView(APIView):
 
 class FileUploadView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser]
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]
 
     def post(self, request, *args, **kwargs):
-        file = request.FILES.get("file")
-        course_id = request.data.get("course_id")
         auth_header = request.headers.get("Authorization")
-
         if not auth_header:
             return Response(
                 {"detail": "Authorization header is required"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        if not file or not course_id:
+        course_id = request.data.get("course_id")
+        if not course_id:
             return Response(
-                {"detail": "File and course_id are required"},
+                {"detail": "course_id is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
         try:
             user = request.user
             course = Course.objects.get(id=course_id, user=user)
-            file_uuid = uuid.uuid4()
-            blob_name, file_url = upload_file_to_blob(
-                file, user.id, course.id, file_uuid
-            )
-            sas_url = generate_sas_url(blob_name)
-
-            file_metadata = {
-                "id": file_uuid,
-                "name": file.name,
-                "blob_name": blob_name,  # Store blob_name
-                "file_url": file_url,
-                "sas_url": sas_url,
-                "num_pages": request.data.get("num_pages", 0),
-                "content_type": file.content_type,
-                "file_size": file.size,
-            }
-
-            serializer = UserFileSerializer(data=file_metadata)
-            if serializer.is_valid():
-                file.seek(0)
-                # When tango is down it will raise an exception and not save the file
-                create_file_embeddings(file, str(file_uuid), auth_header)
-                user_file = serializer.save(user=user)
-                user_file.courses.add(course)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         except Course.DoesNotExist:
             return Response(
                 {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
             )
-        except Exception as e:
-            logging.error(f"Error uploading file: {e}")
+
+        # Retrieve lists of files and URLs
+        files = request.FILES.getlist("files")
+        urls = request.data.getlist("urls")
+
+        # Validate input: we need at least one file or one URL
+        if not files and not urls:
             return Response(
-                {"detail": "Error uploading file"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"detail": "At least one file or one URL is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
+        processed_documents = []
+        logger.info(f"Processing {len(files)} files and {len(urls)} URLs")
+        logger.info(f"Files: {files}")
+        logger.info(f"URLs: {urls}")
+        # Process files if any
+        for file in files:
+            try:
+                file_uuid = uuid.uuid4()
+                blob_name, file_url = upload_file_to_blob(
+                    file, user.id, course.id, file_uuid
+                )
+                sas_url = generate_sas_url(blob_name)
 
-class UserFilesListView(ListAPIView):
+                file_metadata = {
+                    "id": file_uuid,
+                    "name": file.name,
+                    "blob_name": blob_name,
+                    "file_url": file_url,
+                    "sas_url": sas_url,
+                    "num_pages": request.data.get("num_pages", 0),
+                    "content_type": file.content_type,
+                    "file_size": file.size,
+                }
+
+                serializer = UserFileSerializer(data=file_metadata)
+                if serializer.is_valid():
+                    # Attempt to create embeddings
+                    file.seek(0)
+                    create_file_embeddings(file, str(file_uuid), auth_header)
+
+                    user_file: UserFile = serializer.save(user=user)
+                    user_file.courses.add(course)
+
+                    processed_data = serializer.data
+                    processed_data["type"] = "file"
+                    processed_documents.append(processed_data)
+                else:
+                    return Response(
+                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                    )
+            except Exception as e:
+                logging.error(f"Error uploading file {file.name}: {e}")
+                return Response(
+                    {"detail": f"Error uploading file {file.name}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        # Process URLs if any
+        for url in urls:
+            try:
+                url_uuid = uuid.uuid4()
+                url_metadata = {
+                    "id": url_uuid,
+                    "name": url,
+                    "url": url,
+                }
+
+                serializer = UserURLSerializer(data=url_metadata)
+                if serializer.is_valid():
+                    create_url_embeddings(url, str(url_uuid), auth_header)
+                    user_url: UserURL = serializer.save(user=user)
+                    user_url.courses.add(course)
+                    processed_data = serializer.data
+                    processed_data["type"] = "url"
+                    processed_documents.append(processed_data)
+
+                else:
+                    return Response(
+                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            except Exception as e:
+                logging.error(f"Error processing URLs: {e}")
+                return Response(
+                    {"detail": f"Error processing URLs"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        return Response(data=processed_documents, status=status.HTTP_201_CREATED)
+
+
+class UserDocumentsListView(ListAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UserFileSerializer
+    serializer_class = UserDocumentSerializer
 
     def get_queryset(self):
-        return UserFile.objects.filter(user=self.request.user)
+        user = self.request.user
+        # Combine UserFiles and UserURLs for this user
+        # We'll return a combined list that the serializer can handle
+        user_files = list(UserFile.objects.filter(user=user))
+        user_urls = list(UserURL.objects.filter(user=user))
+        # Combine and sort by uploaded_at. We assume both have uploaded_at fields.
+        combined = user_files + user_urls
+        combined.sort(key=lambda doc: doc.uploaded_at, reverse=True)
+        return combined
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
-class UserFileDeleteView(DestroyAPIView):
+class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserDocumentSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "id"
 
-    def delete(self, request, file_id):
-        user = request.user
+    def get_object(self):
+        # Try to get UserFile first
+        user = self.request.user
+        doc_id = self.kwargs.get("id")
         try:
-            user_file = UserFile.objects.get(id=file_id, user=user)
-            user_file.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return UserFile.objects.get(id=doc_id, user=user)
         except UserFile.DoesNotExist:
-            return Response(
-                {"detail": "File not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            logging.error(f"Error deleting file: {e}")
-            return Response(
-                {"detail": "Error deleting file"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            pass
+
+        # If not found in UserFile, try UserURL
+        try:
+            return UserURL.objects.get(id=doc_id, user=user)
+        except UserURL.DoesNotExist:
+            # Raise a 404 if neither found
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound("Document not found")
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def update(self, request, *args, **kwargs):
+        # Updating might differ based on what fields you allow updates for.
+        # For simplicity, let's say we only allow updating name for UserFile and nothing for URL.
+        instance = self.get_object()
+        if isinstance(instance, UserFile):
+            # Update allowed fields for files
+            name = request.data.get("name", instance.name)
+            instance.name = name
+            instance.save()
+        else:
+            # For URL, you could potentially allow updating the 'url' field.
+            # If not, just ignore or raise an error.
+            pass
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class FlashcardCreationView(GenericAPIView):
-    serializer_class = ContextSerializer
+class FlashcardGenerationView(GenericAPIView):
+    serializer_class = AdditionalContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Generate flashcards from a given document",
-        request_body=ContextSerializer,
+        request_body=AdditionalContextSerializer,
         responses={
             200: openapi.Response(
                 description="Flashcards generated successfully",
@@ -233,13 +338,18 @@ class FlashcardCreationView(GenericAPIView):
             end = serializer.validated_data.get("end_page")
             subject = serializer.validated_data.get("subject")
             course_id = serializer.validated_data.get("course_id")
+            max_flashcards = serializer.validated_data.get("max_amount_to_generate")
             user = request.user
 
             if start is not None and end is not None:
-                flashcards = process_flashcards_by_page_range(document_id, start, end)
+                flashcards = process_flashcards_by_page_range(
+                    document_id, start, end, max_flashcards
+                )
 
             elif subject:
-                flashcards = process_flashcards_by_subject(document_id, subject)
+                flashcards = process_flashcards_by_subject(
+                    document_id, subject, max_flashcards
+                )
 
             course: Course = None
             if course_id:
@@ -533,13 +643,13 @@ class ChatResponseView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class QuizCreationView(GenericAPIView):
-    serializer_class = ContextSerializer
+class QuizGenerationView(GenericAPIView):
+    serializer_class = AdditionalContextSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
-        request_body=ContextSerializer,
+        request_body=AdditionalContextSerializer,
         responses={
             200: openapi.Response(
                 description="Quiz created successfully",
@@ -578,9 +688,12 @@ class QuizCreationView(GenericAPIView):
             subject = serializer.validated_data.get("subject")
             learning_goals = serializer.validated_data.get("learning_goals", [])
             course_id = serializer.validated_data.get("course_id")
+            max_questions = serializer.validated_data.get("max_amount_to_generate")
 
             # Generate the quiz data
-            quiz_data = generate_quiz(document_id, start, end, subject, learning_goals)
+            quiz_data = generate_quiz(
+                document_id, start, end, subject, learning_goals, max_questions
+            )
 
             title = generate_title_of_quiz(quiz_data)
             # Retrieve the authenticated user

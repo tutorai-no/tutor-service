@@ -33,7 +33,12 @@ SECRET_KEY = os.getenv(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-ALLOWED_HOSTS = ["46.101.107.247", "backend.tutorai.no", "localhost"]
+ALLOWED_HOSTS = [
+    "backend",
+    "46.101.107.247",
+    "backend.tutorai.no",
+    "localhost",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://backend.tutorai.no",
@@ -82,6 +87,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "drf_yasg",
+    "django_prometheus",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -89,9 +95,11 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",  # Keep only one instance
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "tutorai.urls"

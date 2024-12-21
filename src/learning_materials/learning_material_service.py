@@ -3,6 +3,7 @@
 import logging
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
 import uuid
 
 from learning_materials.knowledge_base.response_formulation import (
@@ -42,20 +43,38 @@ def _process_flashcards_by_pages(pages: list[Citation]) -> list[Flashcard]:
     return flashcards
 
 
+def _post_process_flashcards(
+    flashcards: list[Flashcard], max_amount_to_generate: Optional[int] = None
+) -> list[Flashcard]:
+
+    # TODO: Make an AI agent decide which flashcards to keep based on learning goals and curriculum
+    if max_amount_to_generate is not None:
+        flashcards = flashcards[:max_amount_to_generate]
+
+    return flashcards
+
+
 def process_flashcards_by_subject(
-    document_id: uuid.UUID, subject: str
+    document_id: uuid.UUID,
+    subject: str,
+    max_amount_to_generate: Optional[int] = None,
 ) -> list[Flashcard]:
     pages = get_context(document_id, subject)
     flashcards = _process_flashcards_by_pages(pages)
+    flashcards = _post_process_flashcards(flashcards, max_amount_to_generate)
 
     return flashcards
 
 
 def process_flashcards_by_page_range(
-    document_id: uuid.UUID, page_num_start: int, page_num_end: int
+    document_id: uuid.UUID,
+    page_num_start: int,
+    page_num_end: int,
+    max_amount_to_generate: Optional[int] = None,
 ) -> list[Flashcard]:
     pages = get_page_range(document_id, page_num_start, page_num_end)
     flashcards = _process_flashcards_by_pages(pages)
+    flashcards = _post_process_flashcards(flashcards, max_amount_to_generate)
     return flashcards
 
 
@@ -74,9 +93,7 @@ def process_answer(
 
     # Handle case when no context is available
     if len(curriculum) == 0:
-        answer_content = (
-            "I need a bit more information to help you. Please select some files, and I'll provide you with a detailed answer."
-        )
+        answer_content = "I need a bit more information to help you. Please select some files, and I'll provide you with a detailed answer."
     else:
         answer_content = response_formulation(user_question, curriculum, chat_history)
 
