@@ -12,6 +12,7 @@ from learning_materials.models import (
     QuestionAnswerModel,
     QuizModel,
     UserURL,
+    UserVideo,
 )
 
 
@@ -53,6 +54,17 @@ class UserURLSerializer(serializers.ModelSerializer):
         fields = ["id", "url", "name", "uploaded_at", "course_ids"]
         read_only_fields = ["user", "uploaded_at"]
 
+
+class UserVideoSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(required=False)
+    course_ids = serializers.PrimaryKeyRelatedField(
+        source="courses", many=True, read_only=True
+    )
+
+    class Meta:
+        model = UserVideo
+        fields = ["id", "url", "name", "description", "thumbnail",  "uploaded_at", "course_ids"]
+        read_only_fields = ["user", "uploaded_at"]
 
 class UserDocumentSerializer(serializers.Serializer):
     """A unified serializer that can handle both UserFile and UserURL instances."""
