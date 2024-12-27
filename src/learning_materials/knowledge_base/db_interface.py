@@ -84,6 +84,28 @@ class Database(ABC):
             bool: True if the curriculum was posted, False otherwise
         """
         pass
+    
+    @abstractmethod 
+    def post_video(
+        self,
+        video_url: str,
+        timestamp: str,
+        video_name: str,
+        embedding: list[float],
+        document_id: uuid.UUID,
+    ) -> bool:
+        """
+        Post the video to the database
+
+        Args:
+            video_url (str): The video url to be posted
+            embedding (list[float]): The embedding of the question
+
+        Returns:
+            bool: True if the video was posted, False otherwise
+        """
+        pass
+        
 
     @abstractmethod
     def is_reachable(self) -> bool:
@@ -209,6 +231,47 @@ class MongoDB(Database):
         except Exception as e:
             logger.error(f"Error posting curriculum: {e}")
             return False
+        
+    def post_video(
+        self,
+        video_url: str,
+        timestamp: str,
+        video_name: str,
+        embedding: list[float],
+        document_id: uuid.UUID,
+    ) -> bool:
+        
+        if not video_url:
+            raise ValueError("Video URL cannot be None")
+
+        if not timestamp:
+            raise ValueError("Timestamp cannot be None")
+
+        if not video_name:
+            raise ValueError("Video name cannot be None")
+
+        if not embedding:
+            raise ValueError("Embedding cannot be None")
+
+        if not document_id:
+            raise ValueError("Document ID cannot be None")
+
+        try:
+            # Insert the video into the database with metadata
+            self.collection.insert_one(
+                {
+                    "videoUrl": video_url,
+                    "timestamp": timestamp,
+                    "videoName": video_name,
+                    "embedding": embedding,
+                    "documentId": str(document_id),
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error posting video: {e}")
+            return False
+        
 
     def is_reachable(self) -> bool:
         try:
@@ -263,7 +326,33 @@ class MockDatabase(Database):
                         )
                     )
         return results
+    
+    def get_video(
+        self, document_id: uuid.UUID, embedding: list[float]
+    ) -> list[Citation]:
+        if not embedding:
+            raise ValueError("Embedding cannot be None")
 
+        results = []
+
+        # Filter documents based on similarity and document_name
+        for document in self.data:
+            if document["documentId"] == str(document_id):
+                similarity = cosine_similarity(embedding, document["embedding"])
+                if similarity > self.similarity_threshold:
+                    results.append(
+                        Citation(
+                            video_url=document["videoUrl"],
+                            timestamp=document["timestamp"],
+                            video_name=document["videoName"],
+                        )
+                    )
+        return results
+        
+        
+        
+        
+        
     def get_page_range(
         self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
     ) -> list[Citation]:
