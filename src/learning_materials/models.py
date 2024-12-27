@@ -62,6 +62,28 @@ class UserURL(models.Model):
 
     def __str__(self):
         return f"{self.url} (ID: {self.id})"
+    
+class UserVideo(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    url = models.URLField(max_length=1024)
+    name = models.CharField(max_length=255, default="VIDEO NOT NAMED")
+    description = models.TextField()
+    thumbnail = models.URLField(max_length=1024)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="uploaded_videos",
+    )
+    courses = models.ManyToManyField(Course, related_name="videos")
+
+    class Meta:
+        db_table = "user_videos"
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"{self.url} (ID: {self.id})"
+
 
 
 class Chat(models.Model):
