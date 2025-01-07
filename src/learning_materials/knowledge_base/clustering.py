@@ -14,4 +14,4 @@ def cluster_embeddings(embeddings: list[list[float]], n_clusters: int = 5) -> li
     """
     kmeans = KMeans(n_clusters=n_clusters, init="k-means++", random_state=42)
     kmeans.fit(embeddings)
-    return kmeans.labels_
+    return kmeans.labels_.tolist()
