@@ -12,6 +12,6 @@ def cluster_embeddings(embeddings: list[list[float]], n_clusters: int = 5) -> li
     Returns:
         list[int]: The cluster labels of the embeddings
     """
-    kmeans = KMeans(n_clusters=n_clusters)
+    kmeans = KMeans(n_clusters=n_clusters, init="k-means++", random_state=42)
     kmeans.fit(embeddings)
     return kmeans.labels_
