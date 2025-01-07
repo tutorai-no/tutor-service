@@ -64,7 +64,7 @@ class Streak(models.Model):
         return f"{self.user.username} - {self.current_streak}"
     
     def check_if_broken_streak(self):    
-        if (datetime.now().date() - self.end_date).hours > 36:
+        if (datetime.now().date() - self.end_date).total_seconds() > 36*60*60:
             self.current_streak = 0
             self.start_date = datetime.now().date()
             self.end_date = datetime.now().date()

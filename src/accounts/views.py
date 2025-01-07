@@ -223,6 +223,7 @@ class ActivityCreateView(generics.CreateAPIView):
 
         # Update Streak
         streak, created = Streak.objects.get_or_create(user=user)
+        streak.check_if_broken_streak()
         streak.increment_streak()
 
 

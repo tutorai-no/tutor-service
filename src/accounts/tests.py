@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import uuid
 from io import BytesIO
 from PIL import Image
@@ -914,3 +915,11 @@ class StreakTests(APITestCase):
         current_streak = Streak.objects.get(user=self.user).current_streak
         self.assertEqual(current_streak, 1)
 
+    def test_reset_streak(self):
+        streak: Streak = Streak.objects.get_or_create(user=self.user)[0]
+        streak.current_streak = 5
+        streak.end_date = datetime.now() - timedelta(days=1)
+        response = self.client.post(self.url, self.data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        current_streak = Streak.objects.get(user=self.user).current_streak
+        self.assertEqual(current_streak, 1)
