@@ -72,6 +72,11 @@ class Streak(models.Model):
     
     def increment_streak(self):
         today_date = datetime.now().date()
+        if self.current_streak == 0:
+            self.current_streak = 1
+            self.end_date = today_date
+            self.save()
+            return
         
         if not (today_date.month == self.end_date.month and today_date.year == self.end_date.year):
             self.current_streak += 1

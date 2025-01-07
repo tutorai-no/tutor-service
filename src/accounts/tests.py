@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase 
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
@@ -18,7 +18,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from rest_framework_simplejwt.exceptions import TokenError
 from unittest.mock import patch
 
-from accounts.models import Feedback, Subscription
+from accounts.models import Feedback, Subscription, Activity, Streak
 
 User = get_user_model()
 
@@ -876,3 +876,41 @@ class UserFeedbackTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertFalse(Feedback.objects.exists())
+
+class ActivityTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("activity-create")
+        self.user = User.objects.create_user(
+            username="activityuser", email="activity@example.com", password="StrongP@ss1")
+        self.client.force_authenticate(user=self.user)  
+
+    def test_add_activity(self):
+        data = {
+            "activity_type": "Flashcard",
+        }
+        activity_count = Activity.objects.filter(user=self.user).count()
+        self.assertEqual(activity_count, 0)
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        activity_count = Activity.objects.filter(user=self.user).count()
+        self.assertEqual(activity_count, 1)
+    
+
+class StreakTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("activity-create")
+        self.user = User.objects.create_user(
+            username="streakuser", email="streak@gmail.com", password="StrongP@ss1")
+        self.client.force_authenticate(user=self.user)
+        self.data = {
+            "activity_type": "Flashcard",
+        }
+
+    def test_increment_streak(self):
+        current_streak = Streak.objects.get_or_create(user=self.user)[0].current_streak
+        self.assertEqual(current_streak, 0)
+        response = self.client.post(self.url, self.data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        current_streak = Streak.objects.get(user=self.user).current_streak
+        self.assertEqual(current_streak, 1)
+
