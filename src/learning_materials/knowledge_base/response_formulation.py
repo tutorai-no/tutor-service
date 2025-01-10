@@ -79,7 +79,7 @@ def response_formulation(
     return response
 
 
-def _request_chat_completion(
+def _request_chat_compleLogintion(
     message: str,
     role: str = "system",
     history: list[dict[str, str]] = [],
@@ -140,3 +140,21 @@ def _template_system_prompt(document_names: list[str] = []) -> str:
         conversation to a close and tell them you’re here to help if they have further questions.
     """
     return template
+
+def generate_name_for_cluster(cluster_chunks: list[str]) -> str:
+    """
+    Given a list of cluster chunks, generate a name for the cluster
+
+    Args:
+        cluster_chunks (list[str]): The list of cluster chunks
+
+    Returns:
+        str: The name for the cluster
+    """
+    logger.info("Generating name for cluster")
+    prompt = f"Generate a name for the cluster that descibes what the text content is or what it is about based on the following cluster chunks: {cluster_chunks}. Make the name short and meaningful. Avoid using the word cluster in the name."
+
+    llm = create_llm_model()
+    name = llm.invoke(prompt)
+
+    return name.content.strip('"')

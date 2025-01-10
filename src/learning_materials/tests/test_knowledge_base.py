@@ -1,6 +1,7 @@
 from learning_materials.knowledge_base import factory
 from learning_materials.knowledge_base.clustering import cluster_embeddings
 from learning_materials.knowledge_base.embeddings import EmbeddingsModel
+from learning_materials.knowledge_base.response_formulation import generate_name_for_cluster    
 from django.test import TestCase
 
 
@@ -31,3 +32,21 @@ class ClusteringTest(TestCase):
         n_clusters = 3
         labels = cluster_embeddings(self.embeddings, n_clusters=n_clusters)
         self.assertGreaterEqual(len(labels), n_clusters)
+
+
+class ClusteringNamingTest(TestCase):
+    def setUp(self):
+        self.embedding_model: EmbeddingsModel = factory.create_embeddings_model()
+        self.cluster_chunks = [
+            "HTTP stands for HyperText Transfer Protocol.",
+            "It is a stateless protocol, meaning each request is independent of the others.",
+            "HTTP operates on the client-server model.",
+            "The default port for HTTP is 80, while HTTPS uses port 443.",
+            "HTTP/2 introduced multiplexing, allowing multiple requests to be sent over a single connection."
+        ]
+            
+
+    def test_cluster_naming(self):
+        cluster_name = generate_name_for_cluster(self.cluster_chunks)
+        print(cluster_name)
+        self.assertIsInstance(cluster_name, str)
