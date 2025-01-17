@@ -60,6 +60,10 @@ class Citation(BaseModel):
     )
 
 
+class FullCitation(Citation):
+    embedding: list[float] = Field(description="The embeddings of the page")
+
+
 class RagAnswer(BaseModel):
     role: str = Field(default="assistant", description="Role of the message")
     content: str = Field(description="The answer to the question")
