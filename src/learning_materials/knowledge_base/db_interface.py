@@ -4,7 +4,7 @@ from config import Config
 from pymongo import MongoClient
 import logging
 
-from learning_materials.learning_resources import Citation
+from learning_materials.learning_resources import Citation, FullCitation
 from learning_materials.knowledge_base.embeddings import (
     OpenAIEmbedding,
 )
@@ -117,6 +117,19 @@ class Database(ABC):
         """
         pass
 
+
+    @abstractmethod
+    def get_all_pages(self, document_id: uuid.UUID) -> list[FullCitation]:
+        """
+        Retrieves all pages from the knowledge base.
+
+        Args:
+            document_id (str): The ID of the document to retrieve the pages from.
+
+        Returns:
+            list[FullCitation]: A list of FullCitation objects representing pieces of content, like sentences, from the specified document.
+        """
+        pass
 
 class MongoDB(Database):
     def __init__(self):
@@ -282,6 +295,32 @@ class MongoDB(Database):
         except Exception as e:
             logger.error(f"Failed to ping MongoDB: {e}")
             return False
+        
+    def get_all_pages(self, document_id: uuid.UUID) -> list[FullCitation]:
+        # Get the curriculum from the database
+        cursor = self.collection.find(
+            {
+                "documentId": str(document_id),
+            }
+        )
+
+        if not cursor:
+            raise ValueError("No documents found")
+
+        results = []
+
+        for document in cursor:
+            results.append(
+                FullCitation(
+                    text=document["text"],
+                    page_num=document["pageNum"],
+                    document_name=document["documentName"],
+                    document_id=document["documentId"],
+                    embedding=document["embedding"],
+                )
+            )
+
+        return results
 
 
 class MockDatabase(Database):

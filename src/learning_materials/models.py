@@ -3,7 +3,7 @@ from django.db import models
 from uuid import uuid4
 
 from tutorai import settings
-
+    
 
 class Course(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -83,6 +83,19 @@ class UserVideo(models.Model):
 
     def __str__(self):
         return f"{self.url} (ID: {self.id})"
+
+
+class ClusterElement(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user_file = models.ForeignKey(
+        UserFile, on_delete=models.CASCADE, related_name="cluster_elements"
+    )
+
+    cluster_name = models.CharField(max_length=255)
+    page_number = models.IntegerField()
+    mastery = models.FloatField(default=0.0)
+    x = models.FloatField(help_text="The x-coordinate of the element")
+    y = models.FloatField(help_text="The y-coordinate of the element")
 
 
 
