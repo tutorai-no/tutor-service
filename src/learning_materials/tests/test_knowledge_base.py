@@ -142,3 +142,7 @@ class ClusteringIntegrationTest(TestCase):
         cluster_elements = ClusterElement.objects.all()
         self.assertTrue(cluster_elements.exists())
         self.assertEqual(len(cluster_elements), len(self.contexts))
+
+    def test_cluster_document_with_invalid_document_id(self):
+        with self.assertRaises(ValueError):
+            cluster_document(uuid4())
