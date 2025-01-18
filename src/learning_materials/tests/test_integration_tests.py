@@ -1822,7 +1822,7 @@ class FileUploadTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["detail"], "Course not found")
 
-    @patch("learning_materials.files.file_embeddings.create_file_embeddings")
+    @patch("learning_materials.views.create_file_embeddings")
     def test_upload_when_tango_is_down(self, mock_create_file_embeddings):
         # The Mock will raise an exception when called
         mock_create_file_embeddings.side_effect = Exception("Tango is down")
@@ -1841,7 +1841,8 @@ class FileUploadTest(TestCase):
         # Check that no UserFile was created
         self.assertFalse(UserFile.objects.exists())
 
-    def test_upload_url(self):
+    @patch("learning_materials.views.create_url_embeddings")
+    def test_upload_url(self, mock_create_url_embeddings):
         self.authenticate()
 
         wikipedia_url = "https://en.wikipedia.org/wiki/Impeachment_of_Yoon_Suk_Yeol"
@@ -1850,11 +1851,12 @@ class FileUploadTest(TestCase):
             "course_id": str(self.course.id),
         }
         response = self.client.post(self.url, data)
-        print(f"Response: {response.data}", flush=True)
+        mock_create_url_embeddings.assert_called_once()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(UserURL.objects.filter(url=wikipedia_url).exists())
 
-    def test_upload_youtube_url(self):
+    @patch("learning_materials.views.create_url_embeddings")
+    def test_upload_youtube_url(self, mock_url_embeddings):
         self.authenticate()
 
         youtube_url = "https://www.youtube.com/watch?v=9bZkp7q19f0"
@@ -1864,9 +1866,11 @@ class FileUploadTest(TestCase):
         }
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        mock_url_embeddings.assert_called_once()
         self.assertTrue(UserURL.objects.filter(url=youtube_url).exists())
 
-    def test_upload_multiple_urls(self):
+    @patch("learning_materials.views.create_url_embeddings")
+    def test_upload_multiple_urls(self, mock_url_embeddings):
         self.authenticate()
 
         urls = [
@@ -1881,7 +1885,11 @@ class FileUploadTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(all(UserURL.objects.filter(url=url).exists() for url in urls))
 
-    def test_multiple_files_and_multiple_urls(self):
+    @patch("learning_materials.views.create_url_embeddings")
+    @patch("learning_materials.views.create_file_embeddings")
+    def test_multiple_files_and_multiple_urls(
+        self, mock_create_url_embeddings, mock_create_file_embeddings
+    ):
         self.authenticate()
 
         # Create a dummy file
