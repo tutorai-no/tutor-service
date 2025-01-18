@@ -5,16 +5,19 @@ from django.contrib.auth import get_user_model
 
 from learning_materials.knowledge_base import factory
 from learning_materials.knowledge_base.rag_service import post_context
-from learning_materials.knowledge_base.clustering import cluster_embeddings, create_2d_projection, cluster_document
+from learning_materials.knowledge_base.clustering import (
+    cluster_embeddings,
+    create_2d_projection,
+    cluster_document,
+)
 from learning_materials.knowledge_base.embeddings import EmbeddingsModel
-from learning_materials.knowledge_base.response_formulation import generate_name_for_cluster
+from learning_materials.knowledge_base.response_formulation import (
+    generate_name_for_cluster,
+)
 from learning_materials.models import ClusterElement, UserFile
 from accounts.models import CustomUser
 
 User = get_user_model()
-
-
-
 
 
 class ClusteringTest(TestCase):
@@ -54,9 +57,8 @@ class ClusteringNamingTest(TestCase):
             "It is a stateless protocol, meaning each request is independent of the others.",
             "HTTP operates on the client-server model.",
             "The default port for HTTP is 80, while HTTPS uses port 443.",
-            "HTTP/2 introduced multiplexing, allowing multiple requests to be sent over a single connection."
+            "HTTP/2 introduced multiplexing, allowing multiple requests to be sent over a single connection.",
         ]
-            
 
     def test_cluster_naming(self):
         cluster_name = generate_name_for_cluster(self.cluster_chunks)
@@ -76,7 +78,8 @@ class ProjectionTest(TestCase):
             "What do you call fake spaghetti? An impasta!",
             "Why did the math book look sad? Because it had too many problems.",
             "What do you call a bear with no teeth? A gummy bear.",
-            "Why don’t oysters donate to charity? Because"]
+            "Why don’t oysters donate to charity? Because",
+        ]
         self.embeddings = [
             self.embedding_model.get_embedding(text) for text in self.texts
         ]
@@ -88,9 +91,10 @@ class ProjectionTest(TestCase):
         self.assertEqual(len(projection[0]), 2)
         self.assertEqual(len(projection), len(self.embeddings))
 
+
 class ClusteringIntegrationTest(TestCase):
     def setUp(self):
-        
+
         self.valid_document_name = "test.pdf"
         self.subject = "Anakin Skywalker"
         self.contexts = [
@@ -104,8 +108,8 @@ class ClusteringIntegrationTest(TestCase):
             "What do you call a bear with no teeth? A gummy bear.",
             "Why don’t oysters donate to charity? Because",
         ]
-       
-       # Create a user so that we can create a user file
+
+        # Create a user so that we can create a user file
         self.user = User.objects.create_user(
             username="clustersuser",
             email="cluster@lover.com",
@@ -119,7 +123,7 @@ class ClusteringIntegrationTest(TestCase):
         # Populate rag database
         for i, context in enumerate(self.contexts):
             post_context(context, i, self.valid_document_name, self.document_id)
-    
+
     def create_user_file(self, user, course=None):
         """Helper method to create user files"""
         user_file = UserFile.objects.create(
@@ -133,14 +137,10 @@ class ClusteringIntegrationTest(TestCase):
         if course:
             user_file.courses.add(course)
         return user_file
-       
+
     def test_cluster_document(self):
         cluster_document(self.document_id)
         cluster_elements = ClusterElement.objects.all()
         print(cluster_elements, flush=True)
         self.assertTrue(cluster_elements.exists())
         self.assertEqual(len(cluster_elements), 5)
-
-
-       
-       
