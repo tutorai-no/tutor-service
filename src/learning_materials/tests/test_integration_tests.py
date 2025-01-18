@@ -2016,6 +2016,79 @@ class UserFilesTest(TestCase):
         self.assertEqual(file.name, new_name)
 
 
+class ClusteringAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="testuser", email="testemail@domain.com", password="Str0ngP@ss!23"
+        )
+        self.url = f"{base}clustering/"
+        self.valid_document_name = "test.pdf"
+        self.subject = "Anakin Skywalker"
+        self.contexts = [
+            "Why don't scientists trust atoms? Because they make up everything!",
+            "Why did the scarecrow win an award? Because he was outstanding in his field!",
+            "Why don’t skeletons fight each other? They don’t have the guts.",
+            "What do you call cheese that isn't yours? Nacho cheese.",
+            "Why couldn't the bicycle stand up by itself? It was two-tired.",
+            "What do you call fake spaghetti? An impasta!",
+            "Why did the math book look sad? Because it had too many problems.",
+            "What do you call a bear with no teeth? A gummy bear.",
+            "Why don’t oysters donate to charity? Because",
+        ]
+
+        # Create a user so that we can create a user file
+        self.user = User.objects.create_user(
+            username="clustersuser",
+            email="cluster@lover.com",
+            password="StrongP@ss1",
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.refresh_token = str(refresh)
+        self.access_token = str(refresh.access_token)
+
+        # We need to create a user file to be able to create a cluster element
+        self.user_file = self.create_user_file(self.user)
+        self.document_id = self.user_file.id
+
+        # Populate rag database
+        for i, context in enumerate(self.contexts):
+            post_context(context, i, self.valid_document_name, self.document_id)
+
+    def authenticate(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + self.access_token)
+
+    def create_user_file(self, user, course=None):
+        """Helper method to create user files"""
+        user_file = UserFile.objects.create(
+            name="Test File",
+            blob_name="test_blob",
+            file_url="http://example.com/file.pdf",
+            num_pages=10,
+            content_type="application/pdf",
+            user=user,
+        )
+        if course:
+            user_file.courses.add(course)
+        return user_file
+
+    def test_valid_request(self):
+        """Test the clustering endpoint with a valid request."""
+        self.authenticate()
+        valid_payload = {
+            "document_id": self.document_id,
+        }
+        response = self.client.get(self.url, valid_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_unauthenticated_request(self):
+        """Test the clustering endpoint without authentication."""
+        response = self.client.get(
+            self.url, {"document_id": self.document_id}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
 class CourseAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()

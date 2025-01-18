@@ -90,7 +90,7 @@ class ProjectionTest(TestCase):
         self.assertEqual(len(projection), len(self.embeddings))
 
 
-class ClusteringIntegrationTest(TestCase):
+class ClusteringCreationTest(TestCase):
     def setUp(self):
 
         self.valid_document_name = "test.pdf"
