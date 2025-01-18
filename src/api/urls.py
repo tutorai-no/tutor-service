@@ -22,6 +22,7 @@ from learning_materials.views import (
     ChatResponseView,
     ChatListView,
     ChatView,
+    ClusterListView,
     CourseViewSet,
     FileUploadView,
     UserDocumentsListView,
@@ -83,6 +84,8 @@ urlpatterns = [
     path("files/upload/", FileUploadView.as_view(), name="upload-file"),
     path("files/", UserDocumentsListView.as_view(), name="user-files"),
     path("files/<uuid:id>/", UserDocumentDetailView.as_view(), name="file-update"),
+    # Clustering
+    path("clustering/", ClusterListView.as_view(), name="clustering"),
     # Chat
     path("chat/response/", ChatResponseView.as_view(), name="chat-response"),
     path("chat/history/", ChatListView.as_view(), name="chat-history-list"),
