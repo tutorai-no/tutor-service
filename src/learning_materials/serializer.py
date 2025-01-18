@@ -3,6 +3,7 @@ from rest_framework.exceptions import NotFound
 
 from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAINER_NAME
 from learning_materials.models import (
+    ClusterElement,
     Course,
     UserFile,
     Chat,
@@ -63,8 +64,17 @@ class UserVideoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserVideo
-        fields = ["id", "url", "name", "description", "thumbnail",  "uploaded_at", "course_ids"]
+        fields = [
+            "id",
+            "url",
+            "name",
+            "description",
+            "thumbnail",
+            "uploaded_at",
+            "course_ids",
+        ]
         read_only_fields = ["user", "uploaded_at"]
+
 
 class UserDocumentSerializer(serializers.Serializer):
     """A unified serializer that can handle both UserFile and UserURL instances."""
@@ -330,3 +340,9 @@ class QuizModelSerializer(serializers.ModelSerializer):
 
         # Combine both types of questions
         return qa_serialized + mc_serialized
+
+
+class ClusterElementSerializer(serializers.Serializer):
+    class Meta:
+        model = ClusterElement
+        fields = ["id", "user_file", "cluster_name", "page_number", "mastery", "x", "y"]

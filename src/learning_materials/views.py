@@ -42,6 +42,7 @@ from learning_materials.quizzes.quiz_service import (
 from learning_materials.flashcards.flashcards_service import parse_for_anki
 from learning_materials.models import (
     Cardset,
+    ClusterElement,
     Course,
     FlashcardModel,
     Chat,
@@ -59,6 +60,7 @@ from learning_materials.translator import (
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
     AdditionalContextSerializer,
+    ClusterElementSerializer,
     CourseSerializer,
     UserDocumentSerializer,
     UserFileSerializer,
@@ -297,6 +299,15 @@ class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ClusterListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ClusterElementSerializer
+
+    def get_queryset(self):
+        document_id = self.request.query_params.get("document_id")
+        return ClusterElement.objects.filter(user_file=document_id)
 
 
 class FlashcardGenerationView(GenericAPIView):
