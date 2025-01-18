@@ -84,8 +84,8 @@ class Database(ABC):
             bool: True if the curriculum was posted, False otherwise
         """
         pass
-    
-    @abstractmethod 
+
+    @abstractmethod
     def post_video(
         self,
         video_url: str,
@@ -105,7 +105,6 @@ class Database(ABC):
             bool: True if the video was posted, False otherwise
         """
         pass
-        
 
     @abstractmethod
     def is_reachable(self) -> bool:
@@ -116,7 +115,6 @@ class Database(ABC):
             bool: True if the database is reachable, False otherwise
         """
         pass
-
 
     @abstractmethod
     def get_all_pages(self, document_id: uuid.UUID) -> list[FullCitation]:
@@ -130,6 +128,7 @@ class Database(ABC):
             list[FullCitation]: A list of FullCitation objects representing pieces of content, like sentences, from the specified document.
         """
         pass
+
 
 class MongoDB(Database):
     def __init__(self):
@@ -244,7 +243,7 @@ class MongoDB(Database):
         except Exception as e:
             logger.error(f"Error posting curriculum: {e}")
             return False
-        
+
     def post_video(
         self,
         video_url: str,
@@ -253,7 +252,7 @@ class MongoDB(Database):
         embedding: list[float],
         document_id: uuid.UUID,
     ) -> bool:
-        
+
         if not video_url:
             raise ValueError("Video URL cannot be None")
 
@@ -284,7 +283,6 @@ class MongoDB(Database):
         except Exception as e:
             logger.error(f"Error posting video: {e}")
             return False
-        
 
     def is_reachable(self) -> bool:
         try:
@@ -295,7 +293,7 @@ class MongoDB(Database):
         except Exception as e:
             logger.error(f"Failed to ping MongoDB: {e}")
             return False
-        
+
     def get_all_pages(self, document_id: uuid.UUID) -> list[FullCitation]:
         # Get the curriculum from the database
         cursor = self.collection.find(
@@ -365,7 +363,7 @@ class MockDatabase(Database):
                         )
                     )
         return results
-    
+
     def get_video(
         self, document_id: uuid.UUID, embedding: list[float]
     ) -> list[Citation]:
@@ -387,11 +385,7 @@ class MockDatabase(Database):
                         )
                     )
         return results
-        
-        
-        
-        
-        
+
     def get_page_range(
         self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
     ) -> list[Citation]:
@@ -437,3 +431,19 @@ class MockDatabase(Database):
 
     def is_reachable(self) -> bool:
         return True
+
+    def get_all_pages(self, document_id: uuid.UUID) -> list[FullCitation]:
+        results = []
+
+        for document in self.data:
+            if document["documentId"] == str(document_id):
+                results.append(
+                    FullCitation(
+                        text=document["text"],
+                        page_num=document["pageNum"],
+                        document_name=document["documentName"],
+                        document_id=document["documentId"],
+                        embedding=document["embedding"],
+                    )
+                )
+        return results
