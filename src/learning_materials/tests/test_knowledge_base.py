@@ -15,7 +15,6 @@ from learning_materials.knowledge_base.response_formulation import (
     generate_name_for_cluster,
 )
 from learning_materials.models import ClusterElement, UserFile
-from accounts.models import CustomUser
 
 User = get_user_model()
 
@@ -86,7 +85,6 @@ class ProjectionTest(TestCase):
 
     def test_projection(self):
         projection = create_2d_projection(self.embeddings)
-        print(projection)
         self.assertTrue(all(isinstance(point, list) for point in projection))
         self.assertEqual(len(projection[0]), 2)
         self.assertEqual(len(projection), len(self.embeddings))
@@ -139,8 +137,8 @@ class ClusteringIntegrationTest(TestCase):
         return user_file
 
     def test_cluster_document(self):
+        self.assertFalse(ClusterElement.objects.exists())
         cluster_document(self.document_id)
         cluster_elements = ClusterElement.objects.all()
-        print(cluster_elements, flush=True)
         self.assertTrue(cluster_elements.exists())
-        self.assertEqual(len(cluster_elements), 5)
+        self.assertEqual(len(cluster_elements), len(self.contexts))
