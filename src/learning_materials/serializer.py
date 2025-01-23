@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 
-from learning_materials.files.file_service import generate_sas_url, AZURE_CONTAINER_NAME
+from learning_materials.files.file_service import generate_sas_url
 from learning_materials.models import (
     ClusterElement,
     Course,
@@ -181,19 +181,28 @@ class AdditionalContextSerializer(ContextSerializer):
 
 
 class CourseSerializer(serializers.ModelSerializer):
-    files = UserFileSerializer(
-        many=True, read_only=True
-    )  # Use the appropriate serializer
+    files = UserFileSerializer(many=True, read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    language = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    sections = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        allow_empty=True
+    )
 
     class Meta:
         model = Course
-        fields = ["id", "name", "files", "user"]
-        # No need to specify read_only_fields since 'user' is set via HiddenField
+        fields = ["id", "name", "language", "sections", "files", "user"]
 
     def create(self, validated_data):
-        # The user is automatically set by the HiddenField
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get("name", instance.name)
+        instance.language = validated_data.get("language", instance.language)
+        instance.sections = validated_data.get("sections", instance.sections)
+        instance.save()
+        return instance
 
 
 class ChatRequestSerializer(serializers.Serializer):
@@ -205,6 +214,7 @@ class ChatRequestSerializer(serializers.Serializer):
     message = serializers.CharField()
 
     def validate(self, data):
+        from learning_materials.models import Chat, Course
         user = self.context["request"].user
         chat_id = data.get("chatId")
         course_id = data.get("courseId")
@@ -243,7 +253,6 @@ class ReviewFlashcardSerializer(serializers.Serializer):
     id = serializers.IntegerField(
         help_text="The ID of the flashcard",
     )
-
     answer_was_correct = serializers.BooleanField(
         help_text="If the answer was correct",
     )
@@ -253,7 +262,6 @@ class QuizStudentAnswer(serializers.Serializer):
     quiz_id = serializers.CharField(
         help_text="The ID of the quiz",
     )
-    # Answers: The list of answers
     student_answers = serializers.ListField(
         child=serializers.CharField(allow_blank=True),
         help_text="The list of answers",
@@ -261,7 +269,6 @@ class QuizStudentAnswer(serializers.Serializer):
 
 
 class CurriculumSerializer(serializers.Serializer):
-
     curriculum = serializers.ListField(
         child=serializers.FileField(allow_empty_file=False, use_url=False),
         help_text="The list of files to be processed",
