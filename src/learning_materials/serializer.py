@@ -201,9 +201,9 @@ class CourseSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "language",
-            "sections",
-            "preferred_tools",  # Include it here
             "files",
+            "sections",
+            "preferred_tools",
             "user",
         ]
 
