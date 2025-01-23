@@ -189,10 +189,23 @@ class CourseSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True
     )
+    preferred_tools = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        allow_empty=True
+    )
 
     class Meta:
         model = Course
-        fields = ["id", "name", "language", "sections", "files", "user"]
+        fields = [
+            "id",
+            "name",
+            "language",
+            "sections",
+            "preferred_tools",  # Include it here
+            "files",
+            "user",
+        ]
 
     def create(self, validated_data):
         return super().create(validated_data)
@@ -201,6 +214,10 @@ class CourseSerializer(serializers.ModelSerializer):
         instance.name = validated_data.get("name", instance.name)
         instance.language = validated_data.get("language", instance.language)
         instance.sections = validated_data.get("sections", instance.sections)
+        instance.preferred_tools = validated_data.get(
+            "preferred_tools",
+            instance.preferred_tools,
+        )
         instance.save()
         return instance
 
