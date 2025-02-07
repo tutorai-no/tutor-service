@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 import uuid
 
 from rest_framework.views import APIView
@@ -359,7 +360,7 @@ class FlashcardGenerationView(GenericAPIView):
             else:
                 flashcards = []
 
-            course = None
+            course: Optional[Course] = None
             if course_id:
                 course = Course.objects.get(id=course_id)
 
@@ -704,7 +705,7 @@ class QuizGenerationView(GenericAPIView):
             title = generate_title_of_quiz(quiz_data)
             user = request.user
 
-            course = None
+            course: Optional[Course] = None
             if course_id:
                 course = Course.objects.get(id=course_id)
 
