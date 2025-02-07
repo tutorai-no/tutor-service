@@ -231,7 +231,6 @@ class ChatRequestSerializer(serializers.Serializer):
     message = serializers.CharField()
 
     def validate(self, data):
-        from learning_materials.models import Chat, Course
         user = self.context["request"].user
         chat_id = data.get("chatId")
         course_id = data.get("courseId")
