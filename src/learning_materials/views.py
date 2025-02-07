@@ -349,6 +349,8 @@ class FlashcardGenerationView(GenericAPIView):
             max_flashcards = serializer.validated_data.get("max_amount_to_generate")
             user = request.user
 
+            flashcards = []
+
             if start is not None and end is not None:
                 flashcards = process_flashcards_by_page_range(
                     document_id, start, end, max_flashcards
@@ -358,7 +360,10 @@ class FlashcardGenerationView(GenericAPIView):
                     document_id, subject, max_flashcards
                 )
             else:
-                flashcards = []
+                return Response(
+                    {"detail": "Either start and end page or subject is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             course: Optional[Course] = None
             if course_id:
