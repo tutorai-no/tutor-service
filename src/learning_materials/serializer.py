@@ -183,7 +183,7 @@ class AdditionalContextSerializer(ContextSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     files = UserFileSerializer(many=True, read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    language = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    language = serializers.CharField(required=False, allow_blank=True, allow_null=False)
     sections = serializers.ListField(
         child=serializers.DictField(),
         required=False,
