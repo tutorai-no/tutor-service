@@ -25,6 +25,7 @@ def generate_quiz(
     end: Optional[int],
     subject: Optional[str],
     learning_goals: list[str] = [],
+    language: Optional[str] = "en",
     max_questions: Optional[int] = None,
 ) -> Quiz:
     """
@@ -52,16 +53,18 @@ def generate_quiz(
     # Define the prompt template for generating quiz questions
     quiz_prompt_template = """
         You are a teacher AI tasked with creating a quiz based on the following content and learning goals.
-        The quiz must have a good variety of multiple-choice, short answer questions.
-
+        The quiz must have a good variety of multiple-choice and short answer questions.
+        
+        IMPORTANT: All quiz content—including questions, options, and answers—must be written in the language corresponding to the language code "{language}". Ensure that no content is in any other language.
+        
         Content:
         {page_content}
-
+        
         Learning Goals:
         {learning_goals}
-
+        
         Number of questions: {num_questions}
-
+        
         Please format your response as a JSON object matching the Quiz model with these exact keys:
         - "document_name": (string) The name of the document.
         - "start_page": (integer) The starting page number of the quiz.
@@ -92,6 +95,7 @@ def generate_quiz(
         # Chain to determine the quiz questions for each page
         quiz_data = chain.invoke(
             {
+                "language": language,
                 "page_content": citation.text,
                 "learning_goals": learning_goals,
                 "num_questions": questions_per_citation,

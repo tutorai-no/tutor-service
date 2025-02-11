@@ -10,7 +10,7 @@ from learning_materials.knowledge_base.llm import create_llm_model
 logger = logging.getLogger(__name__)
 
 
-def generate_title_of_chat(user_question: str, answer: RagAnswer) -> str:
+def generate_title_of_chat(user_question: str, language: str, answer: RagAnswer) -> str:
     """
     Generate the title of the chat based on the user question and the answer
 
@@ -24,7 +24,7 @@ def generate_title_of_chat(user_question: str, answer: RagAnswer) -> str:
 
     logger.info("Generating title of chat")
     prompt = (
-        f"Generate the title of the chat based on the user question and the answer. The title should be engaging and concise. Here is the user question and the answer:\n\nUser Question: {user_question}\n\nAnswer: {answer} The title should be engaging and concise no more then 5 words.",
+        f"Generate the title of the chat based on the user question and the answer. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here is the user question and the answer:\n\nUser Question: {user_question}\n\nAnswer: {answer} The title should be engaging and concise no more then 5 words.",
     )
 
     llm = create_llm_model()
@@ -33,10 +33,10 @@ def generate_title_of_chat(user_question: str, answer: RagAnswer) -> str:
     return title.content.strip('"')
 
 
-def generate_title_of_flashcards(flashcards: list[Flashcard]) -> str:
+def generate_title_of_flashcards(flashcards: list[Flashcard], language: str) -> str:
 
     logger.info("Generating title of flashcards")
-    prompt = f"Generate the title of the flashcards based on the flashcards. The title should be engaging and concise. Here are the flashcards:\n\n {flashcards}"
+    prompt = f"Generate the title of the flashcards based on the flashcards. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here are the flashcards:\n\n {flashcards}"
 
     llm = create_llm_model()
     title = llm.invoke(prompt)
@@ -44,10 +44,10 @@ def generate_title_of_flashcards(flashcards: list[Flashcard]) -> str:
     return title.content.strip('"')
 
 
-def generate_title_of_quiz(quiz: Quiz) -> str:
+def generate_title_of_quiz(quiz: Quiz, language: str) -> str:
 
     logger.info("Generating title of quiz")
-    prompt = f"Generate the title of the quiz based on the questions. The title should be engaging and concise. Here is the quiz:\n\n {quiz}"
+    prompt = f"Generate the title of the quiz based on the questions. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here is the quiz:\n\n {quiz}"
 
     llm = create_llm_model()
     title = llm.invoke(prompt)
@@ -56,7 +56,7 @@ def generate_title_of_quiz(quiz: Quiz) -> str:
 
 
 def response_formulation(
-    user_input: str, context: list[str], chat_history: list[dict[str, str]]
+    user_input: str, context: list[str], chat_history: list[dict[str, str]], language: str
 ) -> str:
     logger.info("Generating response")
 
@@ -74,12 +74,12 @@ def response_formulation(
         template,
         role="user",
         history=chat_history,
-        system_prompt=_template_system_prompt(),
+        system_prompt=_template_system_prompt(language),
     )
     return response
 
 
-def _request_chat_compleLogintion(
+def _request_chat_completion(
     message: str,
     role: str = "system",
     history: list[dict[str, str]] = [],
@@ -116,12 +116,13 @@ def _request_chat_compleLogintion(
     return result
 
 
-def _template_system_prompt(document_names: list[str] = []) -> str:
+def _template_system_prompt(language: str, document_names: list[str] = []) -> str:
     template = f"""
         # Role and Goal:
         You are an upbeat, encouraging tutor who helps students understand concepts by explaining ideas and answering students questions. You are happy to help students with any questions.
         # Constraints:
         You have access to the following documents to help the student: {document_names}
+        You will give your answer in the language of the course, which has the language code "{language}".
         You will be given questions from the student with the relevant context found in the curriculum. The context is added after the user has asked their question.
         If the student asks a question that is out of scope, you should let the student know that the question is out of scope for the curriculum but still try to provide help.
         In case the question is out of scope, should start by telling the names of the documents you have access to.
