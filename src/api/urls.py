@@ -31,7 +31,7 @@ from learning_materials.views import (
     CardsetExportView,
     CardsetViewSet,
     CompendiumCreationView,
-    FlashcardGenerationView,
+    CreateCardsetView,
     FlashcardViewSet,
     QuizGenerationView,
     QuizGradingView,
@@ -93,7 +93,7 @@ urlpatterns = [
     # Flashcards
     path(
         "flashcards/create/",
-        FlashcardGenerationView.as_view(),
+        CreateCardsetView.as_view(),
         name="create-flashcards",
     ),
     path("flashcards/review/", ReviewFlashcardView.as_view(), name="review-flashcards"),
