@@ -133,15 +133,17 @@ class Cardset(models.Model):
     name = models.CharField(max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
     subject = models.CharField(
-        max_length=1000, help_text="The subject of the cardset", blank=True, null=True
+        max_length=1000, help_text="The subject of the cardset", default=None, blank=True, null=True
     )
     start_page = models.IntegerField(
         help_text="The starting page of the quiz",
+        default=None,
         null=True,
         blank=True,
     )
     end_page = models.IntegerField(
         help_text="The ending page of the quiz",
+        default=None,
         null=True,
         blank=True,
     )
@@ -177,7 +179,7 @@ class Cardset(models.Model):
 class FlashcardModel(models.Model):
     """Model to store flashcards"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     front = models.TextField(help_text="The front of the flashcard")
     back = models.TextField(help_text="The back of the flashcard")
     proficiency = models.IntegerField(
@@ -233,7 +235,7 @@ class FlashcardModel(models.Model):
 class QuizModel(models.Model):
     """Model to store quizzes"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(
         max_length=100, default="Not Named", help_text="The name of the quiz"
     )
@@ -280,7 +282,7 @@ class QuizModel(models.Model):
 class QuestionAnswerModel(models.Model):
     """Model to store question-answer pairs"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     question = models.TextField(help_text="The question part of the QA pair")
     answer = models.TextField(help_text="The answer part of the QA pair")
     quiz = models.ForeignKey(
@@ -300,7 +302,7 @@ class QuestionAnswerModel(models.Model):
 class MultipleChoiceQuestionModel(models.Model):
     """Model to store multiple-choice questions"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     question = models.TextField(
         help_text="The question part of the multiple-choice question"
     )
