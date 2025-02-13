@@ -98,8 +98,10 @@ class ClusterElement(models.Model):
     cluster_name = models.CharField(max_length=255)
     page_number = models.IntegerField()
     mastery = models.FloatField(default=0.0)
+    dimensions = models.IntegerField(default=2)
     x = models.FloatField(help_text="The x-coordinate of the element")
     y = models.FloatField(help_text="The y-coordinate of the element")
+    z = models.FloatField(help_text="The z-coordinate of the element", default=0.0)
 
 
 class Chat(models.Model):
