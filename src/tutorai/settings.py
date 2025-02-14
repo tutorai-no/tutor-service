@@ -276,9 +276,9 @@ LOGGING = {
     },
 }
 
-
+# Kafka settings
 KAFKA_CONFIGURATION = {
-    'bootstrap.servers': "localhost:9092",
+    'bootstrap.servers': "broker:9092",
     'auto.offset.reset': 'smallest',
     'group.id': "user_group"
 }
