@@ -9,6 +9,7 @@ from learning_materials.learning_resources import FullCitation
 from learning_materials.models import ClusterElement, UserFile
 
 
+
 def cluster_embeddings(embeddings: list[list[float]], n_clusters: int = 5) -> list[int]:
     """
     Cluster the embeddings using KMeans clustering
@@ -34,6 +35,9 @@ def create_projection(embeddings: list[list[float]], dimensions: int = 2) -> lis
     Returns:
         list[list[float]]: The 2D projection of the embeddings
     """
+
+    print(hello_world(), flush=True)
+
     tsne = TSNE(n_components=dimensions, perplexity=5, random_state=42, init="random", learning_rate=200)
     embeddings = np.array(embeddings)
     return tsne.fit_transform(embeddings).tolist()

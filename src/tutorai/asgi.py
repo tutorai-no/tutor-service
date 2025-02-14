@@ -14,3 +14,8 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tutorai.settings")
 
 application = get_asgi_application()
+
+# Start consumer listeners
+from broker.consumers import start_consumers
+
+start_consumers()
