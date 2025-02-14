@@ -62,7 +62,7 @@ class RequestAccessView(generics.CreateAPIView):
             message += f"Other Source: {application.other_heard_about_us}\n"
         message += f"Inspiration: {application.inspiration}\n\n"
         message += "Please review the application in the admin panel."
-
+        
         admin_emails = [admin[1] for admin in settings.ADMINS]
         if admin_emails:
             send_mail(
@@ -220,7 +220,7 @@ class ActivityCreateView(generics.CreateAPIView):
 
         # Create Activity record
         activity = serializer.save(user=user)
-
+        
         # Update Streak
         streak, created = Streak.objects.get_or_create(user=user)
         streak.check_if_broken_streak()

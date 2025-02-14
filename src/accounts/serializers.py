@@ -25,7 +25,8 @@ from accounts.models import (
     Streak,
     Activity,
 )
-
+from broker.producer import producer
+from broker.topics import Topic
 
 User = get_user_model()
 
@@ -178,6 +179,7 @@ class LoginSerializer(TokenObtainPairSerializer):
             data = super().validate({"username": user.username, "password": password})
             user.last_login = timezone.now()
             user.save()
+            producer.publish(Topic.ACCOUNT_CREATED, {"user_id": user.id})
             return data
         else:
             raise AuthenticationFailed("Invalid credentials", code="authorization")
