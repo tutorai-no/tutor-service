@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 import uuid
 
 from rest_framework.views import APIView
@@ -50,7 +51,6 @@ from learning_materials.models import (
     UserFile,
     UserURL,
 )
-
 from learning_materials.translator import (
     translate_flashcard_to_orm_model,
     translate_quiz_to_orm_model,
@@ -261,9 +261,9 @@ class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
     lookup_url_kwarg = "id"
 
     def get_object(self):
-        # Try to get UserFile first
         user = self.request.user
         doc_id = self.kwargs.get("id")
+        # Try to get UserFile first
         try:
             return UserFile.objects.get(id=doc_id, user=user)
         except UserFile.DoesNotExist:
@@ -273,9 +273,7 @@ class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
         try:
             return UserURL.objects.get(id=doc_id, user=user)
         except UserURL.DoesNotExist:
-            # Raise a 404 if neither found
             from rest_framework.exceptions import NotFound
-
             raise NotFound("Document not found")
 
     def destroy(self, request, *args, **kwargs):
@@ -293,8 +291,7 @@ class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
             instance.name = name
             instance.save()
         else:
-            # For URL, you could potentially allow updating the 'url' field.
-            # If not, just ignore or raise an error.
+            # For URL, you could allow updating 'url' or other fields if you like.
             pass
 
         serializer = self.get_serializer(instance)
@@ -352,17 +349,23 @@ class FlashcardGenerationView(GenericAPIView):
             max_flashcards = serializer.validated_data.get("max_amount_to_generate")
             user = request.user
 
+            flashcards = []
+
             if start is not None and end is not None:
                 flashcards = process_flashcards_by_page_range(
                     document_id, start, end, max_flashcards
                 )
-
             elif subject:
                 flashcards = process_flashcards_by_subject(
                     document_id, subject, max_flashcards
                 )
+            else:
+                return Response(
+                    {"detail": "Either start and end page or subject is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-            course: Course = None
+            course: Optional[Course] = None
             if course_id:
                 course = Course.objects.get(id=course_id)
 
@@ -377,10 +380,9 @@ class FlashcardGenerationView(GenericAPIView):
                 end_page=end,
             )
 
-            flashcard_models = [
-                translate_flashcard_to_orm_model(flashcard, cardset)
-                for flashcard in flashcards
-            ]
+            for fc in flashcards:
+                translate_flashcard_to_orm_model(fc, cardset)
+
             response = CardsetSerializer(cardset).data
             return Response(data=response, status=status.HTTP_200_OK)
         else:
@@ -422,7 +424,6 @@ class CardsetExportView(GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        cardset = Cardset.objects.get(id=cardset_id)
         flashcards_model = cardset.flashcards.all()
         flashcards = translate_flashcards_to_pydantic_model(flashcards_model)
         exportable_flashcard = parse_for_anki(flashcards)
@@ -707,19 +708,17 @@ class QuizGenerationView(GenericAPIView):
             )
 
             title = generate_title_of_quiz(quiz_data)
-            # Retrieve the authenticated user
             user = request.user
 
-            course: Course = None
+            course: Optional[Course] = None
             if course_id:
                 course = Course.objects.get(id=course_id)
 
-            # Translate the quiz data into ORM models and associate with the user
+            # Translate the quiz data into ORM models
             quiz_model = translate_quiz_to_orm_model(quiz_data, title, user, course)
 
             # Serialize the created quiz
             response_serializer = QuizModelSerializer(quiz_model)
-
             return Response(response_serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

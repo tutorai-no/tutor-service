@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build docker image and run tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -39,6 +39,44 @@ jobs:
           docker compose up -d backend
           docker compose down
 
+  push-image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      
+    # Only runs if CI was successful
+    needs: [build]
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine Environment Tag
+        id: env_tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "tag=latest-prod" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+            echo "tag=latest-staging" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest-dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and Push Docker image
+        run: |
+          docker build -t ghcr.io/the-tutorai-project/tutor-service:${{ steps.env_tag.outputs.tag }} ./src/
+          docker push ghcr.io/the-tutorai-project/tutor-service:${{ steps.env_tag.outputs.tag }}
+          
   dependabot:
     name: 'Dependabot'
     # After the E2E and build jobs, if one of them fails, it won't merge the PR.

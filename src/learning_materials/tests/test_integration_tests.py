@@ -2118,6 +2118,40 @@ class CourseAPITest(TestCase):
         id = response.data["id"]
         self.assertTrue(Course.objects.filter(id=id).exists())
 
+    def test_create_course_no_authentication(self):
+        data = {
+            "name": self.valid_course_name,
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_course_missing_name(self):
+        self.authenticate()
+        data = {}
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("name", response.data)
+
+    def test_retrieve_course(self):
+        self.authenticate()
+        course = Course.objects.create(name=self.valid_course_name, user=self.user)
+        response = self.client.get(f"{self.url}{course.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], self.valid_course_name)
+
+    def test_retrieve_other_users_course(self):
+        self.authenticate()
+        course = Course.objects.create(
+            name=self.valid_course_name, user=self.other_user
+        )
+        response = self.client.get(f"{self.url}{course.id}/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_retrieve_course_no_authentication(self):
+        course = Course.objects.create(name=self.valid_course_name, user=self.user)
+        response = self.client.get(f"{self.url}{course.id}/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_list_courses(self):
         self.authenticate()
         Course.objects.create(name="Course 1", user=self.user)
