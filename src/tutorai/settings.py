@@ -278,7 +278,7 @@ LOGGING = {
 
 # Kafka settings
 KAFKA_CONFIGURATION = {
-    'bootstrap.servers': "broker:9092",
+    'bootstrap.servers': 'broker',
     'auto.offset.reset': 'smallest',
     'group.id': "user_group"
 }
