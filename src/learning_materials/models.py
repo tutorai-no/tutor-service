@@ -3,7 +3,7 @@ from django.db import models
 from uuid import uuid4
 
 from tutorai import settings
-    
+
 
 class Course(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -11,6 +11,9 @@ class Course(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="courses"
     )
+    language = models.CharField(max_length=10, null=True, blank=True)
+    sections = models.JSONField(default=list, blank=True)
+    preferred_tools = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "courses"
@@ -62,7 +65,8 @@ class UserURL(models.Model):
 
     def __str__(self):
         return f"{self.url} (ID: {self.id})"
-    
+
+
 class UserVideo(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     url = models.URLField(max_length=1024)
@@ -94,9 +98,10 @@ class ClusterElement(models.Model):
     cluster_name = models.CharField(max_length=255)
     page_number = models.IntegerField()
     mastery = models.FloatField(default=0.0)
+    dimensions = models.IntegerField(default=2)
     x = models.FloatField(help_text="The x-coordinate of the element")
     y = models.FloatField(help_text="The y-coordinate of the element")
-
+    z = models.FloatField(help_text="The z-coordinate of the element", default=0.0)
 
 
 class Chat(models.Model):

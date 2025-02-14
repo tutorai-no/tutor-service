@@ -24,7 +24,7 @@ def cluster_embeddings(embeddings: list[list[float]], n_clusters: int = 5) -> li
     kmeans.fit(embeddings)
     return kmeans.labels_.tolist()
 
-def create_2d_projection(embeddings: list[list[float]]) -> list[list[float]]:
+def create_projection(embeddings: list[list[float]], dimensions: int = 2) -> list[list[float]]:
     """
     Create a 2D projection of the embeddings using PCA
 
@@ -34,11 +34,11 @@ def create_2d_projection(embeddings: list[list[float]]) -> list[list[float]]:
     Returns:
         list[list[float]]: The 2D projection of the embeddings
     """
-    tsne = TSNE(n_components=2, perplexity=5, random_state=42, init="random", learning_rate=200)
+    tsne = TSNE(n_components=dimensions, perplexity=5, random_state=42, init="random", learning_rate=200)
     embeddings = np.array(embeddings)
     return tsne.fit_transform(embeddings).tolist()
 
-def cluster_document(document_id: UUID):
+def cluster_document(document_id: UUID, dimensions: int = 2):
     """
     Cluster the pages of a document
 
@@ -54,7 +54,7 @@ def cluster_document(document_id: UUID):
     # NOTE: All of the lists are in the same order
     embeddings = [page.embedding for page in pages]
     cluster_labels = cluster_embeddings(embeddings)
-    projection = create_2d_projection(embeddings)
+    projection = create_projection(embeddings, dimensions)
 
     # Find topics for cluster labels by subsampling
     cluster_topics = {}
@@ -76,6 +76,8 @@ def cluster_document(document_id: UUID):
             cluster_name=cluster_topics[cluster_labels[i]],
             x=projection[i][0],
             y=projection[i][1],
+            z=projection[i][2] if dimensions == 3 else 0,
+            dimensions=dimensions,
         )
         cluster_element.save()
 
