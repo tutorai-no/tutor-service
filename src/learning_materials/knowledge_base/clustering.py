@@ -4,10 +4,11 @@ from sklearn.manifold import TSNE
 import numpy as np
 
 from learning_materials.knowledge_base.factory import create_database
-from learning_materials.knowledge_base.response_formulation import generate_name_for_cluster
+from learning_materials.knowledge_base.response_formulation import (
+    generate_name_for_cluster,
+)
 from learning_materials.learning_resources import FullCitation
 from learning_materials.models import ClusterElement, UserFile
-
 
 
 def cluster_embeddings(embeddings: list[list[float]], n_clusters: int = 5) -> list[int]:
@@ -25,7 +26,10 @@ def cluster_embeddings(embeddings: list[list[float]], n_clusters: int = 5) -> li
     kmeans.fit(embeddings)
     return kmeans.labels_.tolist()
 
-def create_projection(embeddings: list[list[float]], dimensions: int = 2) -> list[list[float]]:
+
+def create_projection(
+    embeddings: list[list[float]], dimensions: int = 2
+) -> list[list[float]]:
     """
     Create a 2D projection of the embeddings using PCA
 
@@ -35,12 +39,16 @@ def create_projection(embeddings: list[list[float]], dimensions: int = 2) -> lis
     Returns:
         list[list[float]]: The 2D projection of the embeddings
     """
-
-    print(hello_world(), flush=True)
-
-    tsne = TSNE(n_components=dimensions, perplexity=5, random_state=42, init="random", learning_rate=200)
+    tsne = TSNE(
+        n_components=dimensions,
+        perplexity=5,
+        random_state=42,
+        init="random",
+        learning_rate=200,
+    )
     embeddings = np.array(embeddings)
     return tsne.fit_transform(embeddings).tolist()
+
 
 def cluster_document(document_id: UUID, dimensions: int = 2):
     """
@@ -53,8 +61,8 @@ def cluster_document(document_id: UUID, dimensions: int = 2):
         Dict: The clustering information
     """
     db = create_database()
-    pages: FullCitation = db.get_all_pages(document_id) 
-    
+    pages: FullCitation = db.get_all_pages(document_id)
+
     # NOTE: All of the lists are in the same order
     embeddings = [page.embedding for page in pages]
     cluster_labels = cluster_embeddings(embeddings)
@@ -66,10 +74,10 @@ def cluster_document(document_id: UUID, dimensions: int = 2):
     for label in unique_labels:
         cluster_indices = [i for i, x in enumerate(cluster_labels) if x == label]
         cluster_pages = [pages[i].text for i in cluster_indices]
-        subsample = cluster_pages[:min(5, len(cluster_pages))]
+        subsample = cluster_pages[: min(5, len(cluster_pages))]
         # TODO: Do all in parallel
         cluster_topics[label] = generate_name_for_cluster(subsample)
-    
+
     user_file = UserFile.objects.get(id=document_id)
 
     # Save the cluster information to the database
@@ -84,6 +92,3 @@ def cluster_document(document_id: UUID, dimensions: int = 2):
             dimensions=dimensions,
         )
         cluster_element.save()
-
-
-
