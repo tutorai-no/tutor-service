@@ -43,6 +43,10 @@ jobs:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      packages: write
+      
     # Only runs if CI was successful
     needs: [build]
     steps:
