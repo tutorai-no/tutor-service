@@ -64,8 +64,8 @@ services:
       - "9092:9092"
     depends_on:
       - zookeeper
-
-
+    networks:
+      - tutorai_network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -75,6 +75,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    networks:
+      - tutorai_network
+
 volumes:
   postgres_data:
 

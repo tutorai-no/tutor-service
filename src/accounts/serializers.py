@@ -172,14 +172,14 @@ class LoginSerializer(TokenObtainPairSerializer):
             User.objects.filter(email=username_or_email).first()
             or User.objects.filter(username=username_or_email).first()
         )
-
+        import json
         if user and user.check_password(password):
             if not user.is_active:
                 raise AuthenticationFailed("User is inactive.", code="authorization")
             data = super().validate({"username": user.username, "password": password})
             user.last_login = timezone.now()
             user.save()
-            producer.publish(Topic.ACCOUNT_CREATED, {"user_id": user.id})
+            producer.produce(Topic.ACCOUNT_CREATED.value, json.dumps({"user_id": user.username}))   
             return data
         else:
             raise AuthenticationFailed("Invalid credentials", code="authorization")
