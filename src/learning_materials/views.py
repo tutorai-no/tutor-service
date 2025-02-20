@@ -303,9 +303,15 @@ class ClusterListView(ListAPIView):
     serializer_class = ClusterElementSerializer
 
     def get_queryset(self):
-        document_id = self.request.query_params.get("document_id")
-        return ClusterElement.objects.filter(user_file=document_id)
-
+        document_id = self.request.query_params.get("documentId")
+        user_file = UserFile.objects.get(id=document_id)
+        cluster_elements = ClusterElement.objects.filter(user_file=user_file)
+        return cluster_elements
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 class FlashcardGenerationView(GenericAPIView):
     serializer_class = AdditionalContextSerializer
