@@ -41,7 +41,7 @@ admin.site.register(FlashcardModel)
 
 @admin.register(ClusterElement)
 class ClusterElementAdmin(admin.ModelAdmin):
-    list_display = ["id", "user_file", "page_number", "cluster_name", "x", "y", "z"]
+    list_display = ["id", "user_file", "page_number", "cluster_name", "x", "y", "z", "mastery"]
      
 
 
