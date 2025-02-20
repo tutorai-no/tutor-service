@@ -303,7 +303,7 @@ class ClusterListView(ListAPIView):
     serializer_class = ClusterElementSerializer
 
     def get_queryset(self):
-        document_id = self.request.query_params.get("documentId")
+        document_id = self.request.query_params.get("document_id")
         user_file = UserFile.objects.get(id=document_id)
         cluster_elements = ClusterElement.objects.filter(user_file=user_file)
         return cluster_elements
