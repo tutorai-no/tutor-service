@@ -2076,7 +2076,7 @@ class ClusteringAPITest(TestCase):
         """Test the clustering endpoint with a valid request."""
         self.authenticate()
         valid_payload = {
-            "document_id": self.document_id,
+            "documentId": self.document_id,
         }
         response = self.client.get(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
