@@ -7,6 +7,7 @@ from confluent_kafka import Consumer as KafkaConsumer, KafkaException, KafkaErro
 from django.conf import settings
 
 from broker.topics import Topic
+from broker.handlers.clustering_handler import handle_document_upload_rag
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ def handle_account_created(message: dict):
     pass
 
 CONSUMERS = [
-    Consumer(ConsumerConfig([Topic.ACCOUNT_CREATED], handle_account_created)),
+    Consumer(ConsumerConfig([Topic.DOCUMENT_UPLOAD_RAG], handle_document_upload_rag)),
 ]
 
 
