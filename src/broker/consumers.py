@@ -56,11 +56,6 @@ class Consumer(threading.Thread):
             self._consumer.close()
 
 
-def handle_account_created(message: dict):
-    print("Account created message received", flush=True)
-    pass
-
-
 CONSUMERS = [
     Consumer(ConsumerConfig([Topic.DOCUMENT_UPLOAD_RAG], handle_document_upload_rag)),
 ]

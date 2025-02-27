@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import TypedDict
+from pydantic import BaseModel
 import logging
 
 
@@ -8,7 +8,7 @@ from src.learning_materials.knowledge_base.clustering import cluster_document
 logger = logging.getLogger(__name__)
 
 
-class DocumentUploadMessage(TypedDict):
+class DocumentUploadMessage(BaseModel):
     """
     Document upload message from CDN
     """
@@ -17,10 +17,11 @@ class DocumentUploadMessage(TypedDict):
     dimensions: int
 
 
-def handle_document_upload_rag(message: DocumentUploadMessage):
+def handle_document_upload_rag(raw_message: str):
     """
     Handle document upload message from CDN
     """
+    message = DocumentUploadMessage.parse_raw(raw_message)
     logger.info(
         f"Document upload message received for document_id: {message['document_id']}"
     )
