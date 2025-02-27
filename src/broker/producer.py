@@ -7,7 +7,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-
 class KafkaProducerSingleton:
     _instance: Producer = None
     _lock = threading.Lock()
@@ -23,6 +22,5 @@ class KafkaProducerSingleton:
     def get_producer(self) -> Producer:
         return self._producer
 
+
 producer = KafkaProducerSingleton().get_producer()
-
-
