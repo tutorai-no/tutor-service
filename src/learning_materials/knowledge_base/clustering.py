@@ -22,6 +22,7 @@ def cluster_embeddings(embeddings: list[list[float]], n_clusters: int = 5) -> li
     Returns:
         list[int]: The cluster labels of the embeddings
     """
+    n_clusters = min(n_clusters, len(embeddings))
     kmeans = KMeans(n_clusters=n_clusters, init="k-means++", random_state=42)
     kmeans.fit(embeddings)
     return kmeans.labels_.tolist()
@@ -39,9 +40,10 @@ def create_projection(
     Returns:
         list[list[float]]: The 2D projection of the embeddings
     """
+    perplexity = min(5, len(embeddings)-1)
     tsne = TSNE(
         n_components=dimensions,
-        perplexity=5,
+        perplexity=perplexity,
         random_state=42,
         init="random",
         learning_rate=200,

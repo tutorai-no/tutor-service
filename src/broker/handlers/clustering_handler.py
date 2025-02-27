@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import logging
 
 
-from src.learning_materials.knowledge_base.clustering import cluster_document
+from learning_materials.knowledge_base.clustering import cluster_document
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ def handle_document_upload_rag(raw_message: str):
     """
     Handle document upload message from CDN
     """
-    message = DocumentUploadMessage.parse_raw(raw_message)
+    message = DocumentUploadMessage.model_validate_json(raw_message)
     logger.info(
-        f"Document upload message received for document_id: {message['document_id']}"
+        f"Document upload message received for document_id: {message.document_id}"
     )
     cluster_document(
-        document_id=message["document_id"], dimensions=message["dimensions"]
+        document_id=message.document_id, dimensions=message.dimensions
     )
