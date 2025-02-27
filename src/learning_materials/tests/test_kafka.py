@@ -4,7 +4,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from broker.producer import producer
 from broker.topics import Topic
-from broker.handlers.clustering_handler import handle_document_upload_rag
+from broker.handlers.clustering_handler import handle_document_upload_rag, DocumentUploadMessage
 from learning_materials.knowledge_base.rag_service import post_context
 from learning_materials.models import UserFile, ClusterElement
 
@@ -64,12 +64,9 @@ class TestClusteringHandler(TestCase):
         return user_file
 
     def test_handle_document_upload_rag(self):
-        message = {
-            "document_id": self.document_id,
-            "dimensions": 2,
-        }
-        producer.publish(Topic.DOCUMENT_UPLOAD_RAG.value, message)
-        cluster_elements = ClusterElement.objects.filter(document_id=self.document_id)
+        message = DocumentUploadMessage(document_id=self.document_id, dimensions=2)
+        handle_document_upload_rag(message.model_dump_json())
+        cluster_elements = ClusterElement.objects.filter(user_file_id=self.document_id)
         self.assertNotEqual(len(cluster_elements), 0)
 
     def create_user_file(self, user, course=None):
