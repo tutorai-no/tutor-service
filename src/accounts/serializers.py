@@ -151,6 +151,15 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user = User.objects.create_user(subscription=subscription, **validated_data)
 
+        # Publish user signup success event
+        producer.publish(
+            Topic.USER_SIGNUP_SUCCESS.value,
+            {
+                "user_id": user.id,
+                "username": user.username,
+                "email": user.email,
+            },
+        )
         # Send welcome email
         send_mail(
             subject="Welcome to TutorAI",
@@ -172,14 +181,12 @@ class LoginSerializer(TokenObtainPairSerializer):
             User.objects.filter(email=username_or_email).first()
             or User.objects.filter(username=username_or_email).first()
         )
-        import json
         if user and user.check_password(password):
             if not user.is_active:
                 raise AuthenticationFailed("User is inactive.", code="authorization")
             data = super().validate({"username": user.username, "password": password})
             user.last_login = timezone.now()
             user.save()
-            producer.produce(Topic.ACCOUNT_CREATED.value, json.dumps({"user_id": user.username}))   
             return data
         else:
             raise AuthenticationFailed("Invalid credentials", code="authorization")

@@ -39,10 +39,16 @@ class TestClusteringHandler(TestCase):
         self.user_file = self.create_user_file(self.user)
         self.document_id = self.user_file.id
 
+        self.valid_document_name = "valid_document_name"
+        self.contexts = [
+            "This is the first context",
+            "This is the second context",
+            "This is the third context",
+        ]
         # Populate rag database
         for i, context in enumerate(self.contexts):
             post_context(context, i, self.valid_document_name, self.document_id)
-    
+
     def create_user_file(self, user, course=None):
         """Helper method to create user files"""
         user_file = UserFile.objects.create(
@@ -62,6 +68,20 @@ class TestClusteringHandler(TestCase):
             "document_id": self.document_id,
             "dimensions": 2,
         }
-        
+        producer.publish(Topic.DOCUMENT_UPLOAD_RAG.value, message)
         cluster_elements = ClusterElement.objects.filter(document_id=self.document_id)
         self.assertNotEqual(len(cluster_elements), 0)
+
+    def create_user_file(self, user, course=None):
+        """Helper method to create user files"""
+        user_file = UserFile.objects.create(
+            name="Test File",
+            blob_name="test_blob",
+            file_url="http://example.com/file.pdf",
+            num_pages=10,
+            content_type="application/pdf",
+            user=user,
+        )
+        if course:
+            user_file.courses.add(course)
+        return user_file
