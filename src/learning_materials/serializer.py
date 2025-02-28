@@ -266,7 +266,7 @@ class ChatSerializer(serializers.ModelSerializer):
 
 
 class ReviewFlashcardSerializer(serializers.Serializer):
-    id = serializers.IntegerField(
+    id = serializers.UUIDField(
         help_text="The ID of the flashcard",
     )
     answer_was_correct = serializers.BooleanField(
@@ -299,6 +299,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
             "front",
             "back",
             "cardset",
+            "mastery",
             "proficiency",
             "time_of_next_review",
         ]
