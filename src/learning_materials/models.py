@@ -182,6 +182,9 @@ class FlashcardModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     front = models.TextField(help_text="The front of the flashcard")
     back = models.TextField(help_text="The back of the flashcard")
+    mastery = models.FloatField(
+        help_text="The mastery of the flashcard", default=0.0
+    )
     proficiency = models.IntegerField(
         help_text="The profeciency of the flashcard", default=0
     )
@@ -199,7 +202,7 @@ class FlashcardModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def review(self, answer: bool, user) -> bool:
-        """Update the profeciency of the flashcard based on the correctness of the answer"""
+        """Update the proficiency and mastery of the flashcard based on the correctness of the answer"""
 
         DELAYS = [
             timedelta(minutes=1),
@@ -226,6 +229,11 @@ class FlashcardModel(models.Model):
             self.proficiency = 0
 
         self.time_of_next_review = datetime.now() + DELAYS[self.proficiency]
+
+        ALPHA = 0.8
+        outcome = 1 if answer else 0
+        self.mastery = (1 - ALPHA) * self.mastery + ALPHA * outcome
+
         return True
 
     def __str__(self):
