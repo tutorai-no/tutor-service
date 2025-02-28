@@ -12,7 +12,7 @@ class ActivityMessage(BaseModel):
     metadata: dict
 
 
-def handle_activity_message(raw_message: str):
+def handle_activity_streak(raw_message: str):
     message = ActivityMessage.model_validate_json(raw_message)
     user = CustomUser.objects.get(id=message.user_id)
     Activity.objects.create(
