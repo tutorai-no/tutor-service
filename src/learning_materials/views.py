@@ -494,6 +494,11 @@ class CardsetViewSet(viewsets.ModelViewSet):
         course_id = self.request.query_params.get("course_id", None)
         if course_id is not None:
             queryset = queryset.filter(course_id=course_id)
+        else:
+            # If course_id is not provided, filter on cardset_id
+            cardset_id = self.request.query_params.get("cardset_id", None)
+            if cardset_id is not None:
+                queryset = queryset.filter(id=cardset_id)
 
         return queryset
 
