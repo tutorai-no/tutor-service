@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from broker.producer import producer
 from broker.topics import Topic
 from broker.handlers.clustering_handler import handle_document_upload_rag, DocumentUploadMessage
-from broker.handlers.activity_handler import handle_activity_message, ActivityMessage
+from broker.handlers.activity_handler import handle_activity_streak, ActivityMessage
 from learning_materials.knowledge_base.rag_service import post_context
 from learning_materials.models import UserFile, ClusterElement
 from accounts.models import Streak, Activity
@@ -91,7 +91,7 @@ class HandleActivityMessageTests(TestCase):
                 metadata={},
             )
             raw_message = message.model_dump_json()
-            handle_activity_message(raw_message)
+            handle_activity_streak(raw_message)
 
         def test_activity_is_created(self):
             """Ensure that handle_activity_message() creates an Activity record."""
