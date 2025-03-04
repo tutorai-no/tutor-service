@@ -230,9 +230,15 @@ class FlashcardModel(models.Model):
 
         self.time_of_next_review = datetime.now() + DELAYS[self.proficiency]
 
-        ALPHA = 0.8
         outcome = 1 if answer else 0
-        self.mastery = (1 - ALPHA) * self.mastery + ALPHA * outcome
+
+        if self.proficiency < 3:
+            alpha = 0.7
+        else:
+            alpha = 0.7 + (self.proficiency - 2) * 0.05
+            alpha = min(alpha, 1.0)
+
+        self.mastery = (1 - alpha) * self.mastery + alpha * outcome
 
         return True
 
