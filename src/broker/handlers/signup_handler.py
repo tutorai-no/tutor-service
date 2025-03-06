@@ -1,7 +1,7 @@
 from uuid import UUID
 from decimal import Decimal
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class SubscriptionSchema(BaseModel):
@@ -13,8 +13,7 @@ class SubscriptionSchema(BaseModel):
     price: Decimal
     active: bool
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserSchema(BaseModel):
@@ -28,5 +27,4 @@ class UserSchema(BaseModel):
     heard_about_us: Optional[str] = None
     other_heard_about_us: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
