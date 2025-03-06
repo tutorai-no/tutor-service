@@ -1,4 +1,3 @@
-import json
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -28,6 +27,7 @@ from accounts.models import (
 )
 from broker.producer import producer
 from broker.topics import Topic
+from broker.handlers.signup_handler import SubscriptionSchema, UserSchema
 
 User = get_user_model()
 
@@ -155,11 +155,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Publish user signup success event
         producer.produce(
             Topic.USER_SIGNUP_SUCCESS.value,
-            json.dumps(
-                {
-                    "user_id": str(user.id),
-                }
-            ),
+            UserSchema.from_orm(user).model_dump_json(),
         )
         # Send welcome email
         send_mail(

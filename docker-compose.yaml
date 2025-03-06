@@ -83,3 +83,4 @@ volumes:
 
 networks:
   tutorai_network:
+    external: true
