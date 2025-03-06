@@ -1,3 +1,4 @@
+import json
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -152,13 +153,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(subscription=subscription, **validated_data)
 
         # Publish user signup success event
-        producer.publish(
+        producer.produce(
             Topic.USER_SIGNUP_SUCCESS.value,
-            {
-                "user_id": user.id,
-                "username": user.username,
-                "email": user.email,
-            },
+            json.dumps(
+                {
+                    "user_id": str(user.id),
+                }
+            ),
         )
         # Send welcome email
         send_mail(
