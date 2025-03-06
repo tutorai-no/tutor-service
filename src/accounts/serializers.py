@@ -155,23 +155,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Publish user signup success event
         producer.produce(
             Topic.USER_SIGNUP_SUCCESS.value,
-            UserSchema(
-                id=user.id,
-                username=user.username,
-                email=user.email,
-                phone_number=user.phone_number,
-                subscription=(
-                    SubscriptionSchema(
-                        id=subscription.id,
-                        name=subscription.name,
-                        description=subscription.description,
-                        price=subscription.price,
-                        active=subscription.active,
-                    )
-                    if subscription
-                    else None
-                ),
-            ).model_dump_json(),
+            UserSchema.from_orm(user).model_dump_json(),
         )
         # Send welcome email
         send_mail(
