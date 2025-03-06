@@ -27,7 +27,7 @@ from accounts.models import (
 )
 from broker.producer import producer
 from broker.topics import Topic
-from broker.handlers.signup_handler import UserSchema
+from broker.handlers.signup_handler import SubscriptionSchema, UserSchema
 
 User = get_user_model()
 
@@ -160,7 +160,17 @@ class RegisterSerializer(serializers.ModelSerializer):
                 username=user.username,
                 email=user.email,
                 phone_number=user.phone_number,
-                subscription=subscription,
+                subscription=(
+                    SubscriptionSchema(
+                        id=subscription.id,
+                        name=subscription.name,
+                        description=subscription.description,
+                        price=subscription.price,
+                        active=subscription.active,
+                    )
+                    if subscription
+                    else None
+                ),
             ).model_dump_json(),
         )
         # Send welcome email
