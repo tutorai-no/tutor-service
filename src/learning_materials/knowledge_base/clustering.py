@@ -40,7 +40,7 @@ def create_projection(
     Returns:
         list[list[float]]: The 2D projection of the embeddings
     """
-    perplexity = min(5, len(embeddings)-1)
+    perplexity = float(min(5, len(embeddings)-1))
     tsne = TSNE(
         n_components=dimensions,
         perplexity=perplexity,
