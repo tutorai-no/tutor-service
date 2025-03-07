@@ -24,10 +24,14 @@ jobs:
 
       - name: Pull latest Docker image and restart services
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          RAG_DATABASE_SYSTEM: ${{ secrets.RAG_DATABASE_SYSTEM }}
-          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          OPENAI_API_KEY: ${{ secrets.PROD_OPENAI_API_KEY }}
+          MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
+          MONGODB_DATABASE: ${{ secrets.PROD_MONGODB_DATABASE }}
+          MONGODB_COLLECTION: ${{ secrets.PROD_MONGODB_COLLECTION }}
+          RAG_DATABASE_SYSTEM: ${{ secrets.PROD_RAG_DATABASE_SYSTEM }}
+          DJANGO_SECRET_KEY: ${{ secrets.PROD_DJANGO_SECRET_KEY }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.PROD_AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.PROD_AZURE_STORAGE_CONTAINER_NAME }}
         run: |
           docker compose down
           docker compose pull backend
