@@ -30,11 +30,16 @@ jobs:
           MONGODB_COLLECTION: ${{ secrets.PROD_MONGODB_COLLECTION }}
           RAG_DATABASE_SYSTEM: ${{ secrets.PROD_RAG_DATABASE_SYSTEM }}
           DJANGO_SECRET_KEY: ${{ secrets.PROD_DJANGO_SECRET_KEY }}
+          EMAIL_HOST_USER: ${{ secrets.PROD_EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.PROD_EMAIL_HOST_PASSWORD }}
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.PROD_AZURE_STORAGE_CONNECTION_STRING }}
           AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.PROD_AZURE_STORAGE_CONTAINER_NAME }}
+          BASE_URL_SCRAPER: ${{ secrets.PROD_BASE_URL_SCRAPER }}
+          BASE_URL_FRONTEND: ${{ secrets.PROD_BASE_URL_FRONTEND }}
+
         run: |
+
           docker compose down
-          docker compose pull backend
           docker compose build
           docker compose run backend python manage.py migrate
           docker compose up -d 
