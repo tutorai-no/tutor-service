@@ -79,7 +79,7 @@ def response_formulation(
     return response
 
 
-def _request_chat_compleLogintion(
+def _request_chat_completion(
     message: str,
     role: str = "system",
     history: list[dict[str, str]] = [],
