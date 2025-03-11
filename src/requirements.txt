@@ -77,7 +77,7 @@ python-docx==1.1.2
 python-dotenv==1.0.1
 pytz==2023.4
 PyYAML==6.0.2
-regex==2024.9.11
+regex==2024.11.6
 requests==2.32.3
 requests-toolbelt==1.0.0
 scikit-learn==1.5.2
