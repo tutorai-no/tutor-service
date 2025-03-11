@@ -273,5 +273,17 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        "broker": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
     },
+}
+
+# Kafka settings
+KAFKA_CONFIGURATION = {
+    'bootstrap.servers': 'broker',
+    'auto.offset.reset': 'smallest',
+    'group.id': "user_group"
 }
