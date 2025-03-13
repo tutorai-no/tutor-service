@@ -76,6 +76,8 @@ INSTALLED_APPS = [
     "api",
     "learning_materials",
     # Django built-in apps
+    "django_eventstream",
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -283,7 +285,7 @@ LOGGING = {
 
 # Kafka settings
 KAFKA_CONFIGURATION = {
-    'bootstrap.servers': 'broker',
-    'auto.offset.reset': 'smallest',
-    'group.id': "user_group"
+    "bootstrap.servers": "broker",
+    "auto.offset.reset": "smallest",
+    "group.id": "user_group",
 }
