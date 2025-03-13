@@ -1,5 +1,6 @@
 import logging
 
+from datetime import datetime
 from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -28,7 +29,9 @@ from accounts.serializers import (
     ActivityLogSerializer,
 )
 from accounts.models import Feedback, Subscription, Streak, Activity
-
+from broker.producer import producer
+from broker.handlers.activity_handler import ActivityMessage
+from broker.topics import Topic
 
 logger = logging.getLogger(__name__)
 
@@ -216,18 +219,21 @@ class ActivityCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer: ActivitySerializer):
         activity_type = serializer.validated_data.get("activity_type")
-        user = self.request.user
-
-        # Create Activity record
-        activity = serializer.save(user=user)
+        user_id = self.request.user.id
+        timestamp = datetime.now().isoformat()
+        metadata = serializer.validated_data.get("metadata", {})
         
-        # Update Streak
-        streak, created = Streak.objects.get_or_create(user=user)
-        streak.check_if_broken_streak()
-        streak.increment_streak()
+        message = ActivityMessage(
+            user_id=user_id, activity_type=activity_type, timestamp=timestamp, metadata=metadata
+        )
+        
+        producer.produce(
+            Topic.USER_ACTIVITY.value,
+            message.model_dump_json(),
+        )
 
 
-class ActivityLogView(generics.ListAPIView):
+class ActivityView(generics.ListAPIView):
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated]
 
