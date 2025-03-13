@@ -24,4 +24,4 @@ COPY . /code/
 EXPOSE 8000
 
 # Run the application:
-CMD ["gunicorn", "--bind", ":8000", "tutorai.wsgi", "--workers", "1", "--timeout", "120"]
+CMD ["daphne", "--bind", ":8000", "tutorai.asgi", "--workers", "1", "--timeout", "120"]
