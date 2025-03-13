@@ -23,4 +23,4 @@ class KafkaProducerSingleton:
         return self._producer
 
 
-producer = KafkaProducerSingleton().get_producer()
+producer: Producer = KafkaProducerSingleton().get_producer()
