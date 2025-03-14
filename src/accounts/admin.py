@@ -151,7 +151,7 @@ class StreakAdmin(admin.ModelAdmin):
 
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
-    list_display = ["user", "activity_type", "timestamp"]
+    list_display = ["user", "activity_type", "timestamp", "metadata"]
     search_fields = ["user__username", "activity_type"]
     list_filter = ["timestamp"]
 

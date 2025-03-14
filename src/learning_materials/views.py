@@ -483,7 +483,10 @@ class ReviewFlashcardView(GenericAPIView):
                 user_id=request.user.id,
                 activity_type="Flashcard",
                 timestamp=datetime.now().isoformat(),
-                metadata={},
+                metadata={
+                    "flashcard_id": flashcard_id,
+                    "answer_was_correct": answer_was_correct,
+                },
             )
 
             producer.produce(
@@ -785,14 +788,19 @@ class QuizGradingView(GenericAPIView):
                 user_id=request.user.id,
                 activity_type="Quiz",
                 timestamp=datetime.now().isoformat(),
-                metadata={},
+                metadata={
+                    "quiz_id": quiz_id,
+                    "student_answers": student_answers,
+                    "answers_was_correct": graded_answer.answers_was_correct,
+                    "feedback": graded_answer.feedback,
+                },
             )
 
             producer.produce(
                 Topic.USER_ACTIVITY,
                 message.model_dump_json(),
             )
-             
+
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
