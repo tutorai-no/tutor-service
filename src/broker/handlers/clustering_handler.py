@@ -17,15 +17,12 @@ class DocumentUploadMessage(BaseModel):
     dimensions: int
 
 
-def handle_document_upload_rag(raw_message: str):
+def handle_document_upload_rag(raw_message: dict):
     """
     Handle document upload message from CDN
     """
     message: DocumentUploadMessage
-    if isinstance(raw_message, dict):
-        message = DocumentUploadMessage.model_validate(raw_message)
-    else:
-        message = DocumentUploadMessage.model_validate_json(raw_message)
+    message = DocumentUploadMessage.model_validate(raw_message)
     logger.info(
         f"Document upload message received for document_id: {message.document_id}"
     )

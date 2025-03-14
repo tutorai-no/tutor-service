@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import logging
 from typing import Optional
 import uuid
@@ -18,6 +20,10 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+
+from broker.producer import producer
+from broker.handlers.activity_handler import ActivityMessage
+from broker.topics import Topic
 from learning_materials.files.file_embeddings import (
     create_file_embeddings,
     create_url_embeddings,
@@ -472,6 +478,18 @@ class ReviewFlashcardView(GenericAPIView):
 
             valid_user = flashcard.review(answer_was_correct, user=request.user)
             flashcard.save()
+
+            activity = ActivityMessage(
+                user_id=request.user.id,
+                activity_type="Flashcard",
+                timestamp=datetime.now().isoformat(),
+                metadata={},
+            )
+
+            producer.produce(
+                Topic.USER_ACTIVITY,
+                activity.model_dump_json(),
+            )
 
             if valid_user:
                 return Response(

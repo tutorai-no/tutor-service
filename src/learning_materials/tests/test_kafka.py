@@ -68,7 +68,7 @@ class TestClusteringHandler(TestCase):
 
     def test_handle_document_upload_rag(self):
         message = DocumentUploadMessage(document_id=self.document_id, dimensions=2)
-        handle_document_upload_rag(message.model_dump_json())
+        handle_document_upload_rag(message.model_dump())
         cluster_elements = ClusterElement.objects.filter(user_file_id=self.document_id)
         self.assertNotEqual(len(cluster_elements), 0)
 
@@ -88,9 +88,9 @@ class HandleActivityMessageTests(TestCase):
                 user_id=self.user.id,
                 activity_type=activity_type,
                 timestamp=datetime.now().isoformat(),
-                metadata={},
+                metadata={"test": "metadata"},
             )
-            raw_message = message.model_dump_json()
+            raw_message = message.model_dump()
             handle_activity_streak(raw_message)
             handle_activity_save(raw_message)
 
