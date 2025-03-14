@@ -780,6 +780,19 @@ class QuizGradingView(GenericAPIView):
 
             graded_answer = grade_quiz(quiz, student_answers)
             response = graded_answer.model_dump()
+
+            message = ActivityMessage(
+                user_id=request.user.id,
+                activity_type="Quiz",
+                timestamp=datetime.now().isoformat(),
+                metadata={},
+            )
+
+            producer.produce(
+                Topic.USER_ACTIVITY,
+                message.model_dump_json(),
+            )
+             
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

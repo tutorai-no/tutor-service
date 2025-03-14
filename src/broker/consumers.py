@@ -17,11 +17,14 @@ logger = logging.getLogger(__name__)
 class ConsumerConfig:
     topics: list[Topic]
     logic: Callable[[dict], None]
+    consumer_group: str = "default"
 
 
 class Consumer(threading.Thread):
     def __init__(self, config: ConsumerConfig):
         threading.Thread.__init__(self)
+        self.settings = settings
+        settings.KAFKA_CONFIGURATION["group.id"] = config.consumer_group
         self._consumer = KafkaConsumer(settings.KAFKA_CONFIGURATION)
         self.topics = config.topics
         self.logic = config.logic
@@ -58,9 +61,9 @@ class Consumer(threading.Thread):
 
 
 CONSUMERS = [
-    Consumer(ConsumerConfig([Topic.DOCUMENT_UPLOAD_RAG], handle_document_upload_rag)),
-    Consumer(ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_save)),
-    Consumer(ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_streak)),
+    Consumer(ConsumerConfig([Topic.DOCUMENT_UPLOAD_RAG], handle_document_upload_rag, "clustering")),
+    Consumer(ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_save, "activity_save")),
+    Consumer(ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_streak, "activity_streak")),
 ]
 
 
