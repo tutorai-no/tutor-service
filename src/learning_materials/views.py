@@ -656,6 +656,22 @@ class ChatResponseView(APIView):
                 )
                 chat.save()
 
+                message = ActivityMessage(
+                    user_id=request.user.id,
+                    activity_type="Chat",
+                    timestamp=datetime.now().isoformat(),
+                    metadata={
+                        "chat_id": chat_id,
+                        "message": message,
+                        "response": assistant_response.content,
+                    },
+                )
+
+                producer.produce(
+                    Topic.USER_ACTIVITY,
+                    message.model_dump_json(),
+                )
+
                 # Return the response
                 return Response(
                     {
