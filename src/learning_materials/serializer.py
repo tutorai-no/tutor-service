@@ -275,7 +275,7 @@ class ReviewFlashcardSerializer(serializers.Serializer):
 
 
 class QuizStudentAnswer(serializers.Serializer):
-    quiz_id = serializers.CharField(
+    quiz_id = serializers.IntegerField(
         help_text="The ID of the quiz",
     )
     student_answers = serializers.ListField(
