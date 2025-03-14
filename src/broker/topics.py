@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class Topic(Enum):
+class Topic(StrEnum):
     """
     All message broker topics shall be defined in this enum
     """
