@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import logging
 from typing import Optional
 import uuid
@@ -19,6 +21,10 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+
+from broker.producer import producer
+from broker.handlers.activity_handler import ActivityMessage
+from broker.topics import Topic
 from learning_materials.files.file_embeddings import (
     create_file_embeddings,
     create_url_embeddings,
@@ -306,8 +312,14 @@ class ClusterListView(ListAPIView):
 
     def get_queryset(self):
         document_id = self.request.query_params.get("document_id")
-        return ClusterElement.objects.filter(user_file=document_id)
-
+        user_file = UserFile.objects.get(id=document_id)
+        cluster_elements = ClusterElement.objects.filter(user_file=user_file)
+        return cluster_elements
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 class CreateCardsetView(CreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -469,6 +481,21 @@ class ReviewFlashcardView(GenericAPIView):
 
             valid_user = flashcard.review(answer_was_correct, user=request.user)
             flashcard.save()
+
+            activity = ActivityMessage(
+                user_id=request.user.id,
+                activity_type="Flashcard",
+                timestamp=datetime.now().isoformat(),
+                metadata={
+                    "flashcard_id": flashcard_id,
+                    "answer_was_correct": answer_was_correct,
+                },
+            )
+
+            producer.produce(
+                Topic.USER_ACTIVITY,
+                activity.model_dump_json(),
+            )
 
             if valid_user:
                 return Response(
@@ -637,6 +664,22 @@ class ChatResponseView(APIView):
                 )
                 chat.save()
 
+                message = ActivityMessage(
+                    user_id=request.user.id,
+                    activity_type="Chat",
+                    timestamp=datetime.now().isoformat(),
+                    metadata={
+                        "chat_id": chat_id,
+                        "message": message,
+                        "response": assistant_response.content,
+                    },
+                )
+
+                producer.produce(
+                    Topic.USER_ACTIVITY,
+                    message.model_dump_json(),
+                )
+
                 # Return the response
                 return Response(
                     {
@@ -764,6 +807,24 @@ class QuizGradingView(GenericAPIView):
 
             graded_answer = grade_quiz(quiz, student_answers)
             response = graded_answer.model_dump()
+
+            message = ActivityMessage(
+                user_id=request.user.id,
+                activity_type="Quiz",
+                timestamp=datetime.now().isoformat(),
+                metadata={
+                    "quiz_id": quiz_id,
+                    "student_answers": student_answers,
+                    "answers_was_correct": graded_answer.answers_was_correct,
+                    "feedback": graded_answer.feedback,
+                },
+            )
+
+            producer.produce(
+                Topic.USER_ACTIVITY,
+                message.model_dump_json(),
+            )
+
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

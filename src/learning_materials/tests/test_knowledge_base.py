@@ -7,7 +7,7 @@ from learning_materials.knowledge_base import factory
 from learning_materials.knowledge_base.rag_service import post_context
 from learning_materials.knowledge_base.clustering import (
     cluster_embeddings,
-    create_2d_projection,
+    create_projection,
     cluster_document,
 )
 from learning_materials.knowledge_base.embeddings import EmbeddingsModel
@@ -84,7 +84,7 @@ class ProjectionTest(TestCase):
         ]
 
     def test_projection(self):
-        projection = create_2d_projection(self.embeddings)
+        projection = create_projection(self.embeddings)
         self.assertTrue(all(isinstance(point, list) for point in projection))
         self.assertEqual(len(projection[0]), 2)
         self.assertEqual(len(projection), len(self.embeddings))
@@ -142,6 +142,15 @@ class ClusteringCreationTest(TestCase):
         cluster_elements = ClusterElement.objects.all()
         self.assertTrue(cluster_elements.exists())
         self.assertEqual(len(cluster_elements), len(self.contexts))
+
+    def test_cluster_with_3d_projection(self):
+        self.assertFalse(ClusterElement.objects.exists())
+        cluster_document(self.document_id, dimensions=3)
+        cluster_elements = ClusterElement.objects.all()
+        self.assertTrue(cluster_elements.exists())
+        self.assertEqual(len(cluster_elements), len(self.contexts))
+        self.assertTrue(all(cluster_element.z != 0 for cluster_element in cluster_elements))
+        self.assertTrue(all(cluster_element.dimensions == 3 for cluster_element in cluster_elements))
 
     def test_cluster_document_with_invalid_document_id(self):
         with self.assertRaises(ValueError):
