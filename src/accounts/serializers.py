@@ -25,7 +25,9 @@ from accounts.models import (
     Streak,
     Activity,
 )
-
+from broker.producer import producer
+from broker.topics import Topic
+from broker.handlers.signup_handler import SubscriptionSchema, UserSchema
 
 User = get_user_model()
 
@@ -150,6 +152,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user = User.objects.create_user(subscription=subscription, **validated_data)
 
+        # Publish user signup success event
+        producer.produce(
+            Topic.USER_SIGNUP_SUCCESS,
+            UserSchema.from_orm(user).model_dump_json(),
+        )
         # Send welcome email
         send_mail(
             subject="Welcome to TutorAI",
@@ -171,7 +178,6 @@ class LoginSerializer(TokenObtainPairSerializer):
             User.objects.filter(email=username_or_email).first()
             or User.objects.filter(username=username_or_email).first()
         )
-
         if user and user.check_password(password):
             if not user.is_active:
                 raise AuthenticationFailed("User is inactive.", code="authorization")

@@ -151,7 +151,6 @@ def generate_name_for_cluster(cluster_chunks: list[str]) -> str:
     Returns:
         str: The name for the cluster
     """
-    logger.info("Generating name for cluster")
     prompt = f"Generate a name for the cluster that descibes what the text content is or what it is about based on the following cluster chunks: {cluster_chunks}. Make the name short and meaningful. Avoid using the word cluster in the name."
 
     llm = create_llm_model()

@@ -275,7 +275,7 @@ class ReviewFlashcardSerializer(serializers.Serializer):
 
 
 class QuizStudentAnswer(serializers.Serializer):
-    quiz_id = serializers.CharField(
+    quiz_id = serializers.IntegerField(
         help_text="The ID of the quiz",
     )
     student_answers = serializers.ListField(
@@ -412,7 +412,7 @@ class QuizModelSerializer(serializers.ModelSerializer):
         return qa_serialized + mc_serialized
 
 
-class ClusterElementSerializer(serializers.Serializer):
+class ClusterElementSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClusterElement
-        fields = ["id", "user_file", "cluster_name", "page_number", "mastery", "x", "y"]
+        fields = ["id", "cluster_name", "page_number", "mastery", "x", "y", "z", "dimensions"]
