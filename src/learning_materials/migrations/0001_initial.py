@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Cardset',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('name', models.CharField(help_text='The name of the cardset', max_length=100)),
                 ('description', models.TextField(help_text='The description of the cardset')),
                 ('subject', models.CharField(blank=True, help_text='The subject of the cardset', max_length=1000, null=True)),
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='FlashcardModel',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('front', models.TextField(help_text='The front of the flashcard')),
                 ('back', models.TextField(help_text='The back of the flashcard')),
                 ('proficiency', models.IntegerField(default=0, help_text='The profeciency of the flashcard')),
@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='QuizModel',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('document_name', models.CharField(default='unknown', help_text='The name of the document', max_length=100)),
                 ('subject', models.CharField(blank=True, help_text='The subject of the cardset', max_length=1000, null=True)),
                 ('start_page', models.IntegerField(blank=True, help_text='The starting page of the quiz', null=True)),
@@ -78,7 +78,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='QuestionAnswerModel',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('question', models.TextField(help_text='The question part of the QA pair')),
                 ('answer', models.TextField(help_text='The answer part of the QA pair')),
                 ('quiz', models.ForeignKey(help_text='The quiz to which the question-answer pair belongs', on_delete=django.db.models.deletion.CASCADE, related_name='question_answers', to='learning_materials.quizmodel')),
@@ -87,7 +87,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MultipleChoiceQuestionModel',
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('question', models.TextField(help_text='The question part of the multiple-choice question')),
                 ('options', models.JSONField(help_text='The list of options to choose from')),
                 ('answer', models.TextField(help_text='The correct answer to the question')),
