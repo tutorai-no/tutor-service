@@ -82,7 +82,7 @@ class UserDocumentSerializer(serializers.Serializer):
     # Fields common to both
     id = serializers.UUIDField()
     uploaded_at = serializers.DateTimeField()
-    course_ids = serializers.ListField(child=serializers.IntegerField(), read_only=True)
+    course_ids = serializers.ListField(child=serializers.UUIDField(), read_only=True)
     type = serializers.CharField()
 
     # Fields specific to UserFile
@@ -275,7 +275,7 @@ class ReviewFlashcardSerializer(serializers.Serializer):
 
 
 class QuizStudentAnswer(serializers.Serializer):
-    quiz_id = serializers.IntegerField(
+    quiz_id = serializers.UUIDField(
         help_text="The ID of the quiz",
     )
     student_answers = serializers.ListField(

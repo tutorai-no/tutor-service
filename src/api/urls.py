@@ -98,7 +98,7 @@ urlpatterns = [
     ),
     path("flashcards/review/", ReviewFlashcardView.as_view(), name="review-flashcards"),
     path(
-        "flashcards/export/<int:pk>/",
+        "flashcards/export/<uuid:pk>/",
         CardsetExportView.as_view(),
         name="export-flashcards",
     ),
