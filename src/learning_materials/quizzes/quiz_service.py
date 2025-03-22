@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import List, Union, Optional
 
 from langchain.output_parsers import PydanticOutputParser
@@ -17,6 +18,14 @@ from learning_materials.learning_resources import (
 logger = logging.getLogger(__name__)
 
 llm = ChatOpenAI(temperature=0.0)
+
+
+def sanitize_json_text(text):
+    """Sanitize JSON string by removing trailing commas."""
+    # Handle AIMessage objects by extracting their content
+    if hasattr(text, 'content'):
+        text = text.content
+    return re.sub(r',(\s*[\}\]])', r'\1', text)
 
 
 def generate_quiz(
@@ -140,6 +149,10 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
     # Initialize the parser for GradedQuiz
     parser = PydanticOutputParser(pydantic_object=GradedQuiz)
 
+    def parse_and_sanitize(text):
+        sanitized_text = sanitize_json_text(text)
+        return parser.parse(sanitized_text)
+
     # Define the prompt template for grading answers
     short_text_grading_prompt_template = """
         You are a teacher AI tasked with grading student answers to quiz questions.
@@ -190,8 +203,8 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
         input_variables=["question", "correct_answer", "options", "student_answer"],
     )
 
-    short_answer_chain = short_answer_prompt | llm | parser
-    multiple_choice_chain = multiple_choice_prompt | llm | parser
+    short_answer_chain = short_answer_prompt | llm | parse_and_sanitize
+    multiple_choice_chain = multiple_choice_prompt | llm | parse_and_sanitize
 
     graded_quiz = GradedQuiz(answers_was_correct=[], feedback=[])
 
