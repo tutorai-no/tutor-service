@@ -346,7 +346,7 @@ class CardsetCreateSerializer(serializers.Serializer):
             if not Course.objects.filter(id=course_id, user=user).exists():
                 raise NotFound({"course_id": "Course not found."})
         elif document_id:
-            if not QuizModel.objects.filter(id=document_id, user=user).exists():
+            if not UserFile.objects.filter(id=document_id, user=user).exists():
                 raise NotFound({"document_id": "Document not found."})
         else:
             raise serializers.ValidationError(

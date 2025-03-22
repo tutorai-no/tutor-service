@@ -66,6 +66,18 @@ class FlashcardGenerationTest(TestCase):
             password="StrongP@ss1",
         )
         self.client.force_authenticate(user=self.user)
+
+        # Create a UserFile with the same ID that is used in the tests
+        self.user_file = UserFile.objects.create(
+            id=self.valid_document_id,  # Use the same UUID here
+            user=self.user,
+            name=self.valid_document_name,
+            blob_name="test_blob",
+            file_url="http://example.com/file.pdf",
+            num_pages=self.valid_page_num_end + 1,  # Match the page range
+            content_type="application/pdf"
+        )
+        
         # Populate RAG database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(
