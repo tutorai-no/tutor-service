@@ -7,6 +7,7 @@ import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.generics import (
+    CreateAPIView,
     GenericAPIView,
     ListAPIView,
     UpdateAPIView,
@@ -74,6 +75,7 @@ from learning_materials.serializer import (
     ChatSerializer,
     ChatRequestSerializer,
     FlashcardSerializer,
+    CardsetCreateSerializer,
     ReviewFlashcardSerializer,
     QuizModelSerializer,
     ContextSerializer,
@@ -319,13 +321,13 @@ class ClusterListView(ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-class FlashcardGenerationView(GenericAPIView):
-    serializer_class = AdditionalContextSerializer
+class CreateCardsetView(CreateAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = CardsetCreateSerializer
 
     @swagger_auto_schema(
         operation_description="Generate flashcards from a given document",
-        request_body=AdditionalContextSerializer,
+        request_body=CardsetCreateSerializer,
         responses={
             200: openapi.Response(
                 description="Flashcards generated successfully",
@@ -351,25 +353,26 @@ class FlashcardGenerationView(GenericAPIView):
         tags=["Flashcards"],
     )
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = CardsetCreateSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
-            document_id = serializer.validated_data.get("id")
+            course_id = serializer.validated_data.get("course_id")
+            document_id = serializer.validated_data.get("document_id")
+            subject = serializer.validated_data.get("subject")
             start = serializer.validated_data.get("start_page")
             end = serializer.validated_data.get("end_page")
-            subject = serializer.validated_data.get("subject")
-            course_id = serializer.validated_data.get("course_id")
-            max_flashcards = serializer.validated_data.get("max_amount_to_generate")
+            num_flashcards = serializer.validated_data.get("num_flashcards")
             user = request.user
+            logger.info(f"Generating flashcards for document {document_id}")
 
             flashcards = []
 
             if start is not None and end is not None:
                 flashcards = process_flashcards_by_page_range(
-                    document_id, start, end, max_flashcards
+                    document_id, start, end, num_flashcards
                 )
             elif subject:
                 flashcards = process_flashcards_by_subject(
-                    document_id, subject, max_flashcards
+                    document_id, subject, num_flashcards
                 )
             else:
                 return Response(
@@ -518,6 +521,11 @@ class CardsetViewSet(viewsets.ModelViewSet):
         course_id = self.request.query_params.get("course_id", None)
         if course_id is not None:
             queryset = queryset.filter(course_id=course_id)
+        else:
+            # If course_id is not provided, filter on cardset_id
+            cardset_id = self.request.query_params.get("cardset_id", None)
+            if cardset_id is not None:
+                queryset = queryset.filter(id=cardset_id)
 
         return queryset
 
