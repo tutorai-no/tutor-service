@@ -131,19 +131,21 @@ class Chat(models.Model):
 class Cardset(models.Model):
     """Model to store cardsets"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
     subject = models.CharField(
-        max_length=1000, help_text="The subject of the cardset", blank=True, null=True
+        max_length=1000, help_text="The subject of the cardset", default=None, blank=True, null=True
     )
     start_page = models.IntegerField(
         help_text="The starting page of the quiz",
+        default=None,
         null=True,
         blank=True,
     )
     end_page = models.IntegerField(
         help_text="The ending page of the quiz",
+        default=None,
         null=True,
         blank=True,
     )
@@ -179,9 +181,12 @@ class Cardset(models.Model):
 class FlashcardModel(models.Model):
     """Model to store flashcards"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     front = models.TextField(help_text="The front of the flashcard")
     back = models.TextField(help_text="The back of the flashcard")
+    mastery = models.FloatField(
+        help_text="The mastery of the flashcard", default=0.0
+    )
     proficiency = models.IntegerField(
         help_text="The profeciency of the flashcard", default=0
     )
@@ -199,7 +204,7 @@ class FlashcardModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def review(self, answer: bool, user) -> bool:
-        """Update the profeciency of the flashcard based on the correctness of the answer"""
+        """Update the proficiency and mastery of the flashcard based on the correctness of the answer"""
 
         DELAYS = [
             timedelta(minutes=1),
@@ -226,6 +231,17 @@ class FlashcardModel(models.Model):
             self.proficiency = 0
 
         self.time_of_next_review = datetime.now() + DELAYS[self.proficiency]
+
+        outcome = 1 if answer else 0
+
+        if self.proficiency < 3:
+            alpha = 0.7
+        else:
+            alpha = 0.7 + (self.proficiency - 2) * 0.05
+            alpha = min(alpha, 1.0)
+
+        self.mastery = (1 - alpha) * self.mastery + alpha * outcome
+
         return True
 
     def __str__(self):
@@ -235,7 +251,7 @@ class FlashcardModel(models.Model):
 class QuizModel(models.Model):
     """Model to store quizzes"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(
         max_length=100, default="Not Named", help_text="The name of the quiz"
     )
@@ -282,7 +298,7 @@ class QuizModel(models.Model):
 class QuestionAnswerModel(models.Model):
     """Model to store question-answer pairs"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     question = models.TextField(help_text="The question part of the QA pair")
     answer = models.TextField(help_text="The answer part of the QA pair")
     quiz = models.ForeignKey(
@@ -302,7 +318,7 @@ class QuestionAnswerModel(models.Model):
 class MultipleChoiceQuestionModel(models.Model):
     """Model to store multiple-choice questions"""
 
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     question = models.TextField(
         help_text="The question part of the multiple-choice question"
     )
