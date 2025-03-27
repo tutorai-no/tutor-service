@@ -173,13 +173,6 @@ class ContextSerializer(serializers.Serializer):
         return data
 
 
-class AdditionalContextSerializer(ContextSerializer):
-    max_amount_to_generate = serializers.IntegerField(
-        help_text="The maximum amount of a learning aid to generate",
-        required=False,
-    )
-
-
 class CourseSerializer(serializers.ModelSerializer):
     files = UserFileSerializer(many=True, read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -410,6 +403,63 @@ class QuizModelSerializer(serializers.ModelSerializer):
 
         # Combine both types of questions
         return qa_serialized + mc_serialized
+    
+
+class QuizCreateSerializer(serializers.Serializer):
+    course_id = serializers.UUIDField(required=False)
+    document_id = serializers.UUIDField(required=False)
+    subject = serializers.CharField(required=False)
+    start_page = serializers.IntegerField(required=False)
+    end_page = serializers.IntegerField(required=False)
+    num_questions = serializers.IntegerField(required=False)
+
+    def validate(self, data):
+        user = self.context["request"].user
+        course_id = data.get("course_id")
+        document_id = data.get("document_id")
+        subject = data.get("subject")
+        start_page = data.get("start_page")
+        end_page = data.get("end_page")
+        num_questions = data.get("num_questions")
+
+        if course_id:
+            if not Course.objects.filter(id=course_id, user=user).exists():
+                raise NotFound({"course_id": "Course not found."})
+        elif document_id:
+            if not UserFile.objects.filter(id=document_id, user=user).exists():
+                raise NotFound({"document_id": "Document not found."})
+        else:
+            raise serializers.ValidationError(
+                "Either 'course_id' or 'document_id' must be provided."
+            )
+        
+        if not subject and (start_page is None or end_page is None):
+            raise serializers.ValidationError(
+                "At least one of 'subject' or a valid 'start_page' and 'end_page' must be provided."
+            )
+
+        if (start_page is None) != (end_page is None):
+            raise serializers.ValidationError(
+                "Both 'start_page' and 'end_page' must be provided together."
+            )
+
+        if start_page is not None and end_page is not None:
+            if start_page > end_page:
+                raise serializers.ValidationError(
+                    "'start_page' must be less than or equal to 'end_page'."
+                )
+            
+        if num_questions is None:
+            raise serializers.ValidationError(
+                "'num_questions' must be provided."
+            )
+        
+        if num_questions <= 0:
+            raise serializers.ValidationError(
+                "'num_questions' must be greater than 0."
+            )
+
+        return data
 
 
 class ClusterElementSerializer(serializers.ModelSerializer):

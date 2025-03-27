@@ -786,7 +786,17 @@ class QuizGenerationTest(TestCase):
             of achieving defined goals.
         """
         self.valid_subject = "Artificial Intelligence"
-
+        
+        self.user_file = UserFile.objects.create(
+            id=self.valid_document_id,
+            user=self.user,
+            name=self.valid_document_name,
+            blob_name="test_blob",
+            file_url="http://example.com/file.pdf",
+            num_pages=self.valid_page_num_end + 1,
+            content_type="application/pdf"
+        )
+        
         # Populate RAG database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(
@@ -815,9 +825,10 @@ class QuizGenerationTest(TestCase):
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
         valid_payload = {
-            "id": self.valid_document_id,  # 'id' is correct for AdditionalContextSerializer
+            "document_id": self.valid_document_id,  # 'id' is correct for QuizCreateSerializer
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
+            "num_questions": 5,
         }
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -854,11 +865,12 @@ class QuizGenerationTest(TestCase):
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": self.valid_subject,
             "learning_goals": ["goal1", "goal2"],
+            "num_questions": 5,
         }
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -892,11 +904,12 @@ class QuizGenerationTest(TestCase):
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": "Some subject",
             "course_id": self.course.id,
+            "num_questions": 5,
         }
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -936,9 +949,10 @@ class QuizGenerationTest(TestCase):
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
         invalid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_end,  # start > end
             "end_page": self.valid_page_num_start,
+            "num_questions": 5,
         }
         response = self.client.post(self.url, invalid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -949,8 +963,9 @@ class QuizGenerationTest(TestCase):
     def test_valid_request_for_semantic_creation_of_quizzed(self):
         self.assertFalse(QuizModel.objects.exists())
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.valid_subject,
+            "num_questions": 5,
         }
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -970,9 +985,9 @@ class QuizGenerationTest(TestCase):
         self.assertFalse(QuizModel.objects.exists())
         max_amount = 5
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.valid_subject,
-            "max_amount_to_generate": max_amount,
+            "num_questions": max_amount,
         }
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -985,13 +1000,14 @@ class QuizGenerationTest(TestCase):
         )
         self.assertLessEqual(total_questions, max_amount)
 
-    def test_valid_request_with_total_amount_of_questions_equal_zero(self):
+    def test_valid_request_with_minimum_questions(self):
+        """Test generating a quiz with the minimum allowed number of questions."""
         self.assertFalse(QuizModel.objects.exists())
-        max_amount = 0
+        min_amount = 1
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.valid_subject,
-            "max_amount_to_generate": max_amount,
+            "num_questions": min_amount,
         }
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1002,7 +1018,7 @@ class QuizGenerationTest(TestCase):
             QuestionAnswerModel.objects.filter(quiz=quiz).count()
             + MultipleChoiceQuestionModel.objects.filter(quiz=quiz).count()
         )
-        self.assertLessEqual(total_questions, max_amount)
+        self.assertEqual(total_questions, min_amount)
 
 
 class QuizGradingTest(TestCase):
