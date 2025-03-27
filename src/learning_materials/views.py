@@ -66,9 +66,9 @@ from learning_materials.translator import (
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
-    AdditionalContextSerializer,
     ClusterElementSerializer,
     CourseSerializer,
+    QuizCreateSerializer,
     UserDocumentSerializer,
     UserFileSerializer,
     CardsetSerializer,
@@ -706,13 +706,13 @@ class ChatResponseView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class QuizGenerationView(GenericAPIView):
-    serializer_class = AdditionalContextSerializer
+class QuizGenerationView(CreateAPIView):
+    serializer_class = QuizCreateSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
-        request_body=AdditionalContextSerializer,
+        request_body=QuizCreateSerializer,
         responses={
             200: openapi.Response(
                 description="Quiz created successfully",
@@ -745,17 +745,17 @@ class QuizGenerationView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            document_id = serializer.validated_data.get("id")
+            document_id = serializer.validated_data.get("document_id")
             start = serializer.validated_data.get("start_page")
             end = serializer.validated_data.get("end_page")
             subject = serializer.validated_data.get("subject")
             learning_goals = serializer.validated_data.get("learning_goals", [])
             course_id = serializer.validated_data.get("course_id")
-            max_questions = serializer.validated_data.get("max_amount_to_generate")
+            num_questions = serializer.validated_data.get("num_questions")
 
             # Generate the quiz data
             quiz_data = generate_quiz(
-                document_id, start, end, subject, learning_goals, max_questions
+                document_id, start, end, subject, learning_goals, num_questions
             )
 
             title = generate_title_of_quiz(quiz_data)

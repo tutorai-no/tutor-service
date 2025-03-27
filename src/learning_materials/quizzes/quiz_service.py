@@ -34,7 +34,7 @@ def generate_quiz(
     end: Optional[int],
     subject: Optional[str],
     learning_goals: list[str] = [],
-    max_questions: Optional[int] = None,
+    num_questions: Optional[int] = None,
 ) -> Quiz:
     """
     Generates a quiz for the specified document and page range based on learning goals.
@@ -43,17 +43,22 @@ def generate_quiz(
     logger.info(f"Generating quiz for document {document_id}")
     citations: list[Citation]
     if start is not None and end is not None:
+        logger.info(f"Generating quiz for page range {start} to {end}")
         if start > end:
             raise ValueError(
                 "The start index of the document cannot be after the end index!"
             )
         citations = get_page_range(document_id, start, end)
     elif subject is not None:
+        logger.info(f"Generating quiz for subject {subject}")
         citations = get_context(document_id, subject)
     else:
         raise ValueError(
             "Either start and end page numbers or a subject must be provided."
         )
+    
+    if not citations:
+        raise ValueError("No citations found for the specified document.")
 
     # Initialize the parser for Quiz
     parser = PydanticOutputParser(pydantic_object=Quiz)
@@ -94,7 +99,7 @@ def generate_quiz(
     # Generate the quiz questions
     questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
 
-    questions_per_citation = max_questions // len(citations) if max_questions else 5
+    questions_per_citation = num_questions // len(citations) if num_questions else 5
     document_name = ""
     for citation in citations:
         document_name = citation.document_name
@@ -116,23 +121,23 @@ def generate_quiz(
         subject=subject,
         questions=questions,
     )
-    quiz = _post_process_quiz(quiz, learning_goals, max_questions)
+    quiz = _post_process_quiz(quiz, learning_goals, num_questions)
     return quiz
 
 
 def _post_process_quiz(
     quiz: Quiz,
     learning_goals: list[str] = [],
-    max_questions: Optional[int] = None,
+    num_questions: Optional[int] = None,
 ) -> Quiz:
     """
     Post-process the quiz questions to ensure a good variety of question types.
     """
     logger.info("Post-processing quiz")
 
-    if max_questions is not None:
+    if num_questions is not None:
         # Ensure the number of questions does not exceed the maximum
-        quiz.questions = quiz.questions[:max_questions]
+        quiz.questions = quiz.questions[:num_questions]
 
     return quiz
 
