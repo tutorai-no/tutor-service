@@ -53,6 +53,31 @@ class Migration(migrations.Migration):
                     REFERENCES "learning_materials_cardset" ("id") ON DELETE CASCADE
             );
             
+            -- Create QuestionAnswerModel table
+            CREATE TABLE IF NOT EXISTS "learning_materials_questionanswermodel" (
+                "id" uuid NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
+                "question" text NOT NULL,
+                "answer" text NOT NULL,
+                "quiz_id" uuid NOT NULL,
+                "created_at" timestamp with time zone NULL,
+                "updated_at" timestamp with time zone NULL,
+                CONSTRAINT "learning_materials_questionanswermodel_quiz_id_fkey" FOREIGN KEY ("quiz_id")
+                    REFERENCES "learning_materials_quizmodel" ("id") ON DELETE CASCADE
+            );
+            
+            -- Create MultipleChoiceQuestionModel table
+            CREATE TABLE IF NOT EXISTS "learning_materials_multiplechoicequestionmodel" (
+                "id" uuid NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
+                "question" text NOT NULL,
+                "options" jsonb NOT NULL,
+                "answer" text NOT NULL,
+                "quiz_id" uuid NOT NULL,
+                "created_at" timestamp with time zone NULL,
+                "updated_at" timestamp with time zone NULL,
+                CONSTRAINT "learning_materials_multiplechoicequestionmodel_quiz_id_fkey" FOREIGN KEY ("quiz_id")
+                    REFERENCES "learning_materials_quizmodel" ("id") ON DELETE CASCADE
+            );
+            
             -- Rest of the tables...
             """,
             reverse_sql=migrations.RunSQL.noop
