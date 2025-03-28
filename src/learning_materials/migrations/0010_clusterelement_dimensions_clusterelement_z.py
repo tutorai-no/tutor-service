@@ -6,18 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0009_course_preferred_tools'),
+        ("learning_materials", "0009_course_preferred_tools"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='clusterelement',
-            name='dimensions',
+            model_name="clusterelement",
+            name="dimensions",
             field=models.IntegerField(default=2),
         ),
         migrations.AddField(
-            model_name='clusterelement',
-            name='z',
-            field=models.FloatField(default=0.0, help_text='The z-coordinate of the element'),
+            model_name="clusterelement",
+            name="z",
+            field=models.FloatField(
+                default=0.0, help_text="The z-coordinate of the element"
+            ),
         ),
     ]

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0008_course_language_course_sections'),
+        ("learning_materials", "0008_course_language_course_sections"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='course',
-            name='preferred_tools',
+            model_name="course",
+            name="preferred_tools",
             field=models.JSONField(blank=True, default=list),
         ),
     ]

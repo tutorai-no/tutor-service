@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0004_userurl'),
+        ("learning_materials", "0004_userurl"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userurl',
-            name='name',
-            field=models.CharField(default='URL NOT NAMED', max_length=255),
+            model_name="userurl",
+            name="name",
+            field=models.CharField(default="URL NOT NAMED", max_length=255),
         ),
     ]

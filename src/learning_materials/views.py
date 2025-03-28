@@ -282,6 +282,7 @@ class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
             return UserURL.objects.get(id=doc_id, user=user)
         except UserURL.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound("Document not found")
 
     def destroy(self, request, *args, **kwargs):
@@ -315,11 +316,12 @@ class ClusterListView(ListAPIView):
         user_file = UserFile.objects.get(id=document_id)
         cluster_elements = ClusterElement.objects.filter(user_file=user_file)
         return cluster_elements
-    
+
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
 
 class CreateCardsetView(CreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -353,7 +355,9 @@ class CreateCardsetView(CreateAPIView):
         tags=["Flashcards"],
     )
     def post(self, request, *args, **kwargs):
-        serializer = CardsetCreateSerializer(data=request.data, context={"request": request})
+        serializer = CardsetCreateSerializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             course_id = serializer.validated_data.get("course_id")
             document_id = serializer.validated_data.get("document_id")

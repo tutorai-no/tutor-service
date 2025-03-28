@@ -23,9 +23,9 @@ llm = ChatOpenAI(temperature=0.0)
 def sanitize_json_text(text):
     """Sanitize JSON string by removing trailing commas."""
     # Handle AIMessage objects by extracting their content
-    if hasattr(text, 'content'):
+    if hasattr(text, "content"):
         text = text.content
-    return re.sub(r',(\s*[\}\]])', r'\1', text)
+    return re.sub(r",(\s*[\}\]])", r"\1", text)
 
 
 def generate_quiz(
@@ -56,7 +56,7 @@ def generate_quiz(
         raise ValueError(
             "Either start and end page numbers or a subject must be provided."
         )
-    
+
     if not citations:
         raise ValueError("No citations found for the specified document.")
 

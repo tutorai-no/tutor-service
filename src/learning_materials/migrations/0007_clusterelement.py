@@ -8,20 +8,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0006_uservideo'),
+        ("learning_materials", "0006_uservideo"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ClusterElement',
+            name="ClusterElement",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('cluster_name', models.CharField(max_length=255)),
-                ('page_number', models.IntegerField()),
-                ('mastery', models.FloatField(default=0.0)),
-                ('x', models.FloatField(help_text='The x-coordinate of the element')),
-                ('y', models.FloatField(help_text='The y-coordinate of the element')),
-                ('user_file', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cluster_elements', to='learning_materials.userfile')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("cluster_name", models.CharField(max_length=255)),
+                ("page_number", models.IntegerField()),
+                ("mastery", models.FloatField(default=0.0)),
+                ("x", models.FloatField(help_text="The x-coordinate of the element")),
+                ("y", models.FloatField(help_text="The y-coordinate of the element")),
+                (
+                    "user_file",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cluster_elements",
+                        to="learning_materials.userfile",
+                    ),
+                ),
             ],
         ),
     ]

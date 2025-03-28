@@ -8,7 +8,10 @@ from django.conf import settings
 
 from broker.topics import Topic
 from broker.handlers.clustering_handler import handle_document_upload_rag
-from broker.handlers.activity_handler import handle_activity_streak, handle_activity_save
+from broker.handlers.activity_handler import (
+    handle_activity_streak,
+    handle_activity_save,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +64,17 @@ class Consumer(threading.Thread):
 
 
 CONSUMERS = [
-    Consumer(ConsumerConfig([Topic.DOCUMENT_UPLOAD_RAG], handle_document_upload_rag, "clustering")),
-    Consumer(ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_save, "activity_save")),
-    Consumer(ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_streak, "activity_streak")),
+    Consumer(
+        ConsumerConfig(
+            [Topic.DOCUMENT_UPLOAD_RAG], handle_document_upload_rag, "clustering"
+        )
+    ),
+    Consumer(
+        ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_save, "activity_save")
+    ),
+    Consumer(
+        ConsumerConfig([Topic.USER_ACTIVITY], handle_activity_streak, "activity_streak")
+    ),
 ]
 
 
