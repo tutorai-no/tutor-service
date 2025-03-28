@@ -21,7 +21,6 @@ def handle_document_upload_rag(raw_message: dict):
     """
     Handle document upload message from CDN
     """
-    message: DocumentUploadMessage
     message = DocumentUploadMessage.model_validate(raw_message)
     logger.info(
         f"Document upload message received for document_id: {message.document_id}"
