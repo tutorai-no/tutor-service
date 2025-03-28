@@ -47,16 +47,16 @@ class FlashcardGenerationTest(TestCase):
         self.valid_page_num_end = 1
         self.subject = "Anakin Skywalker"
         self.context = """
-            Revenge of the Sith is set three years after the onset of the Clone Wars 
-            as established in Attack of the Clones. The Jedi are spread across the 
-            galaxy in a full-scale war against the Separatists. The Jedi Council 
-            dispatches Jedi Master Obi-Wan Kenobi on a mission to dfefeat General 
-            Grievous, the head of the Separatist army and Count Dooku's former apprentice, 
-            to put an end to the war. Meanwhile, after having visions of his wife Padmé 
-            Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the 
-            Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic 
-            and, secretly, a Sith Lord. Palpatine manipulates Anakin into turning to the 
-            dark side of the Force and becoming his apprentice, Darth Vader, with 
+            Revenge of the Sith is set three years after the onset of the Clone Wars
+            as established in Attack of the Clones. The Jedi are spread across the
+            galaxy in a full-scale war against the Separatists. The Jedi Council
+            dispatches Jedi Master Obi-Wan Kenobi on a mission to dfefeat General
+            Grievous, the head of the Separatist army and Count Dooku's former apprentice,
+            to put an end to the war. Meanwhile, after having visions of his wife Padmé
+            Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the
+            Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic
+            and, secretly, a Sith Lord. Palpatine manipulates Anakin into turning to the
+            dark side of the Force and becoming his apprentice, Darth Vader, with
             wide-ranging consequences for the galaxy.
         """
 
@@ -535,7 +535,7 @@ class CardsetCRUDTest(TestCase):
 
     def test_filter_cardsets_by_course_id(self):
         course1 = Course.objects.create(name="Course 1", user=self.user)
-        course2 = Course.objects.create(name="Course 2", user=self.user)
+        Course.objects.create(name="Course 2", user=self.user)
 
         Cardset.objects.create(
             name="Cardset for Course 1",
@@ -778,11 +778,11 @@ class QuizGenerationTest(TestCase):
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
         self.context = """
-            Artificial intelligence (AI), in its broadest sense, is intelligence 
-            exhibited by machines, particularly computer systems. It is a field of 
-            research in computer science that develops and studies methods and 
-            software that enable machines to perceive their environment and use 
-            learning and intelligence to take actions that maximize their chances 
+            Artificial intelligence (AI), in its broadest sense, is intelligence
+            exhibited by machines, particularly computer systems. It is a field of
+            research in computer science that develops and studies methods and
+            software that enable machines to perceive their environment and use
+            learning and intelligence to take actions that maximize their chances
             of achieving defined goals.
         """
         self.valid_subject = "Artificial Intelligence"
@@ -1047,10 +1047,10 @@ class QuizGradingTest(TestCase):
         self.question2 = QuestionAnswerModel.objects.create(
             quiz=self.quiz,
             question="""
-                What is the field of research in computer science that 
-                develops and studies methods and software that enable 
-                machines to perceive their environment and use learning 
-                and intelligence to take actions that maximize their 
+                What is the field of research in computer science that
+                develops and studies methods and software that enable
+                machines to perceive their environment and use learning
+                and intelligence to take actions that maximize their
                 chances of achieving defined goals?
             """,
             answer="Artificial intelligence",
@@ -1833,7 +1833,7 @@ class FileUploadTest(TestCase):
             "file": file_obj,
             "course_id": str(self.course.id),
         }
-        response = self.client.post(self.url, data, format="multipart")
+        self.client.post(self.url, data, format="multipart")
         # Check that no UserFile was created
         self.assertFalse(UserFile.objects.exists())
 
@@ -2206,7 +2206,8 @@ class CourseAPITest(TestCase):
         )
         file1.courses.add(course)
 
-        file2 = UserFile.objects.create(
+        # Create other files not in course
+        UserFile.objects.create(
             name="File 2",
             blob_name="blob2",
             file_url="http://example.com/file2.pdf",
@@ -2216,7 +2217,7 @@ class CourseAPITest(TestCase):
             user=self.user,
         )
 
-        file3 = UserFile.objects.create(
+        UserFile.objects.create(
             name="File 3",
             blob_name="blob3",
             file_url="http://example.com/file3.pdf",

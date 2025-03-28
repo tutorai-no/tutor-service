@@ -27,7 +27,7 @@ from accounts.models import (
 )
 from broker.producer import producer
 from broker.topics import Topic
-from broker.handlers.signup_handler import SubscriptionSchema, UserSchema
+from broker.handlers.signup_handler import UserSchema
 
 User = get_user_model()
 
@@ -364,7 +364,7 @@ def validate_image_size(image):
     max_size_in_mb = 4
     max_size_in_bytes = max_size_in_mb * 1024 * 1024  # Convert MB to bytes
     if image.size > max_size_in_bytes:
-        raise ValidationError(f"Image size should not exceed { max_size_in_mb} MB.")
+        raise ValidationError(f"Image size should not exceed {max_size_in_mb} MB.")
 
 
 class UserFeedbackSerializer(serializers.Serializer):

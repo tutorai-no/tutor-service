@@ -10,8 +10,6 @@ from rest_framework.generics import (
     CreateAPIView,
     GenericAPIView,
     ListAPIView,
-    UpdateAPIView,
-    DestroyAPIView,
     RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -234,7 +232,7 @@ class FileUploadView(APIView):
             except Exception as e:
                 logging.error(f"Error processing URLs: {e}")
                 return Response(
-                    {"detail": f"Error processing URLs"},
+                    {"detail": f"Error processing URLs: {e}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 

@@ -8,7 +8,6 @@ from azure.storage.blob import (
 )
 from datetime import datetime, timedelta
 from django.core.files.uploadedfile import UploadedFile
-from django.utils.text import get_valid_filename
 from uuid import UUID
 from config import Config
 

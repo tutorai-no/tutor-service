@@ -3,8 +3,6 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from broker.producer import producer
-from broker.topics import Topic
 from broker.handlers.clustering_handler import (
     handle_document_upload_rag,
     DocumentUploadMessage,
