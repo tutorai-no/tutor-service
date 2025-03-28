@@ -99,7 +99,8 @@ def generate_quiz(
     # Generate the quiz questions
     questions: List[Union[QuestionAnswer, MultipleChoiceQuestion]] = []
 
-    questions_per_citation = num_questions // len(citations) if num_questions else 5
+    questions_per_citation = max(1, num_questions // len(citations)) if num_questions else 5
+
     document_name = ""
     for citation in citations:
         document_name = citation.document_name
