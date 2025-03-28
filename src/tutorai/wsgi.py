@@ -11,11 +11,12 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
+# Start consumer listeners
+from broker.consumers import start_consumers
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tutorai.settings")
 
 application = get_wsgi_application()
 
-# Start consumer listeners
-from broker.consumers import start_consumers
 
 start_consumers()

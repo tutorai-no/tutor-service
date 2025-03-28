@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 import uuid
 from io import BytesIO
 from PIL import Image
@@ -19,7 +18,7 @@ from rest_framework_simplejwt.token_blacklist.models import (
 from rest_framework_simplejwt.exceptions import TokenError
 from unittest.mock import patch
 
-from accounts.models import Feedback, Subscription, Activity, Streak
+from accounts.models import Feedback, Subscription
 
 User = get_user_model()
 

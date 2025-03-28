@@ -1,5 +1,3 @@
-from langchain_core.language_models.llms import LLM
-
 from langchain_openai import ChatOpenAI
 
 from config import Config

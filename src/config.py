@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 """
 This module provides the Config class to manage configuration variables
-from environment files. It also supports fetching test cases 
+from environment files. It also supports fetching test cases
 ifthe configuration is loaded from a test environment file.
 """
 

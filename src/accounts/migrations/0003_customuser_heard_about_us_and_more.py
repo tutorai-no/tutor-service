@@ -9,35 +9,66 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_customuser_phone_number'),
+        ("accounts", "0002_customuser_phone_number"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='heard_about_us',
+            model_name="customuser",
+            name="heard_about_us",
             field=models.CharField(blank=True, max_length=100, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='other_heard_about_us',
+            model_name="customuser",
+            name="other_heard_about_us",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.CreateModel(
-            name='UserApplication',
+            name="UserApplication",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('username', models.CharField(max_length=150, unique=True)),
-                ('email', models.EmailField(max_length=254, unique=True)),
-                ('phone_number', models.CharField(max_length=15)),
-                ('heard_about_us', models.CharField(max_length=100)),
-                ('other_heard_about_us', models.CharField(blank=True, max_length=255, null=True)),
-                ('inspiration', models.TextField(max_length=250)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')], default='pending', max_length=10)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('review_comments', models.TextField(blank=True, null=True)),
-                ('reviewed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reviewed_applications', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("username", models.CharField(max_length=150, unique=True)),
+                ("email", models.EmailField(max_length=254, unique=True)),
+                ("phone_number", models.CharField(max_length=15)),
+                ("heard_about_us", models.CharField(max_length=100)),
+                (
+                    "other_heard_about_us",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("inspiration", models.TextField(max_length=250)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("approved", "Approved"),
+                            ("rejected", "Rejected"),
+                        ],
+                        default="pending",
+                        max_length=10,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("review_comments", models.TextField(blank=True, null=True)),
+                (
+                    "reviewed_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="reviewed_applications",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]
