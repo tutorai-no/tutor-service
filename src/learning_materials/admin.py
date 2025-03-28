@@ -9,7 +9,7 @@ from learning_materials.models import (
     QuestionAnswerModel,
     QuizModel,
     Chat,
-    ClusterElement
+    ClusterElement,
 )
 
 
@@ -39,10 +39,19 @@ class CardsetAdmin(admin.ModelAdmin):
 
 admin.site.register(FlashcardModel)
 
+
 @admin.register(ClusterElement)
 class ClusterElementAdmin(admin.ModelAdmin):
-    list_display = ["id", "user_file", "page_number", "cluster_name", "x", "y", "z", "mastery"]
-     
+    list_display = [
+        "id",
+        "user_file",
+        "page_number",
+        "cluster_name",
+        "x",
+        "y",
+        "z",
+        "mastery",
+    ]
 
 
 class QuestionAnswerInline(admin.TabularInline):

@@ -283,6 +283,6 @@ LOGGING = {
 
 # Kafka settings
 KAFKA_CONFIGURATION = {
-    'bootstrap.servers': 'broker',
-    'auto.offset.reset': 'smallest',
+    "bootstrap.servers": "broker",
+    "auto.offset.reset": "smallest",
 }

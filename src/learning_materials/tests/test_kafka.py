@@ -5,8 +5,15 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from broker.producer import producer
 from broker.topics import Topic
-from broker.handlers.clustering_handler import handle_document_upload_rag, DocumentUploadMessage
-from broker.handlers.activity_handler import handle_activity_streak, handle_activity_save, ActivityMessage
+from broker.handlers.clustering_handler import (
+    handle_document_upload_rag,
+    DocumentUploadMessage,
+)
+from broker.handlers.activity_handler import (
+    handle_activity_streak,
+    handle_activity_save,
+    ActivityMessage,
+)
 from learning_materials.knowledge_base.rag_service import post_context
 from learning_materials.models import UserFile, ClusterElement
 from accounts.models import Streak, Activity
@@ -74,53 +81,53 @@ class TestClusteringHandler(TestCase):
 
 
 class HandleActivityMessageTests(TestCase):
-        def setUp(self):
-            self.user = User.objects.create_user(
-                username="clustersuser",
-                email="cluster@lover.com",
-                password="StrongP@ss1",
-            )
-            self.streak, _ = Streak.objects.get_or_create(user=self.user)
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="clustersuser",
+            email="cluster@lover.com",
+            password="StrongP@ss1",
+        )
+        self.streak, _ = Streak.objects.get_or_create(user=self.user)
 
-        def send_activity_message(self, activity_type, metadata=None):
-            """Helper function to send a test activity message"""
-            message = ActivityMessage(
-                user_id=self.user.id,
-                activity_type=activity_type,
-                timestamp=datetime.now().isoformat(),
-                metadata={"test": "metadata"},
-            )
-            raw_message = message.model_dump()
-            handle_activity_streak(raw_message)
-            handle_activity_save(raw_message)
+    def send_activity_message(self, activity_type, metadata=None):
+        """Helper function to send a test activity message"""
+        message = ActivityMessage(
+            user_id=self.user.id,
+            activity_type=activity_type,
+            timestamp=datetime.now().isoformat(),
+            metadata={"test": "metadata"},
+        )
+        raw_message = message.model_dump()
+        handle_activity_streak(raw_message)
+        handle_activity_save(raw_message)
 
-        def test_activity_is_created(self):
-            """Ensure that handle_activity_message() creates an Activity record."""
-            self.assertEqual(Activity.objects.count(), 0)
+    def test_activity_is_created(self):
+        """Ensure that handle_activity_message() creates an Activity record."""
+        self.assertEqual(Activity.objects.count(), 0)
 
-            self.send_activity_message("Flashcard")
+        self.send_activity_message("Flashcard")
 
-            self.assertEqual(Activity.objects.count(), 1)
-            activity = Activity.objects.first()
-            self.assertEqual(activity.user, self.user)
-            self.assertEqual(activity.activity_type, "Flashcard")
+        self.assertEqual(Activity.objects.count(), 1)
+        activity = Activity.objects.first()
+        self.assertEqual(activity.user, self.user)
+        self.assertEqual(activity.activity_type, "Flashcard")
 
-        def test_increment_streak(self):
-            """Ensure that handle_activity_message() increments the streak."""
-            self.assertEqual(self.streak.current_streak, 0)
+    def test_increment_streak(self):
+        """Ensure that handle_activity_message() increments the streak."""
+        self.assertEqual(self.streak.current_streak, 0)
 
-            self.send_activity_message("Flashcard")
+        self.send_activity_message("Flashcard")
 
-            self.streak.refresh_from_db()
-            self.assertEqual(self.streak.current_streak, 1)
+        self.streak.refresh_from_db()
+        self.assertEqual(self.streak.current_streak, 1)
 
-        def test_reset_streak(self):
-            """Ensure that handle_activity_message() resets the streak if the previous streak expired."""
-            self.streak.current_streak = 5
-            self.streak.end_date = datetime.now() - timedelta(days=1)
+    def test_reset_streak(self):
+        """Ensure that handle_activity_message() resets the streak if the previous streak expired."""
+        self.streak.current_streak = 5
+        self.streak.end_date = datetime.now() - timedelta(days=1)
 
-            self.send_activity_message("Flashcard")
+        self.send_activity_message("Flashcard")
 
-            current_streak = Streak.objects.get(user=self.user).current_streak
-           
-            self.assertEqual(current_streak, 1)
+        current_streak = Streak.objects.get(user=self.user).current_streak
+
+        self.assertEqual(current_streak, 1)

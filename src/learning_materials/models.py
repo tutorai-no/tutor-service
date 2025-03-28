@@ -135,7 +135,11 @@ class Cardset(models.Model):
     name = models.CharField(max_length=100, help_text="The name of the cardset")
     description = models.TextField(help_text="The description of the cardset")
     subject = models.CharField(
-        max_length=1000, help_text="The subject of the cardset", default=None, blank=True, null=True
+        max_length=1000,
+        help_text="The subject of the cardset",
+        default=None,
+        blank=True,
+        null=True,
     )
     start_page = models.IntegerField(
         help_text="The starting page of the quiz",
@@ -184,9 +188,7 @@ class FlashcardModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     front = models.TextField(help_text="The front of the flashcard")
     back = models.TextField(help_text="The back of the flashcard")
-    mastery = models.FloatField(
-        help_text="The mastery of the flashcard", default=0.0
-    )
+    mastery = models.FloatField(help_text="The mastery of the flashcard", default=0.0)
     proficiency = models.IntegerField(
         help_text="The profeciency of the flashcard", default=0
     )

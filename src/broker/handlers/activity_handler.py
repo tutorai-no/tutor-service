@@ -7,6 +7,7 @@ from accounts.models import Activity, Streak, CustomUser
 
 logger = logging.getLogger(__name__)
 
+
 class ActivityMessage(BaseModel):
     user_id: UUID
     activity_type: str
@@ -26,7 +27,7 @@ def handle_activity_streak(raw_message: dict):
 
 def handle_activity_save(raw_message: dict):
     logger.info("Handling activity save")
-    logger.info(raw_message)    
+    logger.info(raw_message)
     message = ActivityMessage.model_validate(raw_message)
     user = CustomUser.objects.get(id=message.user_id)
     Activity.objects.create(

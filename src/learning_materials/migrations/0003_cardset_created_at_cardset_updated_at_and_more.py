@@ -6,58 +6,58 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0002_quizmodel_name'),
+        ("learning_materials", "0002_quizmodel_name"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cardset',
-            name='created_at',
+            model_name="cardset",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AddField(
-            model_name='cardset',
-            name='updated_at',
+            model_name="cardset",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
         migrations.AddField(
-            model_name='flashcardmodel',
-            name='created_at',
+            model_name="flashcardmodel",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AddField(
-            model_name='flashcardmodel',
-            name='updated_at',
+            model_name="flashcardmodel",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
         migrations.AddField(
-            model_name='multiplechoicequestionmodel',
-            name='created_at',
+            model_name="multiplechoicequestionmodel",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AddField(
-            model_name='multiplechoicequestionmodel',
-            name='updated_at',
+            model_name="multiplechoicequestionmodel",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
         migrations.AddField(
-            model_name='questionanswermodel',
-            name='created_at',
+            model_name="questionanswermodel",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AddField(
-            model_name='questionanswermodel',
-            name='updated_at',
+            model_name="questionanswermodel",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
         migrations.AddField(
-            model_name='quizmodel',
-            name='created_at',
+            model_name="quizmodel",
+            name="created_at",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.AddField(
-            model_name='quizmodel',
-            name='updated_at',
+            model_name="quizmodel",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
     ]

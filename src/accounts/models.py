@@ -40,6 +40,7 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
+
 class SubscriptionHistory(models.Model):
     user = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name="subscription_history"
@@ -50,6 +51,7 @@ class SubscriptionHistory(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.subscription.name}"
+
 
 class Streak(models.Model):
     user = models.OneToOneField(
@@ -62,14 +64,14 @@ class Streak(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.current_streak}"
-    
-    def check_if_broken_streak(self):    
-        if (datetime.now().date() - self.end_date).total_seconds() > 36*60*60:
+
+    def check_if_broken_streak(self):
+        if (datetime.now().date() - self.end_date).total_seconds() > 36 * 60 * 60:
             self.current_streak = 0
             self.start_date = datetime.now().date()
             self.end_date = datetime.now().date()
             self.save()
-    
+
     def increment_streak(self):
         today_date = datetime.now().date()
         if self.current_streak == 0:
@@ -77,8 +79,11 @@ class Streak(models.Model):
             self.end_date = today_date
             self.save()
             return
-        
-        if not (today_date.month == self.end_date.month and today_date.year == self.end_date.year):
+
+        if not (
+            today_date.month == self.end_date.month
+            and today_date.year == self.end_date.year
+        ):
             self.current_streak += 1
             self.end_date = today_date
             if self.current_streak > self.longest_streak:

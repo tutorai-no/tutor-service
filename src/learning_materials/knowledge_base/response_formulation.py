@@ -141,6 +141,7 @@ def _template_system_prompt(document_names: list[str] = []) -> str:
     """
     return template
 
+
 def generate_name_for_cluster(cluster_chunks: list[str]) -> str:
     """
     Given a list of cluster chunks, generate a name for the cluster

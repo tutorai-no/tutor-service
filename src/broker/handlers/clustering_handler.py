@@ -25,6 +25,4 @@ def handle_document_upload_rag(raw_message: dict):
     logger.info(
         f"Document upload message received for document_id: {message.document_id}"
     )
-    cluster_document(
-        document_id=message.document_id, dimensions=message.dimensions
-    )
+    cluster_document(document_id=message.document_id, dimensions=message.dimensions)

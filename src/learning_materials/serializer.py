@@ -178,14 +178,10 @@ class CourseSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     language = serializers.CharField(required=False, allow_blank=True, allow_null=False)
     sections = serializers.ListField(
-        child=serializers.DictField(),
-        required=False,
-        allow_empty=True
+        child=serializers.DictField(), required=False, allow_empty=True
     )
     preferred_tools = serializers.ListField(
-        child=serializers.CharField(),
-        required=False,
-        allow_empty=True
+        child=serializers.CharField(), required=False, allow_empty=True
     )
 
     class Meta:
@@ -317,7 +313,7 @@ class CardsetSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
-    
+
 
 class CardsetCreateSerializer(serializers.Serializer):
     course_id = serializers.UUIDField(required=False)
@@ -345,7 +341,7 @@ class CardsetCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Either 'course_id' or 'document_id' must be provided."
             )
-        
+
         if not subject and (start_page is None or end_page is None):
             raise serializers.ValidationError(
                 "At least one of 'subject' or a valid 'start_page' and 'end_page' must be provided."
@@ -403,7 +399,7 @@ class QuizModelSerializer(serializers.ModelSerializer):
 
         # Combine both types of questions
         return qa_serialized + mc_serialized
-    
+
 
 class QuizCreateSerializer(serializers.Serializer):
     course_id = serializers.UUIDField(required=False)
@@ -432,7 +428,7 @@ class QuizCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Either 'course_id' or 'document_id' must be provided."
             )
-        
+
         if not subject and (start_page is None or end_page is None):
             raise serializers.ValidationError(
                 "At least one of 'subject' or a valid 'start_page' and 'end_page' must be provided."
@@ -448,16 +444,12 @@ class QuizCreateSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     "'start_page' must be less than or equal to 'end_page'."
                 )
-            
+
         if num_questions is None:
-            raise serializers.ValidationError(
-                "'num_questions' must be provided."
-            )
-        
+            raise serializers.ValidationError("'num_questions' must be provided.")
+
         if num_questions <= 0:
-            raise serializers.ValidationError(
-                "'num_questions' must be greater than 0."
-            )
+            raise serializers.ValidationError("'num_questions' must be greater than 0.")
 
         return data
 
@@ -465,4 +457,13 @@ class QuizCreateSerializer(serializers.Serializer):
 class ClusterElementSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClusterElement
-        fields = ["id", "cluster_name", "page_number", "mastery", "x", "y", "z", "dimensions"]
+        fields = [
+            "id",
+            "cluster_name",
+            "page_number",
+            "mastery",
+            "x",
+            "y",
+            "z",
+            "dimensions",
+        ]

@@ -75,9 +75,9 @@ class FlashcardGenerationTest(TestCase):
             blob_name="test_blob",
             file_url="http://example.com/file.pdf",
             num_pages=self.valid_page_num_end + 1,  # Match the page range
-            content_type="application/pdf"
+            content_type="application/pdf",
         )
-        
+
         # Populate RAG database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(
@@ -786,7 +786,7 @@ class QuizGenerationTest(TestCase):
             of achieving defined goals.
         """
         self.valid_subject = "Artificial Intelligence"
-        
+
         self.user_file = UserFile.objects.create(
             id=self.valid_document_id,
             user=self.user,
@@ -794,9 +794,9 @@ class QuizGenerationTest(TestCase):
             blob_name="test_blob",
             file_url="http://example.com/file.pdf",
             num_pages=self.valid_page_num_end + 1,
-            content_type="application/pdf"
+            content_type="application/pdf",
         )
-        
+
         # Populate RAG database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(

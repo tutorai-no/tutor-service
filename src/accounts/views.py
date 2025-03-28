@@ -65,7 +65,7 @@ class RequestAccessView(generics.CreateAPIView):
             message += f"Other Source: {application.other_heard_about_us}\n"
         message += f"Inspiration: {application.inspiration}\n\n"
         message += "Please review the application in the admin panel."
-        
+
         admin_emails = [admin[1] for admin in settings.ADMINS]
         if admin_emails:
             send_mail(
@@ -222,11 +222,14 @@ class ActivityCreateView(generics.CreateAPIView):
         user_id = self.request.user.id
         timestamp = datetime.now().isoformat()
         metadata = serializer.validated_data.get("metadata", {})
-        
+
         message = ActivityMessage(
-            user_id=user_id, activity_type=activity_type, timestamp=timestamp, metadata=metadata
+            user_id=user_id,
+            activity_type=activity_type,
+            timestamp=timestamp,
+            metadata=metadata,
         )
-        
+
         producer.produce(
             Topic.USER_ACTIVITY.value,
             message.model_dump_json(),

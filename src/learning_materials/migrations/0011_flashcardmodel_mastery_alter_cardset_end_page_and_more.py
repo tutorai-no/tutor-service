@@ -6,28 +6,46 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0010_clusterelement_dimensions_clusterelement_z'),
+        ("learning_materials", "0010_clusterelement_dimensions_clusterelement_z"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='flashcardmodel',
-            name='mastery',
-            field=models.FloatField(default=0.0, help_text='The mastery of the flashcard'),
+            model_name="flashcardmodel",
+            name="mastery",
+            field=models.FloatField(
+                default=0.0, help_text="The mastery of the flashcard"
+            ),
         ),
         migrations.AlterField(
-            model_name='cardset',
-            name='end_page',
-            field=models.IntegerField(blank=True, default=None, help_text='The ending page of the quiz', null=True),
+            model_name="cardset",
+            name="end_page",
+            field=models.IntegerField(
+                blank=True,
+                default=None,
+                help_text="The ending page of the quiz",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cardset',
-            name='start_page',
-            field=models.IntegerField(blank=True, default=None, help_text='The starting page of the quiz', null=True),
+            model_name="cardset",
+            name="start_page",
+            field=models.IntegerField(
+                blank=True,
+                default=None,
+                help_text="The starting page of the quiz",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cardset',
-            name='subject',
-            field=models.CharField(blank=True, default=None, help_text='The subject of the cardset', max_length=1000, null=True),
+            model_name="cardset",
+            name="subject",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="The subject of the cardset",
+                max_length=1000,
+                null=True,
+            ),
         ),
     ]
