@@ -3,6 +3,7 @@ from django.utils.html import format_html
 import json
 
 from learning_materials.models import (
+    Course,
     FlashcardModel,
     Cardset,
     MultipleChoiceQuestionModel,
@@ -18,6 +19,28 @@ class FlashcardInline(admin.TabularInline):
     fields = ["front", "back", "proficiency", "time_of_next_review"]
     readonly_fields = ["time_of_next_review"]
     extra = 0
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "name",
+        "description",
+        "subject",
+        "user",
+        "created_at",
+        "updated_at",
+    ]
+    search_fields = ["name", "subject", "user__username"]
+    list_filter = ["subject", "user"]
+    ordering = ["-created_at"]
+
+    fieldsets = (
+        ("Course Details", {"fields": ("name", "description", "subject", "user")}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
+    readonly_fields = ["created_at", "updated_at"]
 
 
 # Add cardset with flashcards to the admin site
