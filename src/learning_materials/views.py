@@ -3,6 +3,8 @@ from datetime import datetime
 import logging
 from typing import Optional
 import uuid
+import io
+import PyPDF2
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -170,6 +172,21 @@ class FileUploadView(APIView):
                     file, user.id, course.id, file_uuid
                 )
                 sas_url = generate_sas_url(blob_name)
+                
+                # Extract number of pages if file is a PDF
+                num_pages = request.data.get("num_pages", 0)  # Default value
+                if file.content_type == 'application/pdf':
+                    try:
+                        # Reset file pointer to beginning
+                        file.seek(0)
+                        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+                        num_pages = len(pdf_reader.pages)
+                        # Reset file pointer again for later use
+                        file.seek(0)
+                        logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
+                    except Exception as e:
+                        logger.error(f"Error extracting page count from PDF: {e}")
+                        # Keep using the default or provided value
 
                 file_metadata = {
                     "id": file_uuid,
@@ -177,7 +194,7 @@ class FileUploadView(APIView):
                     "blob_name": blob_name,
                     "file_url": file_url,
                     "sas_url": sas_url,
-                    "num_pages": request.data.get("num_pages", 0),
+                    "num_pages": num_pages,
                     "content_type": file.content_type,
                     "file_size": file.size,
                 }

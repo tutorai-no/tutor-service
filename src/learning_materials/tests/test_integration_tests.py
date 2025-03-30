@@ -4,8 +4,8 @@ import uuid
 import re
 from uuid import uuid4
 from datetime import datetime
+from unittest.mock import patch, Mock
 
-from unittest.mock import patch
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
@@ -1777,8 +1777,10 @@ class ChatAPITest(APITestCase):
 class FileUploadTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        # Use a unique username to avoid conflicts between test runs
+        username = f"testuser_{uuid.uuid4().hex[:8]}"
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="Str0ngP@ss"
+            username=username, email=f"{username}@example.com", password="Str0ngP@ss"
         )
         self.client.force_authenticate(user=self.user)
 
@@ -1906,6 +1908,41 @@ class FileUploadTest(TestCase):
         response = self.client.post(self.url, data, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(all(UserURL.objects.filter(url=url).exists() for url in urls))
+
+    @patch("learning_materials.views.create_file_embeddings")
+    def test_pdf_page_count_extraction(self, mock_create_file_embeddings):
+        """Test that PDF page count is correctly extracted and stored when uploading a PDF file."""
+        self.authenticate()
+        
+        # Create a PDF file
+        file_content = b"Dummy PDF content"
+        file_obj = io.BytesIO(file_content)
+        file_obj.name = "test.pdf"
+        
+        # Patch PyPDF2.PdfReader to return a reader with specific number of pages
+        with patch("learning_materials.views.PyPDF2.PdfReader") as mock_reader:
+            expected_pages = 5
+            mock_reader_instance = Mock()
+            mock_reader_instance.pages = [None] * expected_pages
+            mock_reader.return_value = mock_reader_instance
+            
+            # Upload the file
+            data = {
+                "files": file_obj,
+                "course_id": str(self.course.id),
+            }
+            response = self.client.post(self.url, data, format="multipart")
+        
+        # Verify response status
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Check that the response includes the correct page count
+        self.assertEqual(response.data[0]["num_pages"], expected_pages)
+        
+        # Also verify the database record
+        file_id = response.data[0]["id"]
+        user_file = UserFile.objects.get(id=file_id)
+        self.assertEqual(user_file.num_pages, expected_pages)
 
 
 class UserFilesTest(TestCase):
