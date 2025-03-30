@@ -3,11 +3,13 @@ import time
 import uuid
 import re
 from uuid import uuid4
+from datetime import datetime
 
 from unittest.mock import patch
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -2236,3 +2238,43 @@ class CourseAPITest(TestCase):
         print(response.data, flush=True)
         self.assertEqual(files[0]["name"], file1.name)
         self.assertEqual(files[0]["file_url"], file1.file_url)
+
+    def test_course_created_at_field(self):
+        """Test that the created_at field is set automatically when creating a course."""
+        self.authenticate()
+        
+        # Get current time for comparison
+        before_creation = timezone.now()
+        
+        data = {
+            "name": self.valid_course_name,
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Verify created_at is present in the response
+        self.assertIn("created_at", response.data)
+        
+        # Get the course from the database to verify the stored value
+        course = Course.objects.get(id=response.data["id"])
+        
+        # Verify created_at is not None
+        self.assertIsNotNone(course.created_at)
+        
+        # Verify created_at is close to the current time
+        after_creation = timezone.now()
+        self.assertTrue(before_creation <= course.created_at <= after_creation)
+        
+        # Verify the field is read-only by trying to modify it
+        old_created_at = course.created_at
+        modified_time = timezone.now()
+        data = {
+            "name": "Updated Course",
+            "created_at": modified_time.isoformat()
+        }
+        response = self.client.patch(f"{self.url}{course.id}/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Refresh from database and verify created_at didn't change
+        course.refresh_from_db()
+        self.assertEqual(course.created_at, old_created_at)

@@ -194,7 +194,9 @@ class CourseSerializer(serializers.ModelSerializer):
             "sections",
             "preferred_tools",
             "user",
+            "created_at",
         ]
+        read_only_fields = ["created_at"]
 
     def create(self, validated_data):
         return super().create(validated_data)

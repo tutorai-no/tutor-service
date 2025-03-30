@@ -14,6 +14,7 @@ class Course(models.Model):
     language = models.CharField(max_length=10, null=True, blank=True)
     sections = models.JSONField(default=list, blank=True)
     preferred_tools = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "courses"
