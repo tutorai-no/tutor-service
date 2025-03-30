@@ -26,21 +26,18 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "name",
-        "description",
-        "subject",
         "user",
         "created_at",
-        "updated_at",
     ]
-    search_fields = ["name", "subject", "user__username"]
-    list_filter = ["subject", "user"]
+    search_fields = ["name", "user__username"]
+    list_filter = ["user"]
     ordering = ["-created_at"]
 
     fieldsets = (
-        ("Course Details", {"fields": ("name", "description", "subject", "user")}),
-        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+        ("Course Details", {"fields": ("name", "user")}),
+        ("Timestamps", {"fields": ("created_at",)}),
     )
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["created_at"]
 
 
 # Add cardset with flashcards to the admin site
