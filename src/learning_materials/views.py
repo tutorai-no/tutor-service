@@ -385,13 +385,18 @@ class CreateCardsetView(CreateAPIView):
 
             flashcards = []
 
+            course: Optional[Course] = None
+            if course_id:
+                course = Course.objects.get(id=course_id)
+            language = course.language if course else None
+
             if start is not None and end is not None:
                 flashcards = process_flashcards_by_page_range(
-                    document_id, start, end, num_flashcards
+                    document_id, start, end, language, num_flashcards
                 )
             elif subject:
                 flashcards = process_flashcards_by_subject(
-                    document_id, subject, num_flashcards
+                    document_id, subject, language, num_flashcards
                 )
             else:
                 return Response(
@@ -399,11 +404,7 @@ class CreateCardsetView(CreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            course: Optional[Course] = None
-            if course_id:
-                course = Course.objects.get(id=course_id)
-
-            title = generate_title_of_flashcards(flashcards)
+            title = generate_title_of_flashcards(flashcards, language)
             # Create a cardset for the flashcards and save them to the database
             cardset = Cardset.objects.create(
                 name=title,
@@ -624,10 +625,10 @@ class ChatResponseView(APIView):
             course_id = data.get("courseId")
             user_file_ids = data.get("userFileIds", [])
             message = data["message"]
+            course = None
 
             # Handle chat creation or retrieval
             if not chat_id:
-                course = None
                 if course_id:
                     try:
                         course = Course.objects.get(id=course_id, user=user)
@@ -646,6 +647,7 @@ class ChatResponseView(APIView):
             else:
                 try:
                     chat = Chat.objects.get(id=chat_id, user=user)
+                    course = chat.course
                 except Chat.DoesNotExist:
                     return Response(
                         {"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND
@@ -655,20 +657,24 @@ class ChatResponseView(APIView):
             chat.messages.append({"role": "user", "content": message})
             chat.save()
 
+            # Get the language of the course
+            language = course.language if course else None
+
             # Process the LLM response
             try:
                 document_ids = user_file_ids or ([course_id] if course_id else [])
                 assistant_response = process_answer(
-                    document_ids, message, chat.messages
+                    document_ids, message, chat.messages, language
                 )
 
                 # Sanitize the response
                 assistant_response.content = assistant_response.content.replace(
                     "\u0000", ""
                 )
-                # Create a title for the chat
+                
+                # Create a title for the chat (we already have the language)
                 if not chat.title:
-                    title = generate_title_of_chat(message, assistant_response)
+                    title = generate_title_of_chat(message, language, assistant_response)
                     chat.title = title
 
                 chat.messages.append(
@@ -772,17 +778,24 @@ class QuizGenerationView(CreateAPIView):
             course_id = serializer.validated_data.get("course_id")
             num_questions = serializer.validated_data.get("num_questions")
 
-            # Generate the quiz data
-            quiz_data = generate_quiz(
-                document_id, start, end, subject, learning_goals, num_questions
-            )
-
-            title = generate_title_of_quiz(quiz_data)
-            user = request.user
-
             course: Optional[Course] = None
             if course_id:
                 course = Course.objects.get(id=course_id)
+            language = course.language if course else None
+
+            # Generate the quiz data
+            quiz_data = generate_quiz(
+                document_id, start, end, subject, learning_goals, language, num_questions
+            )
+            # Get the course
+            course = None
+            if course_id:
+                course = Course.objects.get(id=course_id)
+
+            # Get the language of the course
+            language = course.language if course else None
+            title = generate_title_of_quiz(quiz_data, language)
+            user = request.user
 
             # Translate the quiz data into ORM models
             quiz_model = translate_quiz_to_orm_model(quiz_data, title, user, course)

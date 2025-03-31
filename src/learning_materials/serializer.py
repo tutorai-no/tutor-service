@@ -198,6 +198,14 @@ class CourseSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["created_at"]
 
+    def validate_language(self, value):
+        """
+        Check that the language code doesn't exceed the maximum length.
+        """
+        if value and len(value) > 10:
+            raise serializers.ValidationError("Language code cannot exceed 10 characters")
+        return value
+
     def create(self, validated_data):
         return super().create(validated_data)
 
