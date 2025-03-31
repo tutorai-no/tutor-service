@@ -77,7 +77,7 @@ def _generate_template(context: str, language: str) -> str:
         * Front: "The Eiffel Tower is in Paris. True or False?"
         * Back: "True"
         
-        IMPORTANT: Generate all flashcards in the language corresponding to the language code "{language}". If this code represents a language other than English, ensure that every flashcard (both front and back) is entirely in that language.
+        Generate all flashcards in the language corresponding to the language code "{language}". If this code represents a language other than English, ensure that every flashcard (both front and back) is entirely in that language.
         
         Generate flashcards that best represent the content of the text. Do not ask questions about meta data from the text, like author or publisher. Each flashcard should be clear, directly derived from the text, and formatted using only the styles listed above.
         """
