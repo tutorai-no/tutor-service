@@ -16,8 +16,8 @@ model = ChatOpenAI(temperature=0, api_key=Config().API_KEY)
 flashcard_parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
 
 
-def generate_flashcards(page: Citation) -> list[Flashcard]:
-    template = _generate_template(page.text)
+def generate_flashcards(page: Citation, language: str = "en") -> list[Flashcard]:
+    template = _generate_template(page.text, language)
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n",
         input_variables=["query"],
@@ -41,7 +41,7 @@ def generate_flashcards(page: Citation) -> list[Flashcard]:
     return flashcards
 
 
-def _generate_template(context: str) -> str:
+def _generate_template(context: str, language: str = "en") -> str:
     """
     Returns a template with the correct flashcard and prompt format which can be used to generate flashcards using the context.
 
@@ -53,33 +53,37 @@ def _generate_template(context: str) -> str:
     """
 
     template = (
-        f"""Create flashcards from the provided text using any of the following formats: Standard Q&A, Vocabulary, Fill-in-the-Blank, Multiple Choice, and True/False. Choose the best format(s) based on the content of the text. Follow these examples:
+        f"""Create flashcards from the provided text using any of the following formats: Standard Q&A, Vocabulary, Fill-in-the-Blank, Multiple Choice, and True/False. Choose the best format(s) based on the content of the text.
+        
+        The following examples are provided in English solely for guidance on the desired format. Do not include these examples in your final output:
+        
         1. Q&A:
         * Front: "What is the capital of France?"
         * Back: "Paris"
-
+        
         2. Vocabulary:
         * Front: "Photosynthesis"
         * Back: "The process by which plants use sunlight to make food."
-
+        
         3. Fill-in-the-Blank:
         * Front: "The largest ocean is ____."
         * Back: "Pacific Ocean"
-
+        
         4. Multiple Choice:
-        * Front: "Which planet is the Red Planet? (a) Venus (b) Mars (c) Jupiter"
+        * Front: "Which planet is known as the Red Planet? (a) Venus (b) Mars (c) Jupiter"
         * Back: "(b) Mars"
-
+        
         5. True/False:
         * Front: "The Eiffel Tower is in Paris. True or False?"
         * Back: "True"
-
-        Generate flashcards that best represent the content of the text. 
-        Use only the formats listed above, and ensure each flashcard is clear, relevant, and directly derived from the text."
+        
+        Generate all flashcards in the language corresponding to the language code "{language}". If this code represents a language other than English, ensure that every flashcard (both front and back) is entirely in that language.
+        
+        Generate flashcards that best represent the content of the text. Do not ask questions about meta data from the text, like author or publisher. Each flashcard should be clear, directly derived from the text, and formatted using only the styles listed above.
         """
         f"\n\nText:\n{context}"
     )
-
+    print("TEMPLATEABC", template)
     return template
 
 
