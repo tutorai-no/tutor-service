@@ -58,24 +58,24 @@ def _generate_template(context: str, language: str = "en") -> str:
         The following examples are provided in English solely for guidance on the desired format. Do not include these examples in your final output:
         
         1. Q&A:
-        * Front: "What is the capital of France?"
-        * Back: "Paris"
+        * Front: "<question>"
+        * Back: "<answer>"
         
         2. Vocabulary:
-        * Front: "Photosynthesis"
-        * Back: "The process by which plants use sunlight to make food."
+        * Front: "Word: <word>"
+        * Back: "Definition: <definition>"
         
         3. Fill-in-the-Blank:
-        * Front: "The largest ocean is ____."
-        * Back: "Pacific Ocean"
+        * Front: "The ... is ____."
+        * Back: "The ... is <answer>."
         
         4. Multiple Choice:
-        * Front: "Which planet is known as the Red Planet? (a) Venus (b) Mars (c) Jupiter"
-        * Back: "(b) Mars"
+        * Front: "<question> (a) <option1> (b) <option2> (c) <option3>"
+        * Back: "(x) <correct answer>"
         
         5. True/False:
-        * Front: "The Eiffel Tower is in Paris. True or False?"
-        * Back: "True"
+        * Front: "<statement>"
+        * Back: "True/False"
         
         Generate all flashcards in the language corresponding to the language code "{language}". If this code represents a language other than English, ensure that every flashcard (both front and back) is entirely in that language.
         
