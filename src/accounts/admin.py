@@ -34,7 +34,7 @@ class UserApplicationAdmin(admin.ModelAdmin):
             # Create a new user
             password = str(uuid4().hex[:18])
 
-            user = User.objects.create_user(
+            User.objects.create_user(
                 username=application.username,
                 email=application.email,
                 phone_number=application.phone_number,
@@ -151,7 +151,7 @@ class StreakAdmin(admin.ModelAdmin):
 
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
-    list_display = ["user", "activity_type", "timestamp"]
+    list_display = ["user", "activity_type", "timestamp", "metadata"]
     search_fields = ["user__username", "activity_type"]
     list_filter = ["timestamp"]
 

@@ -8,18 +8,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0004_streak'),
+        ("accounts", "0004_streak"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Activity',
+            name="Activity",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('activity_type', models.CharField(max_length=100)),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
-                ('metadata', models.JSONField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='activities', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("activity_type", models.CharField(max_length=100)),
+                ("timestamp", models.DateTimeField(auto_now_add=True)),
+                ("metadata", models.JSONField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="activities",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

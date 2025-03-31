@@ -8,19 +8,34 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0003_customuser_heard_about_us_and_more'),
+        ("accounts", "0003_customuser_heard_about_us_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Streak',
+            name="Streak",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('start_date', models.DateField(auto_now_add=True)),
-                ('end_date', models.DateField(auto_now=True)),
-                ('current_streak', models.PositiveIntegerField(default=0)),
-                ('longest_streak', models.PositiveIntegerField(default=0)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='streak', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("start_date", models.DateField(auto_now_add=True)),
+                ("end_date", models.DateField(auto_now=True)),
+                ("current_streak", models.PositiveIntegerField(default=0)),
+                ("longest_streak", models.PositiveIntegerField(default=0)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="streak",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

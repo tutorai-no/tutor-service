@@ -3,12 +3,14 @@ from django.utils.html import format_html
 import json
 
 from learning_materials.models import (
+    Course,
     FlashcardModel,
     Cardset,
     MultipleChoiceQuestionModel,
     QuestionAnswerModel,
     QuizModel,
     Chat,
+    ClusterElement,
 )
 
 
@@ -17,6 +19,25 @@ class FlashcardInline(admin.TabularInline):
     fields = ["front", "back", "proficiency", "time_of_next_review"]
     readonly_fields = ["time_of_next_review"]
     extra = 0
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "name",
+        "user",
+        "created_at",
+    ]
+    search_fields = ["name", "user__username"]
+    list_filter = ["user"]
+    ordering = ["-created_at"]
+
+    fieldsets = (
+        ("Course Details", {"fields": ("name", "user")}),
+        ("Timestamps", {"fields": ("created_at",)}),
+    )
+    readonly_fields = ["created_at"]
 
 
 # Add cardset with flashcards to the admin site
@@ -37,6 +58,20 @@ class CardsetAdmin(admin.ModelAdmin):
 
 
 admin.site.register(FlashcardModel)
+
+
+@admin.register(ClusterElement)
+class ClusterElementAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "user_file",
+        "page_number",
+        "cluster_name",
+        "x",
+        "y",
+        "z",
+        "mastery",
+    ]
 
 
 class QuestionAnswerInline(admin.TabularInline):

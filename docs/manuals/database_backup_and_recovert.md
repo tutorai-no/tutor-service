@@ -15,7 +15,7 @@ You need for both scripts to provide the container id of the database container 
 ```bash
 docker ps
 ```
-Then choose the container id of the database container. The image should be postgres:latest. So choose the container id of the postgres:latest image.
+Then choose the container id of the database container. The image should be postgres:latest. So choose the container id of the `postgres:latest` image.
 
 Example:
 ```bash

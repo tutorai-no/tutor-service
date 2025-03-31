@@ -10,6 +10,7 @@ ssh -i ~/.ssh/tutorai azureuser@51.120.0.165
 To deploy the changes to the server, you need to pull the changes from the repository and restart the docker containers.
 ```bash
 git pull
+docker compose run --rm backend python manage.py collectstatic --noinput
 docker compose down; docker compose up --build -d
 ```
 
@@ -36,6 +37,7 @@ ssh -i "~/.ssh/tutorai" root@46.101.107.247
 To deploy the changes to the server, you need to pull the changes from the repository and restart the docker containers.
 ```bash
 git pull
+docker compose run --rm backend python manage.py collectstatic --noinput
 docker compose down; docker compose up --build -d
 ```
 

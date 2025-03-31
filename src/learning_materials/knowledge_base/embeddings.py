@@ -21,7 +21,9 @@ class EmbeddingsModel(ABC):
 
 
 class OpenAIEmbedding(EmbeddingsModel):
-    def __init__(self, model_name: str = "text-embedding-3-small"): # TODO: Make sure the model is the same as used in tango-scraper
+    def __init__(
+        self, model_name: str = "text-embedding-3-small"
+    ):  # TODO: Make sure the model is the same as used in tango-scraper
         api_key = Config().API_KEY
         self.client = openai.Client(api_key=api_key)
         self.model_name = model_name

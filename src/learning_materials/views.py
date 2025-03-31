@@ -1,14 +1,17 @@
+from datetime import datetime
+
 import logging
 from typing import Optional
 import uuid
+import io
+import PyPDF2
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.generics import (
+    CreateAPIView,
     GenericAPIView,
     ListAPIView,
-    UpdateAPIView,
-    DestroyAPIView,
     RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -18,6 +21,10 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+
+from broker.producer import producer
+from broker.handlers.activity_handler import ActivityMessage
+from broker.topics import Topic
 from learning_materials.files.file_embeddings import (
     create_file_embeddings,
     create_url_embeddings,
@@ -59,15 +66,16 @@ from learning_materials.translator import (
 )
 from learning_materials.compendiums.compendium_service import generate_compendium
 from learning_materials.serializer import (
-    AdditionalContextSerializer,
     ClusterElementSerializer,
     CourseSerializer,
+    QuizCreateSerializer,
     UserDocumentSerializer,
     UserFileSerializer,
     CardsetSerializer,
     ChatSerializer,
     ChatRequestSerializer,
     FlashcardSerializer,
+    CardsetCreateSerializer,
     ReviewFlashcardSerializer,
     QuizModelSerializer,
     ContextSerializer,
@@ -164,6 +172,21 @@ class FileUploadView(APIView):
                     file, user.id, course.id, file_uuid
                 )
                 sas_url = generate_sas_url(blob_name)
+                
+                # Extract number of pages if file is a PDF
+                num_pages = request.data.get("num_pages", 0)  # Default value
+                if file.content_type == 'application/pdf':
+                    try:
+                        # Reset file pointer to beginning
+                        file.seek(0)
+                        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+                        num_pages = len(pdf_reader.pages)
+                        # Reset file pointer again for later use
+                        file.seek(0)
+                        logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
+                    except Exception as e:
+                        logger.error(f"Error extracting page count from PDF: {e}")
+                        # Keep using the default or provided value
 
                 file_metadata = {
                     "id": file_uuid,
@@ -171,7 +194,7 @@ class FileUploadView(APIView):
                     "blob_name": blob_name,
                     "file_url": file_url,
                     "sas_url": sas_url,
-                    "num_pages": request.data.get("num_pages", 0),
+                    "num_pages": num_pages,
                     "content_type": file.content_type,
                     "file_size": file.size,
                 }
@@ -226,7 +249,7 @@ class FileUploadView(APIView):
             except Exception as e:
                 logging.error(f"Error processing URLs: {e}")
                 return Response(
-                    {"detail": f"Error processing URLs"},
+                    {"detail": f"Error processing URLs: {e}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
@@ -274,6 +297,7 @@ class UserDocumentDetailView(RetrieveUpdateDestroyAPIView):
             return UserURL.objects.get(id=doc_id, user=user)
         except UserURL.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound("Document not found")
 
     def destroy(self, request, *args, **kwargs):
@@ -304,16 +328,23 @@ class ClusterListView(ListAPIView):
 
     def get_queryset(self):
         document_id = self.request.query_params.get("document_id")
-        return ClusterElement.objects.filter(user_file=document_id)
+        user_file = UserFile.objects.get(id=document_id)
+        cluster_elements = ClusterElement.objects.filter(user_file=user_file)
+        return cluster_elements
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
-class FlashcardGenerationView(GenericAPIView):
-    serializer_class = AdditionalContextSerializer
+class CreateCardsetView(CreateAPIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = CardsetCreateSerializer
 
     @swagger_auto_schema(
         operation_description="Generate flashcards from a given document",
-        request_body=AdditionalContextSerializer,
+        request_body=CardsetCreateSerializer,
         responses={
             200: openapi.Response(
                 description="Flashcards generated successfully",
@@ -339,15 +370,18 @@ class FlashcardGenerationView(GenericAPIView):
         tags=["Flashcards"],
     )
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = CardsetCreateSerializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
-            document_id = serializer.validated_data.get("id")
+            course_id = serializer.validated_data.get("course_id")
+            document_id = serializer.validated_data.get("document_id")
+            subject = serializer.validated_data.get("subject")
             start = serializer.validated_data.get("start_page")
             end = serializer.validated_data.get("end_page")
-            subject = serializer.validated_data.get("subject")
-            course_id = serializer.validated_data.get("course_id")
-            max_flashcards = serializer.validated_data.get("max_amount_to_generate")
+            num_flashcards = serializer.validated_data.get("num_flashcards")
             user = request.user
+            logger.info(f"Generating flashcards for document {document_id}")
 
             flashcards = []
 
@@ -358,11 +392,11 @@ class FlashcardGenerationView(GenericAPIView):
 
             if start is not None and end is not None:
                 flashcards = process_flashcards_by_page_range(
-                    document_id, start, end, language, max_flashcards
+                    document_id, start, end, language, num_flashcards
                 )
             elif subject:
                 flashcards = process_flashcards_by_subject(
-                    document_id, subject, language, max_flashcards
+                    document_id, subject, language, num_flashcards
                 )
             else:
                 return Response(
@@ -468,6 +502,21 @@ class ReviewFlashcardView(GenericAPIView):
             valid_user = flashcard.review(answer_was_correct, user=request.user)
             flashcard.save()
 
+            activity = ActivityMessage(
+                user_id=request.user.id,
+                activity_type="Flashcard",
+                timestamp=datetime.now().isoformat(),
+                metadata={
+                    "flashcard_id": flashcard_id,
+                    "answer_was_correct": answer_was_correct,
+                },
+            )
+
+            producer.produce(
+                Topic.USER_ACTIVITY,
+                activity.model_dump_json(),
+            )
+
             if valid_user:
                 return Response(
                     data=FlashcardSerializer(flashcard).data, status=status.HTTP_200_OK
@@ -492,6 +541,11 @@ class CardsetViewSet(viewsets.ModelViewSet):
         course_id = self.request.query_params.get("course_id", None)
         if course_id is not None:
             queryset = queryset.filter(course_id=course_id)
+        else:
+            # If course_id is not provided, filter on cardset_id
+            cardset_id = self.request.query_params.get("cardset_id", None)
+            if cardset_id is not None:
+                queryset = queryset.filter(id=cardset_id)
 
         return queryset
 
@@ -635,6 +689,22 @@ class ChatResponseView(APIView):
                 )
                 chat.save()
 
+                message = ActivityMessage(
+                    user_id=request.user.id,
+                    activity_type="Chat",
+                    timestamp=datetime.now().isoformat(),
+                    metadata={
+                        "chat_id": chat_id,
+                        "message": message,
+                        "response": assistant_response.content,
+                    },
+                )
+
+                producer.produce(
+                    Topic.USER_ACTIVITY,
+                    message.model_dump_json(),
+                )
+
                 # Return the response
                 return Response(
                     {
@@ -661,13 +731,13 @@ class ChatResponseView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class QuizGenerationView(GenericAPIView):
-    serializer_class = AdditionalContextSerializer
+class QuizGenerationView(CreateAPIView):
+    serializer_class = QuizCreateSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Create a quiz from a given document",
-        request_body=AdditionalContextSerializer,
+        request_body=QuizCreateSerializer,
         responses={
             200: openapi.Response(
                 description="Quiz created successfully",
@@ -700,13 +770,13 @@ class QuizGenerationView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            document_id = serializer.validated_data.get("id")
+            document_id = serializer.validated_data.get("document_id")
             start = serializer.validated_data.get("start_page")
             end = serializer.validated_data.get("end_page")
             subject = serializer.validated_data.get("subject")
             learning_goals = serializer.validated_data.get("learning_goals", [])
             course_id = serializer.validated_data.get("course_id")
-            max_questions = serializer.validated_data.get("max_amount_to_generate")
+            num_questions = serializer.validated_data.get("num_questions")
 
             course: Optional[Course] = None
             if course_id:
@@ -715,7 +785,7 @@ class QuizGenerationView(GenericAPIView):
 
             # Generate the quiz data
             quiz_data = generate_quiz(
-                document_id, start, end, subject, learning_goals, language, max_questions
+                document_id, start, end, subject, learning_goals, language, num_questions
             )
             # Get the course
             course = None
@@ -769,6 +839,24 @@ class QuizGradingView(GenericAPIView):
 
             graded_answer = grade_quiz(quiz, student_answers)
             response = graded_answer.model_dump()
+
+            message = ActivityMessage(
+                user_id=request.user.id,
+                activity_type="Quiz",
+                timestamp=datetime.now().isoformat(),
+                metadata={
+                    "quiz_id": quiz_id,
+                    "student_answers": student_answers,
+                    "answers_was_correct": graded_answer.answers_was_correct,
+                    "feedback": graded_answer.feedback,
+                },
+            )
+
+            producer.produce(
+                Topic.USER_ACTIVITY,
+                message.model_dump_json(),
+            )
+
             return Response(response, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

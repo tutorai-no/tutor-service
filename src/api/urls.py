@@ -15,7 +15,7 @@ from accounts.views import (
     UserProfileView,
     StreakRetrieveView,
     ActivityCreateView,
-    ActivityLogView,
+    ActivityView,
 )
 from api.views import health_check
 from learning_materials.views import (
@@ -31,7 +31,7 @@ from learning_materials.views import (
     CardsetExportView,
     CardsetViewSet,
     CompendiumCreationView,
-    FlashcardGenerationView,
+    CreateCardsetView,
     FlashcardViewSet,
     QuizGenerationView,
     QuizGradingView,
@@ -65,7 +65,7 @@ urlpatterns = [
     path("streak/", StreakRetrieveView.as_view(), name="streak-retrieve"),
     # Activities
     path("activities/", ActivityCreateView.as_view(), name="activity-create"),
-    path("activity-log/", ActivityLogView.as_view(), name="activity-log"),
+    path("activity-log/", ActivityView.as_view(), name="activity-log"),
     path("profile/", UserProfileView.as_view(), name="profile"),
     # Subscriptions
     path("subscriptions/", SubscriptionListView.as_view(), name="subscriptions"),
@@ -93,12 +93,12 @@ urlpatterns = [
     # Flashcards
     path(
         "flashcards/create/",
-        FlashcardGenerationView.as_view(),
+        CreateCardsetView.as_view(),
         name="create-flashcards",
     ),
     path("flashcards/review/", ReviewFlashcardView.as_view(), name="review-flashcards"),
     path(
-        "flashcards/export/<int:pk>/",
+        "flashcards/export/<uuid:pk>/",
         CardsetExportView.as_view(),
         name="export-flashcards",
     ),
