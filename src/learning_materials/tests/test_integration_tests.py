@@ -2315,3 +2315,82 @@ class CourseAPITest(TestCase):
         # Refresh from database and verify created_at didn't change
         course.refresh_from_db()
         self.assertEqual(course.created_at, old_created_at)
+
+    def test_create_course_with_language(self):
+        """Test creating a course with a specified language."""
+        self.authenticate()
+        data = {
+            "name": self.valid_course_name,
+            "language": "en-US"
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], self.valid_course_name)
+        self.assertEqual(response.data["language"], "en-US")
+        
+        # Verify the course was created in the database with the correct language
+        course_id = response.data["id"]
+        course = Course.objects.get(id=course_id)
+        self.assertEqual(course.language, "en-US")
+
+    def test_update_course_language(self):
+        """Test updating a course's language."""
+        self.authenticate()
+        # Create a course with no language
+        course = Course.objects.create(name=self.valid_course_name, user=self.user)
+        self.assertIsNone(course.language)
+        
+        # Update the language
+        data = {"language": "no-NO"}
+        response = self.client.patch(f"{self.url}{course.id}/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["language"], "no-NO")
+        
+        # Verify the language was updated in the database
+        course.refresh_from_db()
+        self.assertEqual(course.language, "no-NO")
+
+    def test_filter_courses_by_language(self):
+        """Test filtering courses by language."""
+        self.authenticate()
+        # Create courses with different languages
+        Course.objects.create(name="English Course", user=self.user, language="en")
+        Course.objects.create(name="Norwegian Course", user=self.user, language="no")
+        Course.objects.create(name="German Course", user=self.user, language="de")
+        Course.objects.create(name="No Language Course", user=self.user)
+        
+        # Filter by English language
+        response = self.client.get(f"{self.url}?language=en")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "English Course")
+        
+        # Filter by Norwegian language
+        response = self.client.get(f"{self.url}?language=no")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "Norwegian Course")
+        
+        # Verify null language can be filtered
+        response = self.client.get(f"{self.url}?language=null")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "No Language Course")
+
+    def test_course_with_long_language_code(self):
+        """Test handling of language codes that exceed the max length."""
+        self.authenticate()
+        # The model has max_length=10, so this should be truncated or rejected
+        data = {
+            "name": self.valid_course_name,
+            "language": "en-US-extended-variant-x"
+        }
+        response = self.client.post(self.url, data, format="json")
+        
+        # This could either be a 400 Bad Request (if validated in serializer)
+        # or a 201 Created with a truncated language value
+        if response.status_code == status.HTTP_400_BAD_REQUEST:
+            self.assertIn("language", response.data)
+        else:
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertLessEqual(len(response.data["language"]), 10)

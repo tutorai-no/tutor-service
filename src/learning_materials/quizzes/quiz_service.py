@@ -69,7 +69,7 @@ def generate_quiz(
         You are a teacher AI tasked with creating a quiz based on the following content and learning goals.
         The quiz must have a good variety of multiple-choice and short answer questions.
         
-        IMPORTANT: All quiz content—including questions, options, and answers—must be written in the language corresponding to the language code "{language}". Ensure that no content is in any other language.
+        All quiz content—including questions, options, and answers—must be written in the language corresponding to the language code "{language}". Ensure that no content is in any other language.
         
         Content:
         {page_content}
