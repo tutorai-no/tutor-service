@@ -23,7 +23,7 @@ from learning_materials.learning_resources import (
 logger = logging.getLogger(__name__)
 
 
-def _process_flashcards_by_pages(pages: list[Citation], language: str) -> list[Flashcard]:
+def _process_flashcards_by_pages(pages: list[Citation], language: str = "en") -> list[Flashcard]:
     """
     Generate flashcards for a specific page range and file
     """
@@ -57,7 +57,7 @@ def _post_process_flashcards(
 def process_flashcards_by_subject(
     document_id: uuid.UUID,
     subject: str,
-    language: Optional[str] = "en",
+    language: str = "en",
     max_amount_to_generate: Optional[int] = None,
 ) -> list[Flashcard]:
     pages = get_context(document_id, subject)
@@ -71,7 +71,7 @@ def process_flashcards_by_page_range(
     document_id: uuid.UUID,
     page_num_start: int,
     page_num_end: int,
-    language: Optional[str] = "en",
+    language: str = "en",
     max_amount_to_generate: Optional[int] = None,
 ) -> list[Flashcard]:
     pages = get_page_range(document_id, page_num_start, page_num_end)

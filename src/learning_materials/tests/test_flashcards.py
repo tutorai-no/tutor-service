@@ -25,7 +25,7 @@ class FlashcardGenerationTests(TestCase):
 
         # Mocking the model and parser
         mock_flashcard1 = Flashcard(
-            front="Who was born in 1879?", back="Albert Einstein"
+            front="When was Albert Einstein born?", back="1879"
         )
         mock_flashcard2 = Flashcard(
             front="At what temperature does water boil?", back="100 degrees Celsius"
@@ -44,13 +44,13 @@ class FlashcardGenerationTests(TestCase):
         mock_model = MockModel.return_value
         mock_model.invoke.return_value = [mock_flashcard1, mock_flashcard2]
 
-        # Call the function
+        # Call the function with language parameter
         flashcards = generate_flashcards(page)
 
         # Check the results
         self.assertEqual(len(flashcards), 2)
-        self.assertEqual(flashcards[0].front, "Who was born in 1879?")
-        self.assertEqual(flashcards[0].back, "Albert Einstein")
+        self.assertEqual(flashcards[0].front, "When was Albert Einstein born?")
+        self.assertEqual(flashcards[0].back, "1879")
         self.assertEqual(flashcards[0].page_num, 1)
         self.assertEqual(flashcards[0].document_name, "sample.pdf")
         self.assertEqual(flashcards[1].front, "At what temperature does water boil?")
