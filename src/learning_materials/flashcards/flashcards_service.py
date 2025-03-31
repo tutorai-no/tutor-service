@@ -16,7 +16,7 @@ model = ChatOpenAI(temperature=0, api_key=Config().API_KEY)
 flashcard_parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
 
 
-def generate_flashcards(page: Citation, language: str) -> list[Flashcard]:
+def generate_flashcards(page: Citation, language: str = "en") -> list[Flashcard]:
     template = _generate_template(page.text, language)
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n",
@@ -41,7 +41,7 @@ def generate_flashcards(page: Citation, language: str) -> list[Flashcard]:
     return flashcards
 
 
-def _generate_template(context: str, language: str) -> str:
+def _generate_template(context: str, language: str = "en") -> str:
     """
     Returns a template with the correct flashcard and prompt format which can be used to generate flashcards using the context.
 

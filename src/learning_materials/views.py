@@ -625,10 +625,10 @@ class ChatResponseView(APIView):
             course_id = data.get("courseId")
             user_file_ids = data.get("userFileIds", [])
             message = data["message"]
+            course = None
 
             # Handle chat creation or retrieval
             if not chat_id:
-                course = None
                 if course_id:
                     try:
                         course = Course.objects.get(id=course_id, user=user)
@@ -647,6 +647,7 @@ class ChatResponseView(APIView):
             else:
                 try:
                     chat = Chat.objects.get(id=chat_id, user=user)
+                    course = chat.course
                 except Chat.DoesNotExist:
                     return Response(
                         {"error": "Chat not found."}, status=status.HTTP_404_NOT_FOUND
@@ -670,9 +671,8 @@ class ChatResponseView(APIView):
                 assistant_response.content = assistant_response.content.replace(
                     "\u0000", ""
                 )
-                # Get the language of the course
-                language = course.language if course else None
-                # Create a title for the chat
+                
+                # Create a title for the chat (we already have the language)
                 if not chat.title:
                     title = generate_title_of_chat(message, language, assistant_response)
                     chat.title = title

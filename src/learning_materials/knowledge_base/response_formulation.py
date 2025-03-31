@@ -10,7 +10,7 @@ from learning_materials.knowledge_base.llm import create_llm_model
 logger = logging.getLogger(__name__)
 
 
-def generate_title_of_chat(user_question: str, language: str, answer: RagAnswer) -> str:
+def generate_title_of_chat(user_question: str, answer: RagAnswer, language: str = "en") -> str:
     """
     Generate the title of the chat based on the user question and the answer
 
@@ -33,7 +33,7 @@ def generate_title_of_chat(user_question: str, language: str, answer: RagAnswer)
     return title.content.strip('"')
 
 
-def generate_title_of_flashcards(flashcards: list[Flashcard], language: str) -> str:
+def generate_title_of_flashcards(flashcards: list[Flashcard], language: str = "en") -> str:
 
     logger.info("Generating title of flashcards")
     prompt = f"Generate the title of the flashcards based on the flashcards. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here are the flashcards:\n\n {flashcards}"
@@ -44,7 +44,7 @@ def generate_title_of_flashcards(flashcards: list[Flashcard], language: str) -> 
     return title.content.strip('"')
 
 
-def generate_title_of_quiz(quiz: Quiz, language: str) -> str:
+def generate_title_of_quiz(quiz: Quiz, language: str = "en") -> str:
 
     logger.info("Generating title of quiz")
     prompt = f"Generate the title of the quiz based on the questions. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here is the quiz:\n\n {quiz}"
@@ -56,7 +56,7 @@ def generate_title_of_quiz(quiz: Quiz, language: str) -> str:
 
 
 def response_formulation(
-    user_input: str, context: list[str], chat_history: list[dict[str, str]], language: str
+    user_input: str, context: list[str], chat_history: list[dict[str, str]], language: str = "en"
 ) -> str:
     logger.info("Generating response")
 
@@ -116,7 +116,7 @@ def _request_chat_completion(
     return result
 
 
-def _template_system_prompt(language: str, document_names: list[str] = []) -> str:
+def _template_system_prompt(language: str = "en", document_names: list[str] = []) -> str:
     template = f"""
         # Role and Goal:
         You are an upbeat, encouraging tutor who helps students understand concepts by explaining ideas and answering students questions. You are happy to help students with any questions.
