@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0007_clusterelement'),
+        ("learning_materials", "0007_clusterelement"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='course',
-            name='language',
+            model_name="course",
+            name="language",
             field=models.CharField(blank=True, max_length=10, null=True),
         ),
         migrations.AddField(
-            model_name='course',
-            name='sections',
+            model_name="course",
+            name="sections",
             field=models.JSONField(blank=True, default=list),
         ),
     ]

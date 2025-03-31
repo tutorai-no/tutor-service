@@ -44,19 +44,19 @@ class QuizGenerationTests(TestCase):
 
         pages = [
             Citation(
-                text="""Artiﬁcial Intelligence (AI) is the branch of computer science, 
+                text="""Artiﬁcial Intelligence (AI) is the branch of computer science,
                 which makesthe computers to mimic the human behavior to assist humans for better performance in the field of science and technology.""",
                 page_num=start,
                 document_name=document_name,
             ),
             Citation(
-                text="""Replicating human intelligence, solving knowledge-intensive tasks, building machines, which can perform tasks, that requirehuman intelligence, 
+                text="""Replicating human intelligence, solving knowledge-intensive tasks, building machines, which can perform tasks, that requirehuman intelligence,
                 creating some system which can learn by itself are the few speciﬁc goals of AI.
-                Machine learning and deep learning are two subsets of AI which are used to solve problems using high performance algorithms and multilayer neural networks, respectively. 
-                With the help of machine learning process, structured datalike genetic data, electrophysical data, 
-                and imaging data are properly investigatedin medical diagnosis. 
-                AI provides advanced devices, advanced drug designing tech-niques, tele-treatment, 
-                physician patient communication using Chatbots and intelligent machines used for analyzing 
+                Machine learning and deep learning are two subsets of AI which are used to solve problems using high performance algorithms and multilayer neural networks, respectively.
+                With the help of machine learning process, structured datalike genetic data, electrophysical data,
+                and imaging data are properly investigatedin medical diagnosis.
+                AI provides advanced devices, advanced drug designing tech-niques, tele-treatment,
+                physician patient communication using Chatbots and intelligent machines used for analyzing
                 the cause and the chances of occurrence of anydisease in the field of health care.""",
                 page_num=end,
                 document_name=document_name,

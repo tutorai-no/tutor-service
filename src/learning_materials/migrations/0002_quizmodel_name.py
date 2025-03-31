@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('learning_materials', '0001_initial'),
+        ("learning_materials", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='quizmodel',
-            name='name',
-            field=models.CharField(default='Not Named', help_text='The name of the quiz', max_length=100),
+            model_name="quizmodel",
+            name="name",
+            field=models.CharField(
+                default="Not Named", help_text="The name of the quiz", max_length=100
+            ),
         ),
     ]

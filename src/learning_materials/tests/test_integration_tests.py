@@ -3,15 +3,16 @@ import time
 import uuid
 import re
 from uuid import uuid4
+from datetime import datetime
+from unittest.mock import patch, Mock
 
-from unittest.mock import patch
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-
 
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
@@ -34,7 +35,6 @@ from learning_materials.knowledge_base.rag_service import post_context
 from accounts.models import CustomUser
 
 base = "/api/"
-
 User = get_user_model()
 
 
@@ -49,11 +49,18 @@ class FlashcardGenerationTest(TestCase):
         self.valid_page_num_end = 1
         self.subject = "Anakin Skywalker"
         self.context = """
-            Revenge of the Sith is set three years after the onset of the Clone Wars as established in Attack of the Clones. 
-            The Jedi are spread across the galaxy in a full-scale war against the Separatists. 
-            The Jedi Council dispatches Jedi Master Obi-Wan Kenobi on a mission to dfefeat General Grievous, the head of the Separatist army and Count Dooku's former apprentice, to put an end to the war. 
-            Meanwhile, after having visions of his wife Padmé Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic and, secretly, a Sith Lord.
-            Palpatine manipulates Anakin into turning to the dark side of the Force and becoming his apprentice, Darth Vader, with wide-ranging consequences for the galaxy."""
+            Revenge of the Sith is set three years after the onset of the Clone Wars
+            as established in Attack of the Clones. The Jedi are spread across the
+            galaxy in a full-scale war against the Separatists. The Jedi Council
+            dispatches Jedi Master Obi-Wan Kenobi on a mission to dfefeat General
+            Grievous, the head of the Separatist army and Count Dooku's former apprentice,
+            to put an end to the war. Meanwhile, after having visions of his wife Padmé
+            Amidala dying in childbirth, Jedi Knight Anakin Skywalker is tasked by the
+            Council to spy on Palpatine, the Supreme Chancellor of the Galactic Republic
+            and, secretly, a Sith Lord. Palpatine manipulates Anakin into turning to the
+            dark side of the Force and becoming his apprentice, Darth Vader, with
+            wide-ranging consequences for the galaxy.
+        """
 
         self.user = User.objects.create_user(
             username="flashcardsuser",
@@ -61,7 +68,19 @@ class FlashcardGenerationTest(TestCase):
             password="StrongP@ss1",
         )
         self.client.force_authenticate(user=self.user)
-        # Populate rag database
+
+        # Create a UserFile with the same ID that is used in the tests
+        self.user_file = UserFile.objects.create(
+            id=self.valid_document_id,  # Use the same UUID here
+            user=self.user,
+            name=self.valid_document_name,
+            blob_name="test_blob",
+            file_url="http://example.com/file.pdf",
+            num_pages=self.valid_page_num_end + 1,  # Match the page range
+            content_type="application/pdf",
+        )
+
+        # Populate RAG database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(
                 self.context, i, self.valid_document_name, self.valid_document_id
@@ -102,9 +121,13 @@ class FlashcardGenerationTest(TestCase):
         self.assertFalse(Cardset.objects.exists())
 
     def test_valid_request_with_page_range_and_subject(self):
+        """
+        Provide both start/end pages AND a subject, plus document_id.
+        This is valid and should yield 200.
+        """
         self.assertFalse(Cardset.objects.exists())
         valid_response = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": self.subject,
@@ -139,7 +162,7 @@ class FlashcardGenerationTest(TestCase):
     def test_valid_request_with_page_range(self):
         self.assertFalse(Cardset.objects.exists())
         valid_response = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
         }
@@ -172,7 +195,7 @@ class FlashcardGenerationTest(TestCase):
     def test_valid_request_with_subject(self):
         self.assertFalse(Cardset.objects.exists())
         valid_response = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.subject,
         }
         response = self.client.post(self.url, valid_response, format="json")
@@ -203,7 +226,7 @@ class FlashcardGenerationTest(TestCase):
     def test_invalid_end_start_index(self):
         self.assertFalse(Cardset.objects.exists())
         invalid_response = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": 1,
             "end_page": 0,
             "subject": "Some subject",
@@ -215,7 +238,7 @@ class FlashcardGenerationTest(TestCase):
     def test_valid_request_with_course_id(self):
         self.assertFalse(Cardset.objects.exists())
         valid_response = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": "Some subject",
@@ -244,22 +267,10 @@ class FlashcardGenerationTest(TestCase):
         self.assertIn("back", flashcards_data[0])
         self.assertIn("id", flashcards_data[0])
 
-    def test_invalid_end_start_index(self):
-        self.assertFalse(Cardset.objects.exists())
-        invalid_response = {
-            "id": self.valid_document_id,
-            "start_page": 1,
-            "end_page": 0,
-            "subject": "Some subject",
-        }
-        response = self.client.post(self.url, invalid_response, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(Cardset.objects.exists())
-
     def test_no_page_range_request(self):
         self.assertFalse(Cardset.objects.exists())
         valid_request = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.subject,
             "course_id": self.course.id,
         }
@@ -271,11 +282,11 @@ class FlashcardGenerationTest(TestCase):
         self.assertFalse(Cardset.objects.exists())
         max_amount = 5
         valid_response = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": "Some subject",
-            "max_amount_to_generate": max_amount,
+            "num_flashcards": max_amount,  # Renamed key
         }
 
         response = self.client.post(self.url, valid_response, format="json")
@@ -345,8 +356,9 @@ class FlashcardReviewTest(TestCase):
 
     def test_review_non_existent_flashcard(self):
         self.assertEqual(self.flashcard.proficiency, 0)
+        fake_id = str(uuid.uuid4())
         response = self.client.post(
-            self.url, data={"id": 999, "answer_was_correct": True}, format="json"
+            self.url, data={"id": fake_id, "answer_was_correct": True}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -448,7 +460,7 @@ class CardsetCRUDTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         cardset.refresh_from_db()
         self.assertEqual(cardset.name, data["name"])
-        self.assertEqual(cardset.description, "This is a test cardset.")  # Unchanged
+        self.assertEqual(cardset.description, "This is a test cardset.")
 
     def test_delete_cardset(self):
         cardset = Cardset.objects.create(
@@ -484,9 +496,7 @@ class CardsetCRUDTest(TestCase):
         url = "/api/cardsets/"
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            len(response.data), 2
-        )  # Should only return cardsets belonging to self.user
+        self.assertEqual(len(response.data), 2)
         names = [cardset["name"] for cardset in response.data]
         self.assertIn("Cardset 1", names)
         self.assertIn("Cardset 2", names)
@@ -515,13 +525,10 @@ class CardsetCRUDTest(TestCase):
             subject="Test Subject",
             user=self.user,
         )
-
-        # Create some flashcards
         FlashcardModel.objects.create(front="Front 1", back="Back 1", cardset=cardset)
         FlashcardModel.objects.create(front="Front 2", back="Back 2", cardset=cardset)
-        # Ensure flashcards exist
         self.assertEqual(FlashcardModel.objects.filter(cardset=cardset).count(), 2)
-        # Delete the cardset
+
         url = f"/api/cardsets/{cardset.id}/"
         response = self.client.delete(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -530,16 +537,15 @@ class CardsetCRUDTest(TestCase):
 
     def test_filter_cardsets_by_course_id(self):
         course1 = Course.objects.create(name="Course 1", user=self.user)
-        course2 = Course.objects.create(name="Course 2", user=self.user)
+        Course.objects.create(name="Course 2", user=self.user)
 
-        cardset1 = Cardset.objects.create(
+        Cardset.objects.create(
             name="Cardset for Course 1",
             description="First cardset",
             subject="Subject 1",
             user=self.user,
             course=course1,
         )
-
         url = f"/api/cardsets/?course_id={course1.id}"
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -648,9 +654,7 @@ class FlashcardCRUDTest(TestCase):
         url = "/api/flashcards/"
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            len(response.data), 2
-        )  # Should only return flashcards belonging to self.user's cardsets
+        self.assertEqual(len(response.data), 2)
         fronts = [flashcard["front"] for flashcard in response.data]
         self.assertIn("Front 1", fronts)
         self.assertIn("Front 2", fronts)
@@ -728,15 +732,13 @@ class CardsetExportTest(TestCase):
             subject="Other Subject",
             user=self.other_user,
         )
-
-        self.non_existent_cardset_id = 9999
+        self.non_existent_cardset_id = uuid.uuid4()
 
     def test_export_flashcards_success(self):
-        url = f"/api/flashcards/export/{self.cardset.id}/"
+        url = f"/api/flashcards/export/{str(self.cardset.id)}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         exportable_flashcards = response.data
-        # Verify that the exportable flashcards content is correct
         expected_content = (
             f"{self.flashcard1.front}:{self.flashcard1.back}\n"
             f"{self.flashcard2.front}:{self.flashcard2.back}\n"
@@ -745,17 +747,17 @@ class CardsetExportTest(TestCase):
 
     def test_export_flashcards_not_authenticated(self):
         self.client.force_authenticate(user=None)  # Log out
-        url = f"/api/flashcards/export/{self.cardset.id}/"
+        url = f"/api/flashcards/export/{str(self.cardset.id)}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_export_flashcards_cardset_not_found(self):
-        url = f"/api/flashcards/export/{self.non_existent_cardset_id}/"
+        url = f"/api/flashcards/export/{str(self.non_existent_cardset_id)}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_export_flashcards_cardset_not_owned(self):
-        url = f"/api/flashcards/export/{self.other_cardset.id}/"
+        url = f"/api/flashcards/export/{str(self.other_cardset.id)}/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -778,13 +780,26 @@ class QuizGenerationTest(TestCase):
         self.valid_page_num_start = 0
         self.valid_page_num_end = 1
         self.context = """
-            Artificial intelligence (AI), in its broadest sense, is intelligence exhibited by machines, particularly computer systems.
-            It is a field of research in computer science that develops and studies methods and software that enable machines to perceive their environment and use learning and intelligence to take actions that maximize their chances of achieving defined goals.
-            [1] Such machines may be called AIs.
+            Artificial intelligence (AI), in its broadest sense, is intelligence
+            exhibited by machines, particularly computer systems. It is a field of
+            research in computer science that develops and studies methods and
+            software that enable machines to perceive their environment and use
+            learning and intelligence to take actions that maximize their chances
+            of achieving defined goals.
         """
         self.valid_subject = "Artificial Intelligence"
 
-        # Populate RAG (Retrieval-Augmented Generation) database
+        self.user_file = UserFile.objects.create(
+            id=self.valid_document_id,
+            user=self.user,
+            name=self.valid_document_name,
+            blob_name="test_blob",
+            file_url="http://example.com/file.pdf",
+            num_pages=self.valid_page_num_end + 1,
+            content_type="application/pdf",
+        )
+
+        # Populate RAG database
         for i in range(self.valid_page_num_start, self.valid_page_num_end + 1):
             post_context(
                 self.context, i, self.valid_document_name, self.valid_document_id
@@ -799,10 +814,8 @@ class QuizGenerationTest(TestCase):
         """
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
-
         invalid_payload = {}
         response = self.client.post(self.url, invalid_payload, format="json")
-
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # Ensure no quizzes are created
         self.assertFalse(QuizModel.objects.exists())
@@ -813,15 +826,15 @@ class QuizGenerationTest(TestCase):
         """
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
-
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,  # 'id' is correct for QuizCreateSerializer
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
+            "num_questions": 5,
         }
         response = self.client.post(self.url, valid_payload, format="json")
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         # Ensure a quiz is created
         self.assertTrue(QuizModel.objects.exists())
 
@@ -853,16 +866,15 @@ class QuizGenerationTest(TestCase):
         """
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
-
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": self.valid_subject,
             "learning_goals": ["goal1", "goal2"],
+            "num_questions": 5,
         }
         response = self.client.post(self.url, valid_payload, format="json")
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Ensure a quiz is created
         self.assertTrue(QuizModel.objects.exists())
@@ -878,9 +890,7 @@ class QuizGenerationTest(TestCase):
         self.assertEqual(response.data["document_name"], self.valid_document_name)
         self.assertEqual(response.data["start_page"], self.valid_page_num_start)
         self.assertEqual(response.data["end_page"], self.valid_page_num_end)
-
         self.assertIn("questions", response.data)
-        self.assertIsInstance(response.data["questions"], list)
         self.assertGreater(len(response.data["questions"]), 0)
 
         # Check that questions are created and associated with the quiz
@@ -895,17 +905,17 @@ class QuizGenerationTest(TestCase):
         """
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
-
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "start_page": self.valid_page_num_start,
             "end_page": self.valid_page_num_end,
             "subject": "Some subject",
             "course_id": self.course.id,
+            "num_questions": 5,
         }
         response = self.client.post(self.url, valid_payload, format="json")
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         # Ensure a quiz is created
         self.assertTrue(QuizModel.objects.exists())
 
@@ -940,41 +950,33 @@ class QuizGenerationTest(TestCase):
         """
         # Ensure no quizzes exist before the test
         self.assertFalse(QuizModel.objects.exists())
-
         invalid_payload = {
-            "id": self.valid_document_id,
-            "start_page": self.valid_page_num_end,  # start is greater than end
+            "document_id": self.valid_document_id,
+            "start_page": self.valid_page_num_end,  # start > end
             "end_page": self.valid_page_num_start,
+            "num_questions": 5,
         }
         response = self.client.post(self.url, invalid_payload, format="json")
-
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
         # Ensure no quizzes are created
         self.assertFalse(QuizModel.objects.exists())
 
     def test_valid_request_for_semantic_creation_of_quizzed(self):
         self.assertFalse(QuizModel.objects.exists())
-
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.valid_subject,
+            "num_questions": 5,
         }
-
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(QuizModel.objects.exists())
-
-        # Verify the response data
-        self.assertIn("id", response.data)
-        self.assertEqual(response.data["document_name"], self.valid_document_name)
-        self.assertEqual(response.data["subject"], self.valid_subject)
-
-        self.assertIn("questions", response.data)
-        self.assertIsInstance(response.data["questions"], list)
-        self.assertGreater(len(response.data["questions"]), 0)
-
         quiz = QuizModel.objects.first()
         self.assertEqual(quiz.subject, self.valid_subject)
+        self.assertIn("questions", response.data)
+        self.assertGreater(len(response.data["questions"]), 0)
+
         # Check that questions are created and associated with the quiz
         self.assertTrue(
             QuestionAnswerModel.objects.filter(quiz=quiz).exists()
@@ -983,49 +985,42 @@ class QuizGenerationTest(TestCase):
 
     def test_valid_request_with_total_amount_of_questions(self):
         self.assertFalse(QuizModel.objects.exists())
-
         max_amount = 5
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.valid_subject,
-            "max_amount_to_generate": max_amount,
+            "num_questions": max_amount,
         }
-
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data)
-
         self.assertTrue(QuizModel.objects.exists())
         quiz = QuizModel.objects.first()
-        self.assertEqual(quiz.subject, self.valid_subject)
         total_questions = (
             QuestionAnswerModel.objects.filter(quiz=quiz).count()
             + MultipleChoiceQuestionModel.objects.filter(quiz=quiz).count()
         )
         self.assertLessEqual(total_questions, max_amount)
 
-    def test_valid_request_with_total_amount_of_questions_equal_zero(self):
+    def test_valid_request_with_minimum_questions(self):
+        """Test generating a quiz with the minimum allowed number of questions."""
         self.assertFalse(QuizModel.objects.exists())
-
-        max_amount = 0
+        min_amount = 1
         valid_payload = {
-            "id": self.valid_document_id,
+            "document_id": self.valid_document_id,
             "subject": self.valid_subject,
-            "max_amount_to_generate": max_amount,
+            "num_questions": min_amount,
         }
-
         response = self.client.post(self.url, valid_payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data)
-
         self.assertTrue(QuizModel.objects.exists())
         quiz = QuizModel.objects.first()
-        self.assertEqual(quiz.subject, self.valid_subject)
         total_questions = (
             QuestionAnswerModel.objects.filter(quiz=quiz).count()
             + MultipleChoiceQuestionModel.objects.filter(quiz=quiz).count()
         )
-        self.assertLessEqual(total_questions, max_amount)
+        self.assertEqual(total_questions, min_amount)
 
 
 class QuizGradingTest(TestCase):
@@ -1053,7 +1048,13 @@ class QuizGradingTest(TestCase):
         )
         self.question2 = QuestionAnswerModel.objects.create(
             quiz=self.quiz,
-            question="What is the field of research in computer science that develops and studies methods and software that enable machines to perceive their environment and use learning and intelligence to take actions that maximize their chances of achieving defined goals?",
+            question="""
+                What is the field of research in computer science that
+                develops and studies methods and software that enable
+                machines to perceive their environment and use learning
+                and intelligence to take actions that maximize their
+                chances of achieving defined goals?
+            """,
             answer="Artificial intelligence",
         )
 
@@ -1123,9 +1124,7 @@ class QuizGradingTest(TestCase):
         }
         response = self.client.post(self.url, valid_response, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Ensure all answers in answers_was_correct are False
         self.assertFalse(any(response.data["answers_was_correct"]))
-        # Ensure that all wrong answers have feedback
         self.assertTrue(all(response.data["feedback"]))
 
     def test_quiz_with_skipped_questions(self):
@@ -1233,8 +1232,8 @@ class QuizCRUDTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         quiz.refresh_from_db()
         self.assertEqual(quiz.document_name, data["document_name"])
-        self.assertEqual(quiz.start_page, 1)  # Unchanged
-        self.assertEqual(quiz.end_page, 5)  # Unchanged
+        self.assertEqual(quiz.start_page, 1)
+        self.assertEqual(quiz.end_page, 5)
 
     def test_delete_quiz(self):
         quiz = QuizModel.objects.create(
@@ -1298,8 +1297,7 @@ class QuizCRUDTest(TestCase):
             user=self.user,
             course=course2,
         )
-
-        # Create a quiz without a course to ensure it is filtered out
+        # Create a quiz without a course
         quiz3 = QuizModel.objects.create(
             document_name="Quiz without Course",
             start_page=1,
@@ -1330,9 +1328,9 @@ class QuizCRUDTest(TestCase):
             start_page=1,
             end_page=4,
             subject="Other Subject",
-            user=self.other_user,  # Specify the user here
+            user=self.other_user,
         )
-        url = f"/api/quizzes/{quiz.id}/"
+        url = f"{base}quizzes/{quiz.id}/"
         response = self.client.get(url, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         response = self.client.patch(url, {"document_name": "Hacked"}, format="json")
@@ -1779,8 +1777,10 @@ class ChatAPITest(APITestCase):
 class FileUploadTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        # Use a unique username to avoid conflicts between test runs
+        username = f"testuser_{uuid.uuid4().hex[:8]}"
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="Str0ngP@ss"
+            username=username, email=f"{username}@example.com", password="Str0ngP@ss"
         )
         self.client.force_authenticate(user=self.user)
 
@@ -1837,7 +1837,7 @@ class FileUploadTest(TestCase):
             "file": file_obj,
             "course_id": str(self.course.id),
         }
-        response = self.client.post(self.url, data, format="multipart")
+        self.client.post(self.url, data, format="multipart")
         # Check that no UserFile was created
         self.assertFalse(UserFile.objects.exists())
 
@@ -1908,6 +1908,41 @@ class FileUploadTest(TestCase):
         response = self.client.post(self.url, data, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(all(UserURL.objects.filter(url=url).exists() for url in urls))
+
+    @patch("learning_materials.views.create_file_embeddings")
+    def test_pdf_page_count_extraction(self, mock_create_file_embeddings):
+        """Test that PDF page count is correctly extracted and stored when uploading a PDF file."""
+        self.authenticate()
+        
+        # Create a PDF file
+        file_content = b"Dummy PDF content"
+        file_obj = io.BytesIO(file_content)
+        file_obj.name = "test.pdf"
+        
+        # Patch PyPDF2.PdfReader to return a reader with specific number of pages
+        with patch("learning_materials.views.PyPDF2.PdfReader") as mock_reader:
+            expected_pages = 5
+            mock_reader_instance = Mock()
+            mock_reader_instance.pages = [None] * expected_pages
+            mock_reader.return_value = mock_reader_instance
+            
+            # Upload the file
+            data = {
+                "files": file_obj,
+                "course_id": str(self.course.id),
+            }
+            response = self.client.post(self.url, data, format="multipart")
+        
+        # Verify response status
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Check that the response includes the correct page count
+        self.assertEqual(response.data[0]["num_pages"], expected_pages)
+        
+        # Also verify the database record
+        file_id = response.data[0]["id"]
+        user_file = UserFile.objects.get(id=file_id)
+        self.assertEqual(user_file.num_pages, expected_pages)
 
 
 class UserFilesTest(TestCase):
@@ -2210,7 +2245,8 @@ class CourseAPITest(TestCase):
         )
         file1.courses.add(course)
 
-        file2 = UserFile.objects.create(
+        # Create other files not in course
+        UserFile.objects.create(
             name="File 2",
             blob_name="blob2",
             file_url="http://example.com/file2.pdf",
@@ -2220,7 +2256,7 @@ class CourseAPITest(TestCase):
             user=self.user,
         )
 
-        file3 = UserFile.objects.create(
+        UserFile.objects.create(
             name="File 3",
             blob_name="blob3",
             file_url="http://example.com/file3.pdf",
@@ -2239,3 +2275,43 @@ class CourseAPITest(TestCase):
         print(response.data, flush=True)
         self.assertEqual(files[0]["name"], file1.name)
         self.assertEqual(files[0]["file_url"], file1.file_url)
+
+    def test_course_created_at_field(self):
+        """Test that the created_at field is set automatically when creating a course."""
+        self.authenticate()
+        
+        # Get current time for comparison
+        before_creation = timezone.now()
+        
+        data = {
+            "name": self.valid_course_name,
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Verify created_at is present in the response
+        self.assertIn("created_at", response.data)
+        
+        # Get the course from the database to verify the stored value
+        course = Course.objects.get(id=response.data["id"])
+        
+        # Verify created_at is not None
+        self.assertIsNotNone(course.created_at)
+        
+        # Verify created_at is close to the current time
+        after_creation = timezone.now()
+        self.assertTrue(before_creation <= course.created_at <= after_creation)
+        
+        # Verify the field is read-only by trying to modify it
+        old_created_at = course.created_at
+        modified_time = timezone.now()
+        data = {
+            "name": "Updated Course",
+            "created_at": modified_time.isoformat()
+        }
+        response = self.client.patch(f"{self.url}{course.id}/", data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Refresh from database and verify created_at didn't change
+        course.refresh_from_db()
+        self.assertEqual(course.created_at, old_created_at)

@@ -16,101 +16,340 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Course',
+            name="Course",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=255)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='courses', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="courses",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'courses',
-                'ordering': ['name'],
+                "db_table": "courses",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Chat',
+            name="Chat",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('title', models.CharField(max_length=255)),
-                ('messages', models.JSONField(default=list)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='chats', to=settings.AUTH_USER_MODEL)),
-                ('course', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='chats', to='learning_materials.course')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("title", models.CharField(max_length=255)),
+                ("messages", models.JSONField(default=list)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="chats",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "course",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="chats",
+                        to="learning_materials.course",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Cardset',
+            name="Cardset",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('name', models.CharField(help_text='The name of the cardset', max_length=100)),
-                ('description', models.TextField(help_text='The description of the cardset')),
-                ('subject', models.CharField(blank=True, help_text='The subject of the cardset', max_length=1000, null=True)),
-                ('start_page', models.IntegerField(blank=True, help_text='The starting page of the quiz', null=True)),
-                ('end_page', models.IntegerField(blank=True, help_text='The ending page of the quiz', null=True)),
-                ('user', models.ForeignKey(help_text='The user who created this cardset', on_delete=django.db.models.deletion.CASCADE, related_name='cardsets', to=settings.AUTH_USER_MODEL)),
-                ('course', models.ForeignKey(blank=True, default=None, help_text='The course to which the cardset belongs', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='cardsets', to='learning_materials.course')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="The name of the cardset", max_length=100
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(help_text="The description of the cardset"),
+                ),
+                (
+                    "subject",
+                    models.CharField(
+                        blank=True,
+                        help_text="The subject of the cardset",
+                        max_length=1000,
+                        null=True,
+                    ),
+                ),
+                (
+                    "start_page",
+                    models.IntegerField(
+                        blank=True, help_text="The starting page of the quiz", null=True
+                    ),
+                ),
+                (
+                    "end_page",
+                    models.IntegerField(
+                        blank=True, help_text="The ending page of the quiz", null=True
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        help_text="The user who created this cardset",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cardsets",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "course",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        help_text="The course to which the cardset belongs",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cardsets",
+                        to="learning_materials.course",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='FlashcardModel',
+            name="FlashcardModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('front', models.TextField(help_text='The front of the flashcard')),
-                ('back', models.TextField(help_text='The back of the flashcard')),
-                ('proficiency', models.IntegerField(default=0, help_text='The profeciency of the flashcard')),
-                ('time_of_next_review', models.DateTimeField(auto_now=True, help_text='The time of the next review')),
-                ('cardset', models.ForeignKey(help_text='The cardset to which the flashcard belongs', on_delete=django.db.models.deletion.CASCADE, related_name='flashcards', to='learning_materials.cardset')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("front", models.TextField(help_text="The front of the flashcard")),
+                ("back", models.TextField(help_text="The back of the flashcard")),
+                (
+                    "proficiency",
+                    models.IntegerField(
+                        default=0, help_text="The profeciency of the flashcard"
+                    ),
+                ),
+                (
+                    "time_of_next_review",
+                    models.DateTimeField(
+                        auto_now=True, help_text="The time of the next review"
+                    ),
+                ),
+                (
+                    "cardset",
+                    models.ForeignKey(
+                        help_text="The cardset to which the flashcard belongs",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="flashcards",
+                        to="learning_materials.cardset",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='QuizModel',
+            name="QuizModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('document_name', models.CharField(default='unknown', help_text='The name of the document', max_length=100)),
-                ('subject', models.CharField(blank=True, help_text='The subject of the cardset', max_length=1000, null=True)),
-                ('start_page', models.IntegerField(blank=True, help_text='The starting page of the quiz', null=True)),
-                ('end_page', models.IntegerField(blank=True, help_text='The ending page of the quiz', null=True)),
-                ('course', models.ForeignKey(blank=True, default=None, help_text='The course to which the quiz belongs', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='quizzes', to='learning_materials.course')),
-                ('user', models.ForeignKey(help_text='The user who created this quiz', on_delete=django.db.models.deletion.CASCADE, related_name='quizzes', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "document_name",
+                    models.CharField(
+                        default="unknown",
+                        help_text="The name of the document",
+                        max_length=100,
+                    ),
+                ),
+                (
+                    "subject",
+                    models.CharField(
+                        blank=True,
+                        help_text="The subject of the cardset",
+                        max_length=1000,
+                        null=True,
+                    ),
+                ),
+                (
+                    "start_page",
+                    models.IntegerField(
+                        blank=True, help_text="The starting page of the quiz", null=True
+                    ),
+                ),
+                (
+                    "end_page",
+                    models.IntegerField(
+                        blank=True, help_text="The ending page of the quiz", null=True
+                    ),
+                ),
+                (
+                    "course",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        help_text="The course to which the quiz belongs",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="quizzes",
+                        to="learning_materials.course",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        help_text="The user who created this quiz",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="quizzes",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='QuestionAnswerModel',
+            name="QuestionAnswerModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('question', models.TextField(help_text='The question part of the QA pair')),
-                ('answer', models.TextField(help_text='The answer part of the QA pair')),
-                ('quiz', models.ForeignKey(help_text='The quiz to which the question-answer pair belongs', on_delete=django.db.models.deletion.CASCADE, related_name='question_answers', to='learning_materials.quizmodel')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "question",
+                    models.TextField(help_text="The question part of the QA pair"),
+                ),
+                (
+                    "answer",
+                    models.TextField(help_text="The answer part of the QA pair"),
+                ),
+                (
+                    "quiz",
+                    models.ForeignKey(
+                        help_text="The quiz to which the question-answer pair belongs",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="question_answers",
+                        to="learning_materials.quizmodel",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='MultipleChoiceQuestionModel',
+            name="MultipleChoiceQuestionModel",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('question', models.TextField(help_text='The question part of the multiple-choice question')),
-                ('options', models.JSONField(help_text='The list of options to choose from')),
-                ('answer', models.TextField(help_text='The correct answer to the question')),
-                ('quiz', models.ForeignKey(help_text='The quiz to which the multiple-choice question belongs', on_delete=django.db.models.deletion.CASCADE, related_name='multiple_choice_questions', to='learning_materials.quizmodel')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "question",
+                    models.TextField(
+                        help_text="The question part of the multiple-choice question"
+                    ),
+                ),
+                (
+                    "options",
+                    models.JSONField(help_text="The list of options to choose from"),
+                ),
+                (
+                    "answer",
+                    models.TextField(help_text="The correct answer to the question"),
+                ),
+                (
+                    "quiz",
+                    models.ForeignKey(
+                        help_text="The quiz to which the multiple-choice question belongs",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="multiple_choice_questions",
+                        to="learning_materials.quizmodel",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='UserFile',
+            name="UserFile",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=255)),
-                ('blob_name', models.CharField(max_length=1024)),
-                ('file_url', models.URLField(max_length=1024)),
-                ('num_pages', models.IntegerField()),
-                ('uploaded_at', models.DateTimeField(auto_now_add=True)),
-                ('content_type', models.CharField(max_length=100)),
-                ('file_size', models.BigIntegerField(blank=True, null=True)),
-                ('courses', models.ManyToManyField(related_name='files', to='learning_materials.course')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='uploaded_files', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("blob_name", models.CharField(max_length=1024)),
+                ("file_url", models.URLField(max_length=1024)),
+                ("num_pages", models.IntegerField()),
+                ("uploaded_at", models.DateTimeField(auto_now_add=True)),
+                ("content_type", models.CharField(max_length=100)),
+                ("file_size", models.BigIntegerField(blank=True, null=True)),
+                (
+                    "courses",
+                    models.ManyToManyField(
+                        related_name="files", to="learning_materials.course"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="uploaded_files",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'user_files',
-                'ordering': ['-uploaded_at'],
+                "db_table": "user_files",
+                "ordering": ["-uploaded_at"],
             },
         ),
     ]

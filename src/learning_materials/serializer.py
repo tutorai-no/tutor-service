@@ -82,7 +82,7 @@ class UserDocumentSerializer(serializers.Serializer):
     # Fields common to both
     id = serializers.UUIDField()
     uploaded_at = serializers.DateTimeField()
-    course_ids = serializers.ListField(child=serializers.IntegerField(), read_only=True)
+    course_ids = serializers.ListField(child=serializers.UUIDField(), read_only=True)
     type = serializers.CharField()
 
     # Fields specific to UserFile
@@ -173,26 +173,15 @@ class ContextSerializer(serializers.Serializer):
         return data
 
 
-class AdditionalContextSerializer(ContextSerializer):
-    max_amount_to_generate = serializers.IntegerField(
-        help_text="The maximum amount of a learning aid to generate",
-        required=False,
-    )
-
-
 class CourseSerializer(serializers.ModelSerializer):
     files = UserFileSerializer(many=True, read_only=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     language = serializers.CharField(required=False, allow_blank=True, allow_null=False)
     sections = serializers.ListField(
-        child=serializers.DictField(),
-        required=False,
-        allow_empty=True
+        child=serializers.DictField(), required=False, allow_empty=True
     )
     preferred_tools = serializers.ListField(
-        child=serializers.CharField(),
-        required=False,
-        allow_empty=True
+        child=serializers.CharField(), required=False, allow_empty=True
     )
 
     class Meta:
@@ -205,7 +194,9 @@ class CourseSerializer(serializers.ModelSerializer):
             "sections",
             "preferred_tools",
             "user",
+            "created_at",
         ]
+        read_only_fields = ["created_at"]
 
     def create(self, validated_data):
         return super().create(validated_data)
@@ -266,7 +257,7 @@ class ChatSerializer(serializers.ModelSerializer):
 
 
 class ReviewFlashcardSerializer(serializers.Serializer):
-    id = serializers.IntegerField(
+    id = serializers.UUIDField(
         help_text="The ID of the flashcard",
     )
     answer_was_correct = serializers.BooleanField(
@@ -275,7 +266,7 @@ class ReviewFlashcardSerializer(serializers.Serializer):
 
 
 class QuizStudentAnswer(serializers.Serializer):
-    quiz_id = serializers.CharField(
+    quiz_id = serializers.UUIDField(
         help_text="The ID of the quiz",
     )
     student_answers = serializers.ListField(
@@ -299,6 +290,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
             "front",
             "back",
             "cardset",
+            "mastery",
             "proficiency",
             "time_of_next_review",
         ]
@@ -323,6 +315,52 @@ class CardsetSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
+
+
+class CardsetCreateSerializer(serializers.Serializer):
+    course_id = serializers.UUIDField(required=False)
+    document_id = serializers.UUIDField(required=False)
+    subject = serializers.CharField(required=False)
+    start_page = serializers.IntegerField(required=False)
+    end_page = serializers.IntegerField(required=False)
+    num_flashcards = serializers.IntegerField(required=False)
+
+    def validate(self, data):
+        user = self.context["request"].user
+        course_id = data.get("course_id")
+        document_id = data.get("document_id")
+        subject = data.get("subject")
+        start_page = data.get("start_page")
+        end_page = data.get("end_page")
+
+        if course_id:
+            if not Course.objects.filter(id=course_id, user=user).exists():
+                raise NotFound({"course_id": "Course not found."})
+        elif document_id:
+            if not UserFile.objects.filter(id=document_id, user=user).exists():
+                raise NotFound({"document_id": "Document not found."})
+        else:
+            raise serializers.ValidationError(
+                "Either 'course_id' or 'document_id' must be provided."
+            )
+
+        if not subject and (start_page is None or end_page is None):
+            raise serializers.ValidationError(
+                "At least one of 'subject' or a valid 'start_page' and 'end_page' must be provided."
+            )
+
+        if (start_page is None) != (end_page is None):
+            raise serializers.ValidationError(
+                "Both 'start_page' and 'end_page' must be provided together."
+            )
+
+        if start_page is not None and end_page is not None:
+            if start_page > end_page:
+                raise serializers.ValidationError(
+                    "'start_page' must be less than or equal to 'end_page'."
+                )
+
+        return data
 
 
 class QuestionAnswerSerializer(serializers.ModelSerializer):
@@ -365,7 +403,69 @@ class QuizModelSerializer(serializers.ModelSerializer):
         return qa_serialized + mc_serialized
 
 
-class ClusterElementSerializer(serializers.Serializer):
+class QuizCreateSerializer(serializers.Serializer):
+    course_id = serializers.UUIDField(required=False)
+    document_id = serializers.UUIDField(required=False)
+    subject = serializers.CharField(required=False)
+    start_page = serializers.IntegerField(required=False)
+    end_page = serializers.IntegerField(required=False)
+    num_questions = serializers.IntegerField(required=False)
+
+    def validate(self, data):
+        user = self.context["request"].user
+        course_id = data.get("course_id")
+        document_id = data.get("document_id")
+        subject = data.get("subject")
+        start_page = data.get("start_page")
+        end_page = data.get("end_page")
+        num_questions = data.get("num_questions")
+
+        if course_id:
+            if not Course.objects.filter(id=course_id, user=user).exists():
+                raise NotFound({"course_id": "Course not found."})
+        elif document_id:
+            if not UserFile.objects.filter(id=document_id, user=user).exists():
+                raise NotFound({"document_id": "Document not found."})
+        else:
+            raise serializers.ValidationError(
+                "Either 'course_id' or 'document_id' must be provided."
+            )
+
+        if not subject and (start_page is None or end_page is None):
+            raise serializers.ValidationError(
+                "At least one of 'subject' or a valid 'start_page' and 'end_page' must be provided."
+            )
+
+        if (start_page is None) != (end_page is None):
+            raise serializers.ValidationError(
+                "Both 'start_page' and 'end_page' must be provided together."
+            )
+
+        if start_page is not None and end_page is not None:
+            if start_page > end_page:
+                raise serializers.ValidationError(
+                    "'start_page' must be less than or equal to 'end_page'."
+                )
+
+        if num_questions is None:
+            raise serializers.ValidationError("'num_questions' must be provided.")
+
+        if num_questions <= 0:
+            raise serializers.ValidationError("'num_questions' must be greater than 0.")
+
+        return data
+
+
+class ClusterElementSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClusterElement
-        fields = ["id", "user_file", "cluster_name", "page_number", "mastery", "x", "y"]
+        fields = [
+            "id",
+            "cluster_name",
+            "page_number",
+            "mastery",
+            "x",
+            "y",
+            "z",
+            "dimensions",
+        ]
