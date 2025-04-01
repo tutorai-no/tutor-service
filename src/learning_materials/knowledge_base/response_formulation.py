@@ -23,9 +23,25 @@ def generate_title_of_chat(user_question: str, answer: RagAnswer, language: str 
     """
 
     logger.info("Generating title of chat")
-    prompt = (
-        f"Generate the title of the chat based on the user question and the answer. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here is the user question and the answer:\n\nUser Question: {user_question}\n\nAnswer: {answer} The title should be engaging and concise no more then 5 words.",
-    )
+    prompt = f"""Generate a short title (3-4 words only) for this conversation.
+    The title should be in the language with code "{language}" and must be informative, 
+    neutral, and accurately represent the topic discussed.
+    
+    Examples of good titles:
+    - "Database Normalization Explained"
+    - "Climate Change Basics"
+    - "JavaScript Loop Methods"
+    - "Renaissance Art History"
+    
+    Do not use phrases like "Chat About" or "Discussion On" in the title.
+    Focus on the core subject matter of the conversation.
+    
+    Here is the conversation to analyze:
+    User Question: {user_question}
+    Answer: {answer}
+    
+    Respond with ONLY the title (3-4 words), nothing else.
+    """
 
     llm = create_llm_model()
     title = llm.invoke(prompt)
@@ -36,7 +52,24 @@ def generate_title_of_chat(user_question: str, answer: RagAnswer, language: str 
 def generate_title_of_flashcards(flashcards: list[Flashcard], language: str = "en") -> str:
 
     logger.info("Generating title of flashcards")
-    prompt = f"Generate the title of the flashcards based on the flashcards. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here are the flashcards:\n\n {flashcards}"
+    prompt = f"""Generate a short title (3-4 words only) for this flashcard set.
+    The title should be in the language with code "{language}" and must be informative, 
+    neutral, and accurately represent the subject matter.
+    
+    Examples of good titles:
+    - "Basic Algebra Concepts"
+    - "World War II Events"
+    - "Cell Biology Fundamentals"
+    - "Python Programming Basics"
+    
+    Do not use phrases like "Flashcard Set" or "Study Cards" in the title.
+    Focus on the subject matter these cards cover.
+    
+    Here are the flashcards to analyze:
+    {flashcards}
+    
+    Respond with ONLY the title (3-4 words), nothing else.
+    """
 
     llm = create_llm_model()
     title = llm.invoke(prompt)
@@ -47,7 +80,24 @@ def generate_title_of_flashcards(flashcards: list[Flashcard], language: str = "e
 def generate_title_of_quiz(quiz: Quiz, language: str = "en") -> str:
 
     logger.info("Generating title of quiz")
-    prompt = f"Generate the title of the quiz based on the questions. The title should be in the language with language code \"{language}\". The title should be engaging and concise. Here is the quiz:\n\n {quiz}"
+    prompt = f"""Generate a short title (3-4 words only) for this quiz.
+    The title should be in the language with code "{language}" and must be informative, 
+    neutral, and accurately represent the subject matter being tested.
+    
+    Examples of good titles:
+    - "Chemical Elements Basics"
+    - "American History Review"
+    - "Geometry Core Concepts"
+    - "French Vocabulary Test"
+    
+    Do not use phrases like "Quiz on" or "Test About" in the title.
+    Focus on the subject matter this quiz covers.
+    
+    Here is the quiz to analyze:
+    {quiz}
+    
+    Respond with ONLY the title (3-4 words), nothing else.
+    """
 
     llm = create_llm_model()
     title = llm.invoke(prompt)
