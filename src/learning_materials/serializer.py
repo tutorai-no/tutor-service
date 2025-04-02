@@ -390,6 +390,7 @@ class QuizModelSerializer(serializers.ModelSerializer):
         model = QuizModel
         fields = [
             "id",
+            "name",
             "document_name",
             "subject",
             "start_page",
