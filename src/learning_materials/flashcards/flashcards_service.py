@@ -53,17 +53,17 @@ def _generate_template(context: str, language: str = "en") -> str:
     """
 
     template = (
-        f"""Create flashcards from the provided text using any of the following formats: Standard Q&A, Vocabulary, Fill-in-the-Blank, Multiple Choice, and True/False. Choose the best format(s) based on the content of the text.
+        f"""Create flashcards from the provided text using any of the following formats: Standard Q&A, Vocabulary, Fill-in-the-Blank, Multiple Choice, and True/False. Choose the best format(s) based on the content of the text.  
         
         The following examples are provided in English solely for guidance on the desired format. Do not include these examples in your final output:
         
         1. Q&A:
-        * Front: "<question>"
-        * Back: "<answer>"
+        * Front: "What is a question?"
+        * Back: "This is an answer."
         
         2. Vocabulary:
-        * Front: "Word: <word>"
-        * Back: "Definition: <definition>"
+        * Front: "Word"
+        * Back: "This is the definition."
         
         3. Fill-in-the-Blank:
         * Front: "The ... is ____."
@@ -74,10 +74,12 @@ def _generate_template(context: str, language: str = "en") -> str:
         * Back: "(x) <correct answer>"
         
         5. True/False:
-        * Front: "<statement>"
+        * Front: "This is a statement."
         * Back: "True/False"
         
         Generate all flashcards in the language corresponding to the language code "{language}". If this code represents a language other than English, ensure that every flashcard (both front and back) is entirely in that language.
+
+        The same information shall not be repeated in multiple flashcards. Each flashcard should focus on a unique piece of information or concept. Avoid generating flashcards that are too similar to each other.
         
         Generate flashcards that best represent the content of the text. Do not ask questions about meta data from the text, like author or publisher. Each flashcard should be clear, directly derived from the text, and formatted using only the styles listed above.
         """

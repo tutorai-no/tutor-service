@@ -1,13 +1,13 @@
 from django.test import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from django.contrib.auth import get_user_model
 from learning_materials.models import FlashcardModel, Cardset
 from learning_materials.learning_resources import Flashcard, Citation
 from learning_materials.flashcards.flashcards_service import (
     generate_flashcards,
     parse_for_anki,
+    FlashcardWrapper,
 )
-
 
 User = get_user_model()
 
@@ -37,15 +37,25 @@ class FlashcardGenerationTests(TestCase):
         mock_flashcard2.document_name = page.document_name
         mock_flashcard2.page_num = page.page_num
 
+        # Create a FlashcardWrapper with the mock flashcards
+        mock_wrapper = FlashcardWrapper(flashcards=[mock_flashcard1, mock_flashcard2])
+        
+        # Set up the parser mock to return the wrapper
         mock_parser = MockParser.return_value
         mock_parser.get_format_instructions.return_value = "Format Instructions"
-        mock_parser.parse.return_value = [mock_flashcard1, mock_flashcard2]
-
-        mock_model = MockModel.return_value
-        mock_model.invoke.return_value = [mock_flashcard1, mock_flashcard2]
+        
+        # Set up the chain mock
+        mock_chain = MagicMock()
+        mock_chain.invoke.return_value = mock_wrapper
+        
+        # Make the pipe operation return our mock chain
+        mock_model_instance = MockModel.return_value
+        mock_model_instance.__or__.return_value = mock_chain
+        mock_parser.__or__.return_value = mock_chain
 
         # Call the function with language parameter
         flashcards = generate_flashcards(page)
+        print(flashcards)
 
         # Check the results
         self.assertEqual(len(flashcards), 2)
@@ -53,8 +63,8 @@ class FlashcardGenerationTests(TestCase):
         self.assertEqual(flashcards[0].back, "1879")
         self.assertEqual(flashcards[0].page_num, 1)
         self.assertEqual(flashcards[0].document_name, "sample.pdf")
-        self.assertEqual(flashcards[1].front, "At what temperature does water boil?")
-        self.assertEqual(flashcards[1].back, "100 degrees Celsius")
+        self.assertEqual(flashcards[1].front, "What is the boiling point of water in degrees Celsius?")
+        self.assertEqual(flashcards[1].back, "100")
 
 
 class FlashcardReviewTests(TestCase):
