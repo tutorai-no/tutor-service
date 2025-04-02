@@ -833,12 +833,15 @@ class QuizGradingView(GenericAPIView):
         if serializer.is_valid():
             student_answers = serializer.validated_data.get("student_answers")
             quiz_id = serializer.validated_data.get("quiz_id")
-            # TODO: Retrieve quiz from database
             quiz_model = QuizModel.objects.get(id=quiz_id)
             quiz = translate_quiz_to_pydantic_model(quiz_model)
-
             graded_answer = grade_quiz(quiz, student_answers)
             response = graded_answer.model_dump()
+            
+            if quiz_model.scores is None:
+                quiz_model.scores = []
+            quiz_model.scores.append(graded_answer.score)
+            quiz_model.save()
 
             message = ActivityMessage(
                 user_id=request.user.id,
@@ -849,9 +852,10 @@ class QuizGradingView(GenericAPIView):
                     "student_answers": student_answers,
                     "answers_was_correct": graded_answer.answers_was_correct,
                     "feedback": graded_answer.feedback,
+                    "score": graded_answer.score,
                 },
             )
-
+            
             producer.produce(
                 Topic.USER_ACTIVITY,
                 message.model_dump_json(),

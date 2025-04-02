@@ -1,6 +1,7 @@
 import logging
 import re
 from typing import List, Union, Optional
+from pydantic import BaseModel, Field
 
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -18,6 +19,15 @@ from learning_materials.learning_resources import (
 logger = logging.getLogger(__name__)
 
 llm = ChatOpenAI(temperature=0.0)
+
+
+# Add a new model for the LLM's grading output
+class QuestionGrading(BaseModel):
+    """Model for individual question grading results from LLM"""
+    answers_was_correct: list[bool] = Field(
+        description="A list indicating whether each answer was correct"
+    )
+    feedback: list[str] = Field(description="Feedback for each question in the quiz")
 
 
 def sanitize_json_text(text):
@@ -158,8 +168,8 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
 
     logger.info("Grading quiz")
 
-    # Initialize the parser for GradedQuiz
-    parser = PydanticOutputParser(pydantic_object=GradedQuiz)
+    # Initialize the parser for individual question grading
+    parser = PydanticOutputParser(pydantic_object=QuestionGrading)
 
     def parse_and_sanitize(text):
         sanitized_text = sanitize_json_text(text)
@@ -179,9 +189,10 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
         {student_answer}
 
         Please evaluate the student's answer and provide whether it is correct along with constructive feedback.
+        If the student didn't provide an answer or provided an empty answer, consider it incorrect and provide feedback about the correct answer.
 
-        Respond with a JSON object matching the GradedQuiz model, containing:
-        - answers_was_correct: A list of booleans indicating correctness.
+        Respond with a JSON object containing:
+        - answers_was_correct: A list of booleans indicating correctness (should be [false] for empty answers).
         - feedback: A list of feedback strings for each question.
     """
 
@@ -198,11 +209,11 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
         Your task is to:
         1. Compare the student's answer with the correct answer.
         2. Provide detailed feedback on why the student's answer is correct or incorrect.
-        3. Explain why each of the other options is incorrect to help the student understand.
+        3. If the student didn't provide an answer, consider it incorrect and explain what the correct answer is.
 
-        Your response must be a JSON object that matches the `GradedQuiz` model structure. The JSON object should contain:
-        - `answers_was_correct`: A boolean list indicating if the student's answer is correct (e.g., `[true]` or `[false]`).
-        - `feedback`: A list of strings providing constructive feedback for the student's answer and explanations for all options.
+        Your response must be a JSON object containing:
+        - answers_was_correct: A boolean list indicating if the student's answer is correct (e.g., [true] or [false]).
+        - feedback: A list of strings providing constructive feedback for the student's answer.
     """
 
     short_answer_prompt = PromptTemplate(
@@ -218,16 +229,21 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
     short_answer_chain = short_answer_prompt | llm | parse_and_sanitize
     multiple_choice_chain = multiple_choice_prompt | llm | parse_and_sanitize
 
-    graded_quiz = GradedQuiz(answers_was_correct=[], feedback=[])
+    # Initialize an empty GradedQuiz with a default score of 0
+    graded_quiz = GradedQuiz(answers_was_correct=[], feedback=[], score=0)
 
     for question, student_answer in zip(quiz.questions, student_answers):
+        # Handle empty student answers by setting a default value
+        if not student_answer or student_answer.strip() == "":
+            student_answer = "[No answer provided]"
+            
         if isinstance(question, QuestionAnswer):
             data = {
                 "question": question.question,
                 "correct_answer": question.answer,
                 "student_answer": student_answer,
             }
-            grade_data = short_answer_chain.invoke(data)
+            question_grade = short_answer_chain.invoke(data)
 
         elif isinstance(question, MultipleChoiceQuestion):
             data = {
@@ -236,22 +252,29 @@ def grade_quiz(quiz: Quiz, student_answers: list[str]) -> GradedQuiz:
                 "options": question.options,
                 "student_answer": student_answer,
             }
-            grade_data = multiple_choice_chain.invoke(data)
+            question_grade = multiple_choice_chain.invoke(data)
 
-        # Append the grading results to the GradedQuiz object
-        if not grade_data:
+        if not question_grade:
             graded_quiz.answers_was_correct.append(False)
             graded_quiz.feedback.append("Error grading question")
             logger.error(f"Error grading question: {question}")
             continue
 
-        elif not grade_data.answers_was_correct or not grade_data.feedback:
+        elif not question_grade.answers_was_correct or not question_grade.feedback:
             graded_quiz.answers_was_correct.append(False)
             graded_quiz.feedback.append("Error grading question")
             logger.error(f"Error grading question: {question}")
             continue
         else:
-            graded_quiz.answers_was_correct.append(grade_data.answers_was_correct[0])
-            graded_quiz.feedback.append(grade_data.feedback[0])
+            graded_quiz.answers_was_correct.append(question_grade.answers_was_correct[0])
+            graded_quiz.feedback.append(question_grade.feedback[0])
+
+    # Calculate the overall quiz score as the proportion of correct answers
+    total_questions = len(graded_quiz.answers_was_correct)
+    if total_questions > 0:
+        correct_answers = sum(1 for answer in graded_quiz.answers_was_correct if answer)
+        graded_quiz.score = correct_answers / total_questions
+    else:
+        graded_quiz.score = 0
 
     return graded_quiz

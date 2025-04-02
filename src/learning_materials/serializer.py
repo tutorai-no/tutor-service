@@ -397,6 +397,7 @@ class QuizModelSerializer(serializers.ModelSerializer):
             "questions",
             "user",
             "course",
+            "scores",
         ]
 
     def get_questions(self, obj):

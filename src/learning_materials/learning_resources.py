@@ -46,6 +46,7 @@ class GradedQuiz(BaseModel):
         description="A list indicating whether each answer was correct"
     )
     feedback: list[str] = Field(description="Feedback for each question in the quiz")
+    score: float = Field(description="The score of the quiz")
 
 
 class Citation(BaseModel):

@@ -283,7 +283,11 @@ class QuizModel(models.Model):
         null=True,
         blank=True,
     )
-
+    scores = models.JSONField(
+        help_text="List of scores from all attempts",
+        default=list,
+        blank=True,
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="quizzes",
