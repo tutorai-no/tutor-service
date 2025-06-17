@@ -1,10 +1,13 @@
 from datetime import datetime
 
 import logging
-from typing import Optional
+from typing import IO, Optional
 import uuid
 import io
 import PyPDF2
+from django.db import transaction
+import re
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -119,6 +122,75 @@ class CourseFilesView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+  
+
+logger = logging.getLogger(__name__)
+
+# Fast regexes
+_PAGES_DICT_RE = re.compile(rb"/Type\s*/Pages[^>]+?/Count\s+(\d+)", re.DOTALL)
+_PAGE_MARK_RE = re.compile(rb"/Type\s*/Page\b")
+
+PDF_HEADER = b"%PDF-"
+
+
+def is_pdf(file_obj: IO[bytes]) -> bool:
+    """Detect PDF by magic bytes so we don't rely on MIME."""
+    pos = file_obj.tell()
+    try:
+        file_obj.seek(0)
+        return file_obj.read(5) == PDF_HEADER
+    finally:
+        file_obj.seek(pos)
+
+
+def cheap_pdf_page_count(file_obj: IO[bytes]) -> Optional[int]:
+    """
+    Fast-but-best-effort page count.
+    Returns an int, or None if we couldn’t determine it cheaply.
+    Leaves the file pointer unchanged.
+    """
+    if not is_pdf(file_obj):
+        return None
+
+    start = file_obj.tell()
+    try:
+        # ---------- FAST PATH: look for /Count in first 128 kB ----------
+        file_obj.seek(0)
+        head = file_obj.read(128_000)
+        m = _PAGES_DICT_RE.search(head)
+        if m:
+            return int(m.group(1))
+
+        # ---------- SLOW PATH: scan literal /Type /Page in the whole file ----------
+        file_obj.seek(0)
+        pages = 0
+        overlap = b""
+        for chunk in iter(lambda: file_obj.read(64_000), b""):
+            data = overlap + chunk
+            pages += len(_PAGE_MARK_RE.findall(data))
+            overlap = data[-20:]                # keep tail for split markers
+        return pages if pages else None         # 0 pages ⇒ treat as unknown
+    finally:
+        file_obj.seek(start)
+
+
+def get_num_pages(file_obj: IO[bytes]) -> int:
+    """
+    Public API: cheap first, then precise.
+    Guaranteed to return an int (0 = unknown / failed).
+    """
+    count = cheap_pdf_page_count(file_obj)
+    if count is not None:
+        return count
+
+    # ---------- fallback: PyPDF2 (accurate, but heavier) ----------
+    try:
+        file_obj.seek(0)
+        reader = PyPDF2.PdfReader(file_obj, strict=False)
+        return len(reader.pages)
+    except Exception as exc:
+        logger.warning("Precise page count failed for %s: %s", file_obj, exc)
+        return 0
 
 class FileUploadView(APIView):
     permission_classes = [IsAuthenticated]
@@ -126,8 +198,156 @@ class FileUploadView(APIView):
         MultiPartParser,
         FormParser,
     ]
-
+    
     def post(self, request, *args, **kwargs):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return Response(
+                {"detail": "Authorization header is required"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        course_id = request.data.get("course_id")
+        if not course_id:
+            return Response(
+                {"detail": "course_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            course = Course.objects.get(id=course_id, user=request.user)
+        except Course.DoesNotExist:
+            return Response(
+                {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        files = request.FILES.getlist("files")          
+        urls = request.data.getlist("urls")             
+
+        if not files and not urls:
+            return Response(
+                {"detail": "At least one file or one URL is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        processed_documents = []
+
+        # These two lists will later be sent to the scraper.
+        file_objects_for_embedding = []   # the actual file-like objects
+        file_uuid_strings = []            # corresponding UUIDs as strings
+
+        # ──────────────────── handle files ─────────────────────────
+        for file_obj in files:
+            try:
+                file_uuid = uuid.uuid4()
+
+                blob_name, file_url = upload_file_to_blob(
+                    file_obj, request.user.id, course.id, file_uuid
+                )
+                sas_url = generate_sas_url(blob_name)
+                num_pages = request.data.get("num_pages", 0)  # Default value
+                # if file_obj.content_type == 'application/pdf':
+                #     try:
+                #         # Reset file pointer to beginning
+                #         file_obj.seek(0)
+                #         pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_obj.read()))
+                #         num_pages = len(pdf_reader.pages)
+                #         # Reset file pointer again for later use
+                #         file_obj.seek(0)
+                #         logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
+                #     except Exception as e:
+                #         logger.error(f"Error extracting page count from PDF: {e}")
+                #         # Keep using the default or provided value
+                
+                if file_obj.content_type == "application/pdf":
+                    num_pages = get_num_pages(file_obj)
+                
+                
+
+                file_metadata = {
+                    "id": file_uuid,
+                    "name": file_obj.name,
+                    "blob_name": blob_name,
+                    "file_url": file_url,
+                    "sas_url": sas_url,
+                    "num_pages": num_pages,     
+                    "content_type": file_obj.content_type,
+                    "file_size": file_obj.size,
+                }
+
+                serializer = UserFileSerializer(data=file_metadata)
+                if not serializer.is_valid():
+                    return Response(
+                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                with transaction.atomic():
+                    user_file: UserFile = serializer.save(user=request.user)
+                    user_file.courses.add(course)
+
+                processed_data = serializer.data
+                processed_data["type"] = "file"
+                processed_documents.append(processed_data)
+
+                # keep for the scraper call
+                file_obj.seek(0)                       # ensure pointer at start
+                file_objects_for_embedding.append(file_obj)
+                file_uuid_strings.append(str(file_uuid))
+
+            except Exception as e:
+                logger.error(f"Error uploading file {file_obj.name}: {e}")
+                return Response(
+                    {"detail": f"Error uploading file {file_obj.name}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        # ──────────────────── send FILES to SCRAPER (once) ─────────
+        if file_objects_for_embedding:                  
+            try:
+                create_file_embeddings(
+                    file_objects_for_embedding,
+                    file_uuid_strings,        
+                    auth_header,
+                )
+            except:
+                pass
+
+        # ──────────────────── handle URLS ──────────────────────────
+        for url in urls:
+            try:
+                url_uuid = uuid.uuid4()
+                url_metadata = {
+                    "id": url_uuid,
+                    "name": url,
+                    "url": url,
+                }
+
+                serializer = UserURLSerializer(data=url_metadata)
+                if not serializer.is_valid():
+                    return Response(
+                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                with transaction.atomic():
+                    user_url: UserURL = serializer.save(user=request.user)
+                    user_url.courses.add(course)
+
+                create_url_embeddings(url, str(url_uuid), auth_header)
+
+                processed_data = serializer.data
+                processed_data["type"] = "url"
+                processed_documents.append(processed_data)
+
+            except Exception as e:
+                logger.error(f"Error processing URL {url}: {e}")
+                return Response(
+                    {"detail": f"Error processing URL {url}: {e}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        return Response(processed_documents, status=status.HTTP_201_CREATED)
+
+    def post2(self, request, *args, **kwargs):
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             return Response(
@@ -160,50 +380,55 @@ class FileUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        processed_documents = []
-        logger.info(f"Processing {len(files)} files and {len(urls)} URLs")
-        logger.info(f"Files: {files}")
-        logger.info(f"URLs: {urls}")
+        # processed_documents = []
+        # logger.info(f"Processing {len(files)} files and {len(urls)} URLs")
+        # logger.info(f"Files: {files}")
+        # logger.info(f"URLs: {urls}")
         # Process files if any
-        for file in files:
+        
+        file_uuids = []
+        processed_documents = []
+        
+        for file, index in enumerate(files):
             try:
                 file_uuid = uuid.uuid4()
                 blob_name, file_url = upload_file_to_blob(
                     file, user.id, course.id, file_uuid
                 )
                 sas_url = generate_sas_url(blob_name)
+                file_uuids.append(str(file_uuid))
                 
-                # Extract number of pages if file is a PDF
                 num_pages = request.data.get("num_pages", 0)  # Default value
-                if file.content_type == 'application/pdf':
-                    try:
-                        # Reset file pointer to beginning
-                        file.seek(0)
-                        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
-                        num_pages = len(pdf_reader.pages)
-                        # Reset file pointer again for later use
-                        file.seek(0)
-                        logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
-                    except Exception as e:
-                        logger.error(f"Error extracting page count from PDF: {e}")
-                        # Keep using the default or provided value
-
+        #         if file.content_type == 'application/pdf':
+        #             try:
+        #                 # Reset file pointer to beginning
+        #                 file.seek(0)
+        #                 pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+        #                 num_pages = len(pdf_reader.pages)
+        #                 # Reset file pointer again for later use
+        #                 file.seek(0)
+        #                 logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
+        #             except Exception as e:
+        #                 logger.error(f"Error extracting page count from PDF: {e}")
+        #                 # Keep using the default or provided value
+                
+                
                 file_metadata = {
-                    "id": file_uuid,
-                    "name": file.name,
-                    "blob_name": blob_name,
-                    "file_url": file_url,
-                    "sas_url": sas_url,
-                    "num_pages": num_pages,
-                    "content_type": file.content_type,
-                    "file_size": file.size,
-                }
-
+                     "id": file_uuid,
+                     "name": file.name,
+                     "blob_name": blob_name,
+                     "file_url": file_url,
+                     "sas_url": sas_url,
+                     "num_pages": num_pages, 
+                     "content_type": file.content_type,
+                     "file_size": file.size,
+                 }
+                
+                # Hope that the scraper works
                 serializer = UserFileSerializer(data=file_metadata)
                 if serializer.is_valid():
                     # Attempt to create embeddings
                     file.seek(0)
-                    create_file_embeddings(file, str(file_uuid), auth_header)
 
                     user_file: UserFile = serializer.save(user=user)
                     user_file.courses.add(course)
@@ -221,6 +446,68 @@ class FileUploadView(APIView):
                     {"detail": f"Error uploading file {file.name}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
+        
+        create_file_embeddings(files, file_uuids, auth_header)
+        
+            
+                
+        
+        # for file in files:
+        #     try:
+        #         file_uuid = uuid.uuid4()
+        #         blob_name, file_url = upload_file_to_blob(
+        #             file, user.id, course.id, file_uuid
+        #         )
+        #         sas_url = generate_sas_url(blob_name)
+                
+        #         # Extract number of pages if file is a PDF
+        #         num_pages = request.data.get("num_pages", 0)  # Default value
+        #         if file.content_type == 'application/pdf':
+        #             try:
+        #                 # Reset file pointer to beginning
+        #                 file.seek(0)
+        #                 pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+        #                 num_pages = len(pdf_reader.pages)
+        #                 # Reset file pointer again for later use
+        #                 file.seek(0)
+        #                 logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
+        #             except Exception as e:
+        #                 logger.error(f"Error extracting page count from PDF: {e}")
+        #                 # Keep using the default or provided value
+
+        #         file_metadata = {
+        #             "id": file_uuid,
+        #             "name": file.name,
+        #             "blob_name": blob_name,
+        #             "file_url": file_url,
+        #             "sas_url": sas_url,
+        #             "num_pages": num_pages,
+        #             "content_type": file.content_type,
+        #             "file_size": file.size,
+        #         }
+
+        #         serializer = UserFileSerializer(data=file_metadata)
+        #         if serializer.is_valid():
+        #             # Attempt to create embeddings
+        #             file.seek(0)
+        #             create_file_embeddings(file, str(file_uuid), auth_header)
+
+        #             user_file: UserFile = serializer.save(user=user)
+        #             user_file.courses.add(course)
+
+        #             processed_data = serializer.data
+        #             processed_data["type"] = "file"
+        #             processed_documents.append(processed_data)
+        #         else:
+        #             return Response(
+        #                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
+        #             )
+        #     except Exception as e:
+        #         logging.error(f"Error uploading file {file.name}: {e}")
+        #         return Response(
+        #             {"detail": f"Error uploading file {file.name}"},
+        #             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #         )
 
         # Process URLs if any
         for url in urls:
