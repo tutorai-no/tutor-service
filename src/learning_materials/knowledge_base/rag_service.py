@@ -13,7 +13,7 @@ db: Database = create_database(db_system)
 embeddings: EmbeddingsModel = create_embeddings_model()
 
 
-def get_context(document_id: uuid.UUID, query: str) -> list[Citation]:
+def get_context(document_ids: list[uuid.UUID], query: str) -> list[Citation]:
     """
     Get the context of the query
 
@@ -24,7 +24,7 @@ def get_context(document_id: uuid.UUID, query: str) -> list[Citation]:
         list[str]: The context of the query
     """
     embedding = embeddings.get_embedding(query)
-    context = db.get_curriculum(document_id, embedding)
+    context = db.get_curriculum(document_ids, embedding)
     return context
 
 

@@ -81,7 +81,7 @@ def _generate_template(context: str, language: str = "en") -> str:
 
         The same information shall not be repeated in multiple flashcards. Each flashcard should focus on a unique piece of information or concept. Avoid generating flashcards that are too similar to each other.
         
-        Generate flashcards that best represent the content of the text. Do not ask questions about meta data from the text, like author or publisher. Each flashcard should be clear, directly derived from the text, and formatted using only the styles listed above.
+        Generate flashcards that best represent the content of the text. Do NOT ask questions about meta data from the text, like author or publisher. Each flashcard should be clear, directly derived from the text, and formatted using only the styles listed above.
         """
         f"\n\nText:\n{context}"
     )

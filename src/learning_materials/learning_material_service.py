@@ -60,7 +60,7 @@ def process_flashcards_by_subject(
     language: str = "en",
     max_amount_to_generate: Optional[int] = None,
 ) -> list[Flashcard]:
-    pages = get_context(document_id, subject)
+    pages = get_context([document_id], subject)
     flashcards = _process_flashcards_by_pages(pages, language)
     flashcards = _post_process_flashcards(flashcards, max_amount_to_generate)
 
@@ -90,9 +90,7 @@ def process_answer(
     Process the user's question and return a response based on the context of the documents and chat history.
     """
     # Retrieve relevant contexts for the provided documents
-    curriculum: list[Citation] = []
-    for document_id in document_ids:
-        curriculum.extend(get_context(document_id, user_question))
+    curriculum: list[Citation] = get_context(document_ids, user_question)
 
     # Handle case when no context is available
     if len(curriculum) == 0:
