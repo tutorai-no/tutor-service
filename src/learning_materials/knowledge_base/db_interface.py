@@ -33,7 +33,7 @@ class Database(ABC):
 
     @abstractmethod
     def get_curriculum(
-        self, document_id: uuid.UUID, embedding: list[float]
+        self, document_ids: list[uuid.UUID], embedding: list[float], top_k: int = 5
     ) -> list[Citation]:
         """
         Get the curriculum from the database
@@ -139,10 +139,14 @@ class MongoDB(Database):
         self.embeddings = OpenAIEmbedding()
 
     def get_curriculum(
-        self, document_id: uuid.UUID, embedding: list[float]
+        self, document_ids: list[uuid.UUID], embedding: list[float], top_k: int = 5
     ) -> list[Citation]:
         # Step 1: Filter by documentId first
-        cursor = self.collection.find({"documentId": str(document_id)})
+        if not document_ids:
+            raise ValueError("Document IDs cannot be empty")
+        cursor = self.collection.find(
+            {"documentId": {"$in": [str(doc_id) for doc_id in document_ids]}}
+        )
         if not cursor:
             raise ValueError("No documents found")
 
@@ -158,7 +162,7 @@ class MongoDB(Database):
         similarities.sort(key=lambda x: x[1], reverse=True)
 
         # Retrieve top 5 matches
-        top_5_matches = similarities[:5]
+        top_5_matches = similarities[:top_k]
 
         # Return those of the top 5 matches that are above the similarity threshold
         for match in top_5_matches:
@@ -343,7 +347,7 @@ class MockDatabase(Database):
             self.initialized = True
 
     def get_curriculum(
-        self, document_id: uuid.UUID, embedding: list[float]
+        self, document_id: uuid.UUID, embedding: list[float], top_k: int = 5
     ) -> list[Citation]:
         if not embedding:
             raise ValueError("Embedding cannot be None")

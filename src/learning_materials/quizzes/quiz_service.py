@@ -62,7 +62,7 @@ def generate_quiz(
         citations = get_page_range(document_id, start, end)
     elif subject is not None:
         logger.info(f"Generating quiz for subject {subject}")
-        citations = get_context(document_id, subject)
+        citations = get_context([document_id], subject)
     else:
         raise ValueError(
             "Either start and end page numbers or a subject must be provided."
