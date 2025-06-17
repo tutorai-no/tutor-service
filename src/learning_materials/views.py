@@ -1,10 +1,13 @@
 from datetime import datetime
 
 import logging
-from typing import Optional
+from typing import IO, Optional
 import uuid
 import io
 import PyPDF2
+from django.db import transaction
+import re
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -25,6 +28,7 @@ from drf_yasg import openapi
 from broker.producer import producer
 from broker.handlers.activity_handler import ActivityMessage
 from broker.topics import Topic
+from learning_materials.utils.get_number_of_pages import get_num_pages
 from learning_materials.files.file_embeddings import (
     create_file_embeddings,
     create_url_embeddings,
@@ -119,6 +123,9 @@ class CourseFilesView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+  
+
+
 
 class FileUploadView(APIView):
     permission_classes = [IsAuthenticated]
@@ -126,7 +133,7 @@ class FileUploadView(APIView):
         MultiPartParser,
         FormParser,
     ]
-
+    
     def post(self, request, *args, **kwargs):
         auth_header = request.headers.get("Authorization")
         if not auth_header:
@@ -141,19 +148,17 @@ class FileUploadView(APIView):
                 {"detail": "course_id is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         try:
-            user = request.user
-            course = Course.objects.get(id=course_id, user=user)
+            course = Course.objects.get(id=course_id, user=request.user)
         except Course.DoesNotExist:
             return Response(
                 {"detail": "Course not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # Retrieve lists of files and URLs
-        files = request.FILES.getlist("files")
-        urls = request.data.getlist("urls")
+        files = request.FILES.getlist("files")          
+        urls = request.data.getlist("urls")             
 
-        # Validate input: we need at least one file or one URL
         if not files and not urls:
             return Response(
                 {"detail": "At least one file or one URL is required"},
@@ -161,68 +166,88 @@ class FileUploadView(APIView):
             )
 
         processed_documents = []
-        logger.info(f"Processing {len(files)} files and {len(urls)} URLs")
-        logger.info(f"Files: {files}")
-        logger.info(f"URLs: {urls}")
-        # Process files if any
-        for file in files:
+
+        # These two lists will later be sent to the scraper.
+        file_objects_for_embedding = []   # the actual file-like objects
+        file_uuid_strings = []            # corresponding UUIDs as strings
+
+        # ──────────────────── handle files ─────────────────────────
+        for file_obj in files:
             try:
                 file_uuid = uuid.uuid4()
+
                 blob_name, file_url = upload_file_to_blob(
-                    file, user.id, course.id, file_uuid
+                    file_obj, request.user.id, course.id, file_uuid
                 )
                 sas_url = generate_sas_url(blob_name)
-                
-                # Extract number of pages if file is a PDF
                 num_pages = request.data.get("num_pages", 0)  # Default value
-                if file.content_type == 'application/pdf':
-                    try:
-                        # Reset file pointer to beginning
-                        file.seek(0)
-                        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
-                        num_pages = len(pdf_reader.pages)
-                        # Reset file pointer again for later use
-                        file.seek(0)
-                        logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
-                    except Exception as e:
-                        logger.error(f"Error extracting page count from PDF: {e}")
-                        # Keep using the default or provided value
+                # if file_obj.content_type == 'application/pdf':
+                #     try:
+                #         # Reset file pointer to beginning
+                #         file_obj.seek(0)
+                #         pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_obj.read()))
+                #         num_pages = len(pdf_reader.pages)
+                #         # Reset file pointer again for later use
+                #         file_obj.seek(0)
+                #         logger.info(f"Extracted {num_pages} pages from PDF: {file.name}")
+                #     except Exception as e:
+                #         logger.error(f"Error extracting page count from PDF: {e}")
+                #         # Keep using the default or provided value
+                
+                if file_obj.content_type == "application/pdf":
+                    num_pages = get_num_pages(file_obj)
+                
+                
 
                 file_metadata = {
                     "id": file_uuid,
-                    "name": file.name,
+                    "name": file_obj.name,
                     "blob_name": blob_name,
                     "file_url": file_url,
                     "sas_url": sas_url,
-                    "num_pages": num_pages,
-                    "content_type": file.content_type,
-                    "file_size": file.size,
+                    "num_pages": num_pages,     
+                    "content_type": file_obj.content_type,
+                    "file_size": file_obj.size,
                 }
 
                 serializer = UserFileSerializer(data=file_metadata)
-                if serializer.is_valid():
-                    # Attempt to create embeddings
-                    file.seek(0)
-                    create_file_embeddings(file, str(file_uuid), auth_header)
-
-                    user_file: UserFile = serializer.save(user=user)
-                    user_file.courses.add(course)
-
-                    processed_data = serializer.data
-                    processed_data["type"] = "file"
-                    processed_documents.append(processed_data)
-                else:
+                if not serializer.is_valid():
                     return Response(
                         serializer.errors, status=status.HTTP_400_BAD_REQUEST
                     )
+
+                with transaction.atomic():
+                    user_file: UserFile = serializer.save(user=request.user)
+                    user_file.courses.add(course)
+
+                processed_data = serializer.data
+                processed_data["type"] = "file"
+                processed_documents.append(processed_data)
+
+                # keep for the scraper call
+                file_obj.seek(0)                       # ensure pointer at start
+                file_objects_for_embedding.append(file_obj)
+                file_uuid_strings.append(str(file_uuid))
+
             except Exception as e:
-                logging.error(f"Error uploading file {file.name}: {e}")
+                logger.error(f"Error uploading file {file_obj.name}: {e}")
                 return Response(
-                    {"detail": f"Error uploading file {file.name}"},
+                    {"detail": f"Error uploading file {file_obj.name}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-        # Process URLs if any
+        # ──────────────────── send FILES to SCRAPER (once) ─────────
+        if file_objects_for_embedding:                  
+            try:
+                create_file_embeddings(
+                    file_objects_for_embedding,
+                    file_uuid_strings,        
+                    auth_header,
+                )
+            except:
+                pass
+
+        # ──────────────────── handle URLS ──────────────────────────
         for url in urls:
             try:
                 url_uuid = uuid.uuid4()
@@ -233,28 +258,31 @@ class FileUploadView(APIView):
                 }
 
                 serializer = UserURLSerializer(data=url_metadata)
-                if serializer.is_valid():
-                    create_url_embeddings(url, str(url_uuid), auth_header)
-                    user_url: UserURL = serializer.save(user=user)
-                    user_url.courses.add(course)
-                    processed_data = serializer.data
-                    processed_data["type"] = "url"
-                    processed_documents.append(processed_data)
-
-                else:
+                if not serializer.is_valid():
                     return Response(
                         serializer.errors, status=status.HTTP_400_BAD_REQUEST
                     )
 
+                with transaction.atomic():
+                    user_url: UserURL = serializer.save(user=request.user)
+                    user_url.courses.add(course)
+
+                create_url_embeddings(url, str(url_uuid), auth_header)
+
+                processed_data = serializer.data
+                processed_data["type"] = "url"
+                processed_documents.append(processed_data)
+
             except Exception as e:
-                logging.error(f"Error processing URLs: {e}")
+                logger.error(f"Error processing URL {url}: {e}")
                 return Response(
-                    {"detail": f"Error processing URLs: {e}"},
+                    {"detail": f"Error processing URL {url}: {e}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-        return Response(data=processed_documents, status=status.HTTP_201_CREATED)
+        return Response(processed_documents, status=status.HTTP_201_CREATED)
 
+    
 
 class UserDocumentsListView(ListAPIView):
     permission_classes = [IsAuthenticated]
