@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "accounts",
     "api",
     "learning_materials",
+    "payments",
     # Django built-in apps
     "django.contrib.admin",
     "django.contrib.auth",
