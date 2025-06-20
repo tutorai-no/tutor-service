@@ -67,6 +67,8 @@ urlpatterns = [
     path("activities/", ActivityCreateView.as_view(), name="activity-create"),
     path("activity-log/", ActivityView.as_view(), name="activity-log"),
     path("profile/", UserProfileView.as_view(), name="profile"),
+    # Payments
+    path("payments/", include("payments.urls")),  # Include payments URLs
     # Subscriptions
     path("subscriptions/", SubscriptionListView.as_view(), name="subscriptions"),
     path(
