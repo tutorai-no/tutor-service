@@ -35,7 +35,7 @@ services:
       - BASE_URL_FRONTEND=${BASE_URL_FRONTEND}
       - DEBUG=${DEBUG}
     networks:
-      - tutorai_network
+      - aksio_network
 
   db:
     image: postgres:latest
@@ -46,7 +46,7 @@ services:
       - POSTGRES_USER=tutoraiuser
       - POSTGRES_PASSWORD=tutoraipassword
     networks:
-      - tutorai_network
+      - aksio_network
 
   broker:
     image: confluentinc/cp-kafka:latest
@@ -66,7 +66,7 @@ services:
     depends_on:
       - zookeeper
     networks:
-      - tutorai_network
+      - aksio_network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -77,12 +77,12 @@ services:
     ports:
       - "2181:2181"
     networks:
-      - tutorai_network
+      - aksio_network
 
 volumes:
   postgres_data:
   static_volume:
 
 networks:
-  tutorai_network:
+  aksio_network:
     external: true
