@@ -28,7 +28,7 @@ jobs:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
           AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.AZURE_STORAGE_CONTAINER_NAME }}
         run: |
-          docker network create tutorai_network
+          docker network create aksio_network
           docker compose down -v
           docker compose build backend
           docker compose run backend python manage.py makemigrations accounts
