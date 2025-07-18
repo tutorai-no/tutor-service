@@ -60,6 +60,36 @@ DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 STATICFILES_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
+# Cache configuration
+REDIS_URL = os.getenv("REDIS_URL")
+if REDIS_URL:
+    # Use Redis if available (recommended for production)
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            "KEY_PREFIX": "aksio",
+            "TIMEOUT": 300,  # 5 minutes default timeout
+        }
+    }
+else:
+    # Fallback to local memory cache (not recommended for production)
+    # This is only suitable for single-instance deployments
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "aksio-cache",
+        }
+    }
+
+# Session configuration
+if REDIS_URL:
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+
 # Logging for production
 LOGGING["handlers"]["console"]["level"] = "WARNING"
 LOGGING["loggers"]["django"]["level"] = "WARNING"

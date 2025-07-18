@@ -8,41 +8,141 @@ on:
       - completed
   workflow_dispatch: {}
 
+env:
+  PROJECT_ID: production-466308
+  REGION: europe-west1
+  REPOSITORY: aksio
+  SERVICE: aksio-backend
+  CLOUD_SQL_CONNECTION_NAME: ${{ secrets.CLOUD_SQL_CONNECTION_NAME }}
+
+permissions:
+  contents: read
+  id-token: write  # Required for Workload Identity Federation
+
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: [self-hosted, Linux, X64]
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      - name: Create .env file for compose
-        run: |
-          cat <<EOF > .env
-          OPENAI_API_KEY=${{ secrets.PROD_OPENAI_API_KEY }}
-          MONGODB_URI=${{ secrets.PROD_MONGODB_URI }}
-          MONGODB_DATABASE=${{ secrets.PROD_MONGODB_DATABASE }}
-          MONGODB_COLLECTION=${{ secrets.PROD_MONGODB_COLLECTION }}
-          RAG_DATABASE_SYSTEM=${{ secrets.PROD_RAG_DATABASE_SYSTEM }}
-          DJANGO_SECRET_KEY=${{ secrets.PROD_DJANGO_SECRET_KEY }}
-          EMAIL_HOST_USER=${{ secrets.PROD_EMAIL_HOST_USER }}
-          EMAIL_HOST_PASSWORD=${{ secrets.PROD_EMAIL_HOST_PASSWORD }}
-          AZURE_STORAGE_CONNECTION_STRING=${{ secrets.PROD_AZURE_STORAGE_CONNECTION_STRING }}
-          AZURE_STORAGE_CONTAINER_NAME=${{ secrets.PROD_AZURE_STORAGE_CONTAINER_NAME }}
-          BASE_URL_SCRAPER=${{ secrets.PROD_BASE_URL_SCRAPER }}
-          BASE_URL_FRONTEND=${{ secrets.PROD_BASE_URL_FRONTEND }}
-          EOF
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Pull latest Docker image and restart services
+      - name: Configure Docker for Artifact Registry
         run: |
-          docker compose down
-          docker compose build
-          docker compose run backend python manage.py migrate
-          docker compose up -d 
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+
+      - name: Run Database Migrations
+        run: |
+          # Pull the latest image
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:latest"
+          docker pull ${IMAGE}
+          
+          # Run migrations using Cloud SQL Proxy
+          docker run --rm \
+            -e DATABASE_HOST="127.0.0.1" \
+            -e DATABASE_PORT="5432" \
+            -e DATABASE_NAME="${{ secrets.DATABASE_NAME }}" \
+            -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
+            -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
+            -e DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+            -e DJANGO_SETTINGS_MODULE="aksio.settings.production" \
+            --network host \
+            ${IMAGE} python manage.py migrate &
+          
+          MIGRATE_PID=$!
+          
+          # Start Cloud SQL Proxy in the background
+          docker run -d \
+            --name cloud-sql-proxy \
+            --network host \
+            gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest \
+            --address 127.0.0.1 \
+            --port 5432 \
+            ${CLOUD_SQL_CONNECTION_NAME}
+          
+          # Wait for proxy to be ready
+          sleep 10
+          
+          # Wait for migrations to complete
+          wait $MIGRATE_PID
+          MIGRATE_EXIT_CODE=$?
+          
+          # Clean up proxy
+          docker stop cloud-sql-proxy
+          docker rm cloud-sql-proxy
+          
+          # Exit with migration exit code
+          exit $MIGRATE_EXIT_CODE
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${SERVICE} \
+            --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:latest \
+            --platform managed \
+            --region ${REGION} \
+            --allow-unauthenticated \
+            --add-cloudsql-instances ${CLOUD_SQL_CONNECTION_NAME} \
+            --set-env-vars "DJANGO_SETTINGS_MODULE=aksio.settings.production" \
+            --set-env-vars "DATABASE_HOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME}" \
+            --set-env-vars "DATABASE_PORT=5432" \
+            --set-env-vars "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" \
+            --set-env-vars "DATABASE_USER=${{ secrets.DATABASE_USER }}" \
+            --set-env-vars "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" \
+            --set-env-vars "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" \
+            --set-env-vars "DJANGO_ALLOWED_HOSTS=${{ secrets.DJANGO_ALLOWED_HOSTS }}" \
+            --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
+            --set-env-vars "GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}" \
+            --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
+            --set-env-vars "LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}" \
+            --set-env-vars "LLM_MODEL=${{ secrets.LLM_MODEL }}" \
+            --set-env-vars "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" \
+            --set-env-vars "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}" \
+            --set-env-vars "DEFAULT_FROM_EMAIL=${{ secrets.DEFAULT_FROM_EMAIL }}" \
+            --set-env-vars "REDIS_URL=${{ secrets.REDIS_URL }}" \
+            --set-env-vars "SCRAPER_SERVICE_URL=${{ secrets.SCRAPER_SERVICE_URL }}" \
+            --set-env-vars "RETRIEVER_SERVICE_URL=${{ secrets.RETRIEVER_SERVICE_URL }}" \
+            --set-env-vars "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" \
+            --set-env-vars "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" \
+            --set-env-vars "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+            --set-env-vars "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" \
+            --set-env-vars "SENTRY_ENVIRONMENT=production" \
+            --cpu 2 \
+            --memory 4Gi \
+            --min-instances 1 \
+            --max-instances 10 \
+            --timeout 300 \
+            --service-account ${{ secrets.CLOUD_RUN_SERVICE_ACCOUNT }}
+
+      - name: Get Service URL
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${SERVICE} \
+            --platform managed \
+            --region ${REGION} \
+            --format 'value(status.url)')
+          echo "Service deployed to: ${SERVICE_URL}"
+          echo "SERVICE_URL=${SERVICE_URL}" >> $GITHUB_ENV
+
+      - name: Smoke Test
+        run: |
+          # Wait for service to be ready
+          sleep 30
+          
+          # Test health endpoint
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${SERVICE_URL}/api/health/)
+          
+          if [ $HTTP_CODE -eq 200 ]; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed with HTTP code: $HTTP_CODE"
+            exit 1
+          fi

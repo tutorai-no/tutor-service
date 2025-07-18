@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: ["main"]
 
+env:
+  PROJECT_ID: production-466308
+  REGION: europe-west1
+  REPOSITORY: aksio
+  SERVICE: aksio-backend
+
 permissions:
   pull-requests: write
   contents: write
+  id-token: write  # Required for Workload Identity Federation
   
 jobs:
   build:
@@ -17,65 +24,104 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v4
+      
       - name: Build docker image and run tests
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}
-          MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
-          RAG_DATABASE_SYSTEM: ${{ secrets.RAG_DATABASE_SYSTEM }}
+          # Django Configuration
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-          AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.AZURE_STORAGE_CONTAINER_NAME }}
+          DJANGO_DEBUG: True
+          DJANGO_SETTINGS_MODULE: aksio.settings.testing
+          
+          # Database Configuration (local PostgreSQL for tests)
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_NAME: test_aksio_db
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+          
+          # Redis Configuration
+          REDIS_URL: redis://localhost:6379/0
+          
+          # AI Configuration
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: openai
+          LLM_MODEL: gpt-4
+          
+          # Google Cloud Configuration (using test bucket)
+          GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT_ID }}
+          GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME_TEST }}
+          
+          # External Services (mocked for tests)
+          SCRAPER_SERVICE_URL: http://localhost:8080
+          RETRIEVER_SERVICE_URL: http://localhost:8002
+          
         run: |
-          docker network create aksio_network
-          docker compose down -v
-          docker compose build backend
-          docker compose run backend python manage.py makemigrations accounts
-          docker compose run backend python manage.py makemigrations learning_materials
-          docker compose run backend python manage.py makemigrations
-          docker compose run backend python manage.py migrate
-          docker compose run backend python manage.py test --parallel
-          docker compose up -d backend
-          docker compose down
+          # Create test environment file
+          cat > .env.test <<EOF
+          DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+          DATABASE_HOST=db
+          DATABASE_PORT=5432
+          DATABASE_NAME=test_aksio_db
+          DATABASE_USER=aksio_user
+          DATABASE_PASSWORD=aksio_password
+          REDIS_URL=redis://redis:6379/0
+          EOF
+          
+          # Build and run tests using docker-compose
+          docker network create aksio_network || true
+          docker compose -f docker-compose.yaml down -v
+          docker compose -f docker-compose.yaml build backend
+          
+          # Run migrations for all apps
+          docker compose -f docker-compose.yaml run --rm backend python manage.py makemigrations
+          docker compose -f docker-compose.yaml run --rm backend python manage.py migrate
+          
+          # Run tests
+          docker compose -f docker-compose.yaml run --rm backend python manage.py test --parallel
+          
+          # Clean up
+          docker compose -f docker-compose.yaml down -v
 
   push-image:
-    name: Build and Push Docker Image
+    name: Build and Push Docker Image to Artifact Registry
     runs-on: ubuntu-latest
-
+    
     permissions:
       contents: read
-      packages: write
+      id-token: write  # Required for Workload Identity Federation
       
-    # Only runs if CI was successful
+    # Only runs if CI was successful and on main branch
     needs: [build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
     steps:
-      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      - name: Determine Environment Tag
-        id: env_tag
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "tag=latest-prod" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
-            echo "tag=latest-staging" >> $GITHUB_OUTPUT
-          else
-            echo "tag=latest-dev" >> $GITHUB_OUTPUT
-          fi
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
 
       - name: Build and Push Docker image
         run: |
-          docker build -t ghcr.io/the-tutorai-project/tutor-service:${{ steps.env_tag.outputs.tag }} ./src/
-          docker push ghcr.io/the-tutorai-project/tutor-service:${{ steps.env_tag.outputs.tag }}
+          IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:${GITHUB_SHA}"
+          IMAGE_LATEST="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:latest"
+          
+          # Build the image
+          docker build -t ${IMAGE_TAG} -t ${IMAGE_LATEST} .
+          
+          # Push both tags
+          docker push ${IMAGE_TAG}
+          docker push ${IMAGE_LATEST}
           
   dependabot:
     name: 'Dependabot'
