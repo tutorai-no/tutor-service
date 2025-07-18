@@ -78,6 +78,7 @@ aksio-backend/
 ### Backend Framework
 - **Django 5.0+** with Django REST Framework
 - **Google Cloud SQL (PostgreSQL)** for primary database
+- **Google Cloud Storage** for file uploads
 
 ### AI & ML
 - **Large Language Models** for content generation and tutoring (provider TBD)
@@ -321,6 +322,10 @@ gcloud run deploy aksio-backend \
   --platform managed \
   --region europe-west1 \
   --allow-unauthenticated
+
+# Set environment variables for Cloud Run
+gcloud run services update aksio-backend \
+  --set-env-vars="DJANGO_SETTINGS_MODULE=aksio.settings.production,DATABASE_URL=your-cloud-sql-url"
 ```
 
 ## Required Environment Variables

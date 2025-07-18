@@ -1,0 +1,210 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aksio-backend"
+version = "1.0.0"
+description = "AI-powered educational platform backend"
+authors = [
+    {name = "Aksio Team", email = "team@aksio.app"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+keywords = ["django", "education", "ai", "learning", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://aksio.app"
+Documentation = "https://docs.aksio.app"
+Repository = "https://github.com/aksio-team/aksio-backend"
+Issues = "https://github.com/aksio-team/aksio-backend/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["aksio*", "accounts*", "courses*", "assessments*", "chat*", "billing*", "core*", "api*"]
+exclude = ["tests*", "docs*", "requirements*", "scripts*"]
+
+# Black code formatter
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+# isort import sorter
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["aksio", "accounts", "courses", "assessments", "chat", "billing", "core", "api"]
+known_django = ["django", "rest_framework"]
+sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+skip_glob = ["*/migrations/*"]
+
+# Mypy type checker
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+plugins = [
+    "mypy_django_plugin.main",
+    "mypy_drf_plugin.main",
+]
+
+[tool.django-stubs]
+django_settings_module = "aksio.settings.development"
+
+# Pytest configuration
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "aksio.settings.testing"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+testpaths = ["tests"]
+addopts = [
+    "--reuse-db",
+    "--nomigrations",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+    "functional: marks tests as functional tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = "."
+omit = [
+    "*/migrations/*",
+    "*/venv/*",
+    "*/virtualenv/*",
+    "*/tests/*",
+    "*/test_*",
+    "manage.py",
+    "*/settings/*",
+    "*/urls.py",
+    "*/wsgi.py",
+    "*/asgi.py",
+    "*/__pycache__/*",
+    "*/node_modules/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\bProtocol\):",
+    "@(abc\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# Bandit security linter
+[tool.bandit]
+exclude_dirs = ["tests", "migrations"]
+skips = ["B101", "B601"]
+
+# Flake8 configuration (in setup.cfg since flake8 doesn't support pyproject.toml)
+# See setup.cfg for flake8 configuration
+
+# Commitizen configuration
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.0.0"
+tag_format = "v$version"
+version_files = [
+    "pyproject.toml:version",
+    "aksio/__init__.py:__version__",
+]
+
+# Pre-commit hooks
+[tool.pre-commit]
+repos = [
+    {
+        repo = "https://github.com/pre-commit/pre-commit-hooks",
+        rev = "v4.5.0",
+        hooks = [
+            {id = "trailing-whitespace"},
+            {id = "end-of-file-fixer"},
+            {id = "check-yaml"},
+            {id = "check-added-large-files"},
+            {id = "check-merge-conflict"},
+            {id = "debug-statements"},
+        ]
+    },
+    {
+        repo = "https://github.com/psf/black",
+        rev = "23.12.0",
+        hooks = [
+            {id = "black"},
+        ]
+    },
+    {
+        repo = "https://github.com/pycqa/isort",
+        rev = "5.13.2",
+        hooks = [
+            {id = "isort"},
+        ]
+    },
+    {
+        repo = "https://github.com/pycqa/flake8",
+        rev = "7.0.0",
+        hooks = [
+            {id = "flake8"},
+        ]
+    },
+    {
+        repo = "https://github.com/pycqa/bandit",
+        rev = "1.7.5",
+        hooks = [
+            {id = "bandit", args = ["-c", "pyproject.toml"]},
+        ]
+    },
+]

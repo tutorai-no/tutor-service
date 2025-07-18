@@ -1,56 +1,121 @@
+version: '3.8'
+
 services:
   backend:
     build:
-      context: ./src
-    container_name: backend 
+      context: .
+      dockerfile: Dockerfile
+    container_name: aksio-backend
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - ./src:/code
+      - .:/code
       - static_volume:/code/staticfiles
+      - media_volume:/code/media
     ports:
       - "8000:8000"
     depends_on:
       - db
+      - redis
       - broker
       - zookeeper
     environment:
-      - DEBUG=True
+      # Django Configuration
+      - DJANGO_DEBUG=True
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-dev-key}
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,backend
+      - DJANGO_SETTINGS_MODULE=aksio.settings.development
+      
+      # Database Configuration
       - DATABASE_HOST=db
       - DATABASE_PORT=5432
-      - DATABASE_NAME=tutoraidb
-      - DATABASE_USER=tutoraiuser
-      - DATABASE_PASSWORD=tutoraipassword
+      - DATABASE_NAME=aksio_db
+      - DATABASE_USER=aksio_user
+      - DATABASE_PASSWORD=aksio_password
+      
+      # Redis Configuration
+      - REDIS_URL=redis://redis:6379/0
+      
+      # AI Configuration
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - MONGODB_URI=${MONGODB_URI}
-      - MONGODB_DATABASE=${MONGODB_DATABASE}
-      - MONGODB_COLLECTION=${MONGODB_COLLECTION}
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - RAG_DATABASE_SYSTEM=${RAG_DATABASE_SYSTEM}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
+      
+      # Google Cloud Configuration
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      
+      # Email Configuration
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
-      - LOGGING_LEVEL=${LOGGING_LEVEL}
-      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
-      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME}
-      - BASE_URL_SCRAPER=http://scraper-service:8080
-      - BASE_URL_FRONTEND=${BASE_URL_FRONTEND}
-      - DEBUG=${DEBUG}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-noreply@aksio.app}
+      
+      # Feature Flags
+      - ENABLE_AI_FEATURES=${ENABLE_AI_FEATURES:-True}
+      - ENABLE_DOCUMENT_PROCESSING=${ENABLE_DOCUMENT_PROCESSING:-True}
+      - ENABLE_REAL_TIME_CHAT=${ENABLE_REAL_TIME_CHAT:-False}
+      - ENABLE_KAFKA=${ENABLE_KAFKA:-False}
+      
+      # External Services
+      - SCRAPER_SERVICE_URL=${SCRAPER_SERVICE_URL:-http://scraper-service:8080}
+      - RETRIEVER_SERVICE_URL=${RETRIEVER_SERVICE_URL:-http://retriever-service:8002}
+      
+      # Logging
+      - LOGGING_LEVEL=${LOGGING_LEVEL:-INFO}
+      
+      # Payment Configuration
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
     networks:
       - aksio_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   db:
-    image: postgres:latest
+    image: postgres:16
+    container_name: aksio-db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=tutoraidb
-      - POSTGRES_USER=tutoraiuser
-      - POSTGRES_PASSWORD=tutoraipassword
+      - POSTGRES_DB=aksio_db
+      - POSTGRES_USER=aksio_user
+      - POSTGRES_PASSWORD=aksio_password
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5432:5432"
     networks:
       - aksio_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aksio_user -d aksio_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: aksio-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - aksio_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   broker:
     image: confluentinc/cp-kafka:latest
-    container_name: broker
+    container_name: aksio-kafka
     hostname: broker
     environment:
       KAFKA_BROKER_ID: 1
@@ -61,28 +126,96 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
     ports:
       - "9092:9092"
     depends_on:
       - zookeeper
     networks:
       - aksio_network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper
+    container_name: aksio-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
     ports:
       - "2181:2181"
     networks:
       - aksio_network
+    healthcheck:
+      test: ["CMD", "zkCli.sh", "ls", "/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: PGAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: aksio-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@aksio.app
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - aksio_network
+    profiles:
+      - tools
+
+  # Optional: Kafka UI for Kafka management
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: aksio-kafka-ui
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=aksio-cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=broker:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    ports:
+      - "8080:8080"
+    depends_on:
+      - broker
+    networks:
+      - aksio_network
+    profiles:
+      - tools
+
+  # Optional: Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: aksio-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - aksio_network
+    profiles:
+      - tools
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
   static_volume:
+    driver: local
+  media_volume:
+    driver: local
 
 networks:
   aksio_network:
-    external: true
+    driver: bridge
+    name: aksio_network
