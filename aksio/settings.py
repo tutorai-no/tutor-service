@@ -73,12 +73,13 @@ LOGIN_URL = "/admin/login/"
 INSTALLED_APPS = [
     # Your apps
     "accounts",
-    "courses",
-    "assessments",
-    "chat",
-    "billing",
-    "core",
     "api",
+    "assessments",
+    "billing",
+    "chat",
+    "core",
+    "courses",
+    "learning",
     # Django built-in apps
     "django.contrib.admin",
     "django.contrib.auth",

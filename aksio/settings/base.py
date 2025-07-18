@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     # Your apps
     "accounts",
     "courses",
+    "learning",
     "assessments",
     "chat",
     "billing",
