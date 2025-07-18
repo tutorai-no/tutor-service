@@ -485,7 +485,7 @@ class TutoringSession(models.Model):
         default='mixed'
     )
     difficulty_level = models.CharField(
-        max_length=10,
+        max_length=15,
         choices=[
             ('beginner', 'Beginner'),
             ('intermediate', 'Intermediate'),

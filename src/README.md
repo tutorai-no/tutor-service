@@ -5,8 +5,8 @@
 How to generate project:
 
 ```bash
-django-admin startproject tutorai
-cd tutorai
+django-admin startproject aksio
+cd aksio
 ```
 
 ## Docker
@@ -113,7 +113,7 @@ Develop Your App: Now that your app is set up, you can start building its models
 
 ## Backend Structure
 
-The backend of our project is organized into several Django apps, each dedicated to handling a specific set of functionalities within our TutorAI platform. Below is an overview of the directory structure and the role of each component:
+The backend of our project is organized into several Django apps, each dedicated to handling a specific set of functionalities within our aksio platform. Below is an overview of the directory structure and the role of each component:
 
 ### Directory Overview
 
@@ -130,7 +130,7 @@ The backend of our project is organized into several Django apps, each dedicated
 
         -   Similar structure to `api/` with `migrations/`, `models.py`, `views.py`, etc.
 
-    -   `tutorai/` - The core app that includes settings and root configurations for the entire backend project.
+    -   `aksio/` - The core app that includes settings and root configurations for the entire backend project.
 
         -   Similar structure to `api/` but also includes global settings like `settings.py` and root URL configurations in `urls.py`.
 

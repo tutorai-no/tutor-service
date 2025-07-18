@@ -50,17 +50,17 @@ RUN pip install --upgrade pip \
 COPY . /code/
 
 # Create necessary directories
-RUN mkdir -p /code/staticfiles /code/media /code/logs
+RUN mkdir -p /code/logs
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --clear
+# Skip collectstatic in development - Django will serve static files directly
 
-# Create non-root user
+# Create non-root user (but don't switch to it in development)
 RUN useradd --create-home --shell /bin/bash aksio \
     && chown -R aksio:aksio /code
 
-# Switch to non-root user
-USER aksio
+# Note: In development, we run as root for simplicity
+# In production, you should uncomment the following line:
+# USER aksio
 
 # Expose port
 EXPOSE 8000

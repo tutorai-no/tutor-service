@@ -36,12 +36,12 @@ DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 ALLOWED_HOSTS = [
     "backend",
     "46.101.107.247",
-    "backend.tutorai.no",
+    "backend.aksio.app",
     "localhost",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://backend.tutorai.no",
+    "https://backend.aksio.app",
     "https://46.101.107.247",
     "http://localhost:8000",
 ]
