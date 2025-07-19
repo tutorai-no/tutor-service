@@ -59,12 +59,15 @@ jobs:
           # Create test environment file
           cat > .env.test <<EOF
           DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_SETTINGS_MODULE=aksio.settings.testing
           DATABASE_HOST=db
           DATABASE_PORT=5432
           DATABASE_NAME=test_aksio_db
           DATABASE_USER=aksio_user
           DATABASE_PASSWORD=aksio_password
           REDIS_URL=redis://redis:6379/0
+          OPENAI_API_KEY=test-key
+          ENABLE_AI_FEATURES=False
           EOF
           
           # Build and run tests using docker-compose
@@ -72,12 +75,29 @@ jobs:
           docker compose -f docker-compose.yaml down -v
           docker compose -f docker-compose.yaml build backend
           
-          # Run migrations for all apps
-          docker compose -f docker-compose.yaml run --rm backend python manage.py makemigrations
-          docker compose -f docker-compose.yaml run --rm backend python manage.py migrate
+          # Start services and wait for them to be ready
+          docker compose -f docker-compose.yaml up -d db redis
+          sleep 10
           
-          # Run tests
-          docker compose -f docker-compose.yaml run --rm backend python manage.py test --parallel
+          # Run migrations for all apps
+          docker compose -f docker-compose.yaml run --rm \
+            -e DJANGO_SETTINGS_MODULE=aksio.settings.testing \
+            -e DATABASE_HOST=db \
+            -e DATABASE_NAME=test_aksio_db \
+            -e DATABASE_USER=aksio_user \
+            -e DATABASE_PASSWORD=aksio_password \
+            backend python manage.py migrate
+          
+          # Run tests without parallel execution to avoid issues
+          docker compose -f docker-compose.yaml run --rm \
+            -e DJANGO_SETTINGS_MODULE=aksio.settings.testing \
+            -e DATABASE_HOST=db \
+            -e DATABASE_NAME=test_aksio_db \
+            -e DATABASE_USER=aksio_user \
+            -e DATABASE_PASSWORD=aksio_password \
+            -e OPENAI_API_KEY=test-key \
+            -e ENABLE_AI_FEATURES=False \
+            backend python manage.py test --keepdb
           
           # Clean up
           docker compose -f docker-compose.yaml down -v

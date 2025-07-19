@@ -161,16 +161,18 @@ class MockAIResponse:
 
 
 class MockLLM:
-    """Mock LangChain LLM for testing"""
+    """Mock LangChain LLM for testing that implements Runnable interface"""
     
     def __init__(self, responses: List[str] = None):
         self.responses = responses or ["Mock AI response"]
         self.call_count = 0
         self.model_name = "mock-gpt-4"
         self.api_key = "mock-key"
+        # Add required attributes for LangChain compatibility
+        self.temperature = 0.0
     
-    def invoke(self, prompt_or_messages):
-        """Mock invoke method"""
+    def invoke(self, prompt_or_messages, *args, **kwargs):
+        """Mock invoke method compatible with LangChain Runnable interface"""
         if self.call_count < len(self.responses):
             response = self.responses[self.call_count]
         else:
@@ -178,6 +180,57 @@ class MockLLM:
         
         self.call_count += 1
         return MockAIResponse(response)
+    
+    def stream(self, *args, **kwargs):
+        """Mock stream method for LangChain compatibility"""
+        response = self.invoke(*args, **kwargs)
+        yield response
+    
+    def batch(self, inputs, *args, **kwargs):
+        """Mock batch method for LangChain compatibility"""
+        return [self.invoke(inp, *args, **kwargs) for inp in inputs]
+    
+    def __or__(self, other):
+        """Support for LangChain's pipe operator (|) used in chains"""
+        return MockChain([self, other])
+    
+    def __ror__(self, other):
+        """Support for reverse pipe operator"""
+        return MockChain([other, self])
+
+
+class MockChain:
+    """Mock LangChain chain for testing"""
+    
+    def __init__(self, components):
+        self.components = components
+    
+    def invoke(self, inputs, *args, **kwargs):
+        """Execute the chain by passing data through components"""
+        result = inputs
+        for component in self.components:
+            if hasattr(component, 'invoke'):
+                result = component.invoke(result, *args, **kwargs)
+            elif hasattr(component, 'format'):
+                # Handle prompt templates
+                if isinstance(result, dict):
+                    result = component.format(**result)
+                else:
+                    result = component.format(result)
+            elif hasattr(component, 'parse'):
+                # Handle parsers - this is likely a MockPydanticParser
+                if hasattr(result, 'content'):
+                    result = component.parse(result.content)
+                elif hasattr(component, 'return_object'):
+                    # This is our MockPydanticParser, return the mock object directly
+                    result = component.return_object
+                else:
+                    result = component.parse(str(result))
+        return result
+    
+    def __or__(self, other):
+        """Support chaining with pipe operator"""
+        return MockChain(self.components + [other])
 
 
 class MockRetrievalClient:

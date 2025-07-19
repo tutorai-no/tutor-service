@@ -250,7 +250,7 @@ class TestFlashcardGenerationService(BaseTestCase):
         document_ids = [1, 2, 3]
         
         # Mock retrieval client
-        with patch('assessments.services.generators.flashcard_service.get_retrieval_client') as mock_client_factory:
+        with patch('core.services.retrieval_client.get_retrieval_client') as mock_client_factory:
             mock_client = Mock()
             mock_client.get_page_range.side_effect = [
                 "Content from document 1",
@@ -286,7 +286,7 @@ class TestFlashcardGenerationService(BaseTestCase):
     
     def test_bulk_generate_error_handling(self):
         """Test bulk generation with error handling"""
-        with patch('assessments.services.generators.flashcard_service.get_retrieval_client', 
+        with patch('core.services.retrieval_client.get_retrieval_client', 
                   side_effect=Exception("Retrieval service error")):
             result = self.service.bulk_generate_from_documents(
                 user_id=self.user.id,
