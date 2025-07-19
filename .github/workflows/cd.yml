@@ -3,7 +3,7 @@ name: Continuous Deployment
 on:
   workflow_run:
     workflows: ["CI"]
-    branches: ["main"]
+    branches: ["main", "refactor/project-structure"]
     types:
       - completed
   workflow_dispatch: {}
