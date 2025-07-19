@@ -70,11 +70,12 @@ services:
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
     networks:
       - aksio_network
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   db:
     image: postgres:16
@@ -151,10 +152,11 @@ services:
     networks:
       - aksio_network
     healthcheck:
-      test: ["CMD", "zkCli.sh", "ls", "/"]
+      test: ["CMD", "sh", "-c", "echo 'health' | nc localhost 2181 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   # Optional: PGAdmin for database management
   pgadmin:

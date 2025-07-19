@@ -15,7 +15,8 @@
       "Bash(docker-compose:*)",
       "Bash(docker:*)",
       "Bash(true)",
-      "Bash(sudo lsof:*)"
+      "Bash(sudo lsof:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

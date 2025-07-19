@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q, Count, Avg, Max
@@ -5,6 +6,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     Flashcard,
@@ -348,16 +351,164 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def generate_content(self, request, pk=None):
-        """Generate flashcards and quizzes for the assessment."""
+        """Generate flashcards and quizzes for the assessment using agentic AI."""
         assessment = self.get_object()
         
-        # This would integrate with AI services
-        # For now, return a placeholder response
-        return Response({
-            'message': 'Content generation initiated',
-            'assessment_id': assessment.id,
-            'status': 'processing'
-        })
+        try:
+            # Get parameters from request
+            topic = request.data.get('topic', assessment.title or '')
+            content = request.data.get('content', '')
+            document_ids = request.data.get('document_ids', [])
+            use_adaptive = request.data.get('use_adaptive', False)
+            
+            results = {
+                'message': 'Content generation completed',
+                'assessment_id': assessment.id,
+                'status': 'completed',
+                'generated_content': {},
+                'agent_metadata': {}
+            }
+            
+            # Generate flashcards if requested
+            if assessment.include_flashcards:
+                try:
+                    from .services.generators.flashcard_service import get_flashcard_service
+                    
+                    flashcard_service = get_flashcard_service()
+                    flashcard_result = flashcard_service.generate_flashcards(
+                        user_id=request.user.id,
+                        course_id=assessment.course.id,
+                        content=content,
+                        topic=topic,
+                        document_ids=document_ids,
+                        count=assessment.flashcard_count,
+                        difficulty_level=getattr(assessment, 'difficulty_level', 'medium'),
+                        auto_save=True
+                    )
+                    
+                    if flashcard_result.get('success'):
+                        results['generated_content']['flashcards'] = {
+                            'count': flashcard_result.get('count', 0),
+                            'flashcards': flashcard_result.get('flashcards', []),
+                            'confidence': flashcard_result.get('generation_metadata', {}).get('confidence', 0.0)
+                        }
+                        results['agent_metadata']['flashcard_generation'] = flashcard_result.get('generation_metadata', {})
+                    else:
+                        results['generated_content']['flashcards'] = {
+                            'error': flashcard_result.get('error', 'Unknown error')
+                        }
+                    
+                except Exception as e:
+                    logger.error(f"Error generating flashcards: {str(e)}")
+                    results['generated_content']['flashcards'] = {
+                        'error': str(e)
+                    }
+            
+            # Generate quiz questions if requested
+            if assessment.include_quizzes:
+                try:
+                    from .services.generators.quiz_service import get_quiz_service
+                    
+                    quiz_service = get_quiz_service()
+                    
+                    if use_adaptive:
+                        # Get user performance history for adaptive generation
+                        user_performance = self._get_user_performance_stats(request.user, assessment.course)
+                        quiz_result = quiz_service.generate_adaptive_quiz(
+                            user_id=request.user.id,
+                            course_id=assessment.course.id,
+                            topic=topic,
+                            target_duration_minutes=assessment.estimated_duration_minutes or 20,
+                            adaptive_difficulty=True,
+                            performance_history=user_performance
+                        )
+                    else:
+                        quiz_result = quiz_service.generate_quiz(
+                            user_id=request.user.id,
+                            course_id=assessment.course.id,
+                            title=f"Quiz for {assessment.title}",
+                            content=content,
+                            topic=topic,
+                            document_ids=document_ids,
+                            question_count=assessment.quiz_count,
+                            difficulty_level=getattr(assessment, 'difficulty_level', 'medium'),
+                            quiz_type='assessment',
+                            auto_save=True
+                        )
+                    
+                    if quiz_result.get('success'):
+                        quiz_data = quiz_result.get('quiz', {})
+                        results['generated_content']['quiz'] = {
+                            'quiz_id': quiz_data.get('id'),
+                            'title': quiz_data.get('title'),
+                            'question_count': quiz_result.get('question_count', 0),
+                            'questions': quiz_result.get('questions', []),
+                            'confidence': quiz_result.get('generation_metadata', {}).get('confidence', 0.0)
+                        }
+                        results['agent_metadata']['quiz_generation'] = quiz_result.get('generation_metadata', {})
+                        
+                        if use_adaptive:
+                            results['generated_content']['quiz']['adaptive_metadata'] = quiz_result.get('adaptive_metadata', {})
+                    else:
+                        results['generated_content']['quiz'] = {
+                            'error': quiz_result.get('error', 'Unknown error')
+                        }
+                    
+                except Exception as e:
+                    logger.error(f"Error generating quiz questions: {str(e)}")
+                    results['generated_content']['quiz'] = {
+                        'error': str(e)
+                    }
+            
+            return Response(results)
+            
+        except Exception as e:
+            logger.error(f"Error in content generation: {str(e)}")
+            return Response({
+                'message': 'Content generation failed',
+                'assessment_id': assessment.id,
+                'status': 'failed',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def _get_user_performance_stats(self, user, course):
+        """Get user performance statistics for adaptive generation."""
+        try:
+            # Get recent quiz attempts
+            recent_attempts = QuizAttempt.objects.filter(
+                user=user,
+                quiz__course=course,
+                status='completed'
+            ).order_by('-completed_at')[:10]
+            
+            if recent_attempts:
+                scores = [attempt.percentage_score for attempt in recent_attempts]
+                return {
+                    'average_score': sum(scores) / len(scores) / 100.0,  # Convert to 0-1 scale
+                    'recent_attempts': len(recent_attempts),
+                    'improvement_trend': self._calculate_trend(scores)
+                }
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting user performance stats: {str(e)}")
+            return None
+    
+    def _calculate_trend(self, scores):
+        """Calculate performance trend from recent scores."""
+        if len(scores) < 3:
+            return 'insufficient_data'
+        
+        recent_avg = sum(scores[-3:]) / 3
+        earlier_avg = sum(scores[:-3]) / len(scores[:-3]) if len(scores) > 3 else sum(scores[:3]) / 3
+        
+        if recent_avg > earlier_avg + 5:
+            return 'improving'
+        elif recent_avg < earlier_avg - 5:
+            return 'declining'
+        else:
+            return 'stable'
     
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):
@@ -452,7 +603,12 @@ class StudyStreakViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AssessmentAnalyticsView(viewsets.ReadOnlyModelViewSet):
     """Advanced analytics for assessments."""
+    queryset = Assessment.objects.all()
+    serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Assessment.objects.filter(user=self.request.user)
     
     @action(detail=False, methods=['get'])
     def performance_trends(self, request):

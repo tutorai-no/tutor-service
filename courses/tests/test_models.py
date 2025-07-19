@@ -15,29 +15,29 @@ class CourseModelTest(TestCase):
         
     def test_course_creation(self):
         course = Course.objects.create(
-            title='Test Course',
+            name='Test Course',
             description='Test Description',
-            language='English',
-            owner=self.user
+            language='en',
+            user=self.user
         )
         
-        self.assertEqual(course.title, 'Test Course')
-        self.assertEqual(course.owner, self.user)
-        self.assertEqual(str(course), 'Test Course')
+        self.assertEqual(course.name, 'Test Course')
+        self.assertEqual(course.user, self.user)
+        self.assertEqual(str(course), 'Test Course (testuser)')
         
     def test_course_section_creation(self):
         course = Course.objects.create(
-            title='Test Course',
-            owner=self.user
+            name='Test Course',
+            user=self.user
         )
         
         section = CourseSection.objects.create(
             course=course,
-            title='Test Section',
+            name='Test Section',
             description='Test Section Description',
             order=1
         )
         
         self.assertEqual(section.course, course)
-        self.assertEqual(section.title, 'Test Section')
+        self.assertEqual(section.name, 'Test Section')
         self.assertEqual(str(section), 'Test Course - Test Section')

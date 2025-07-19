@@ -90,6 +90,7 @@ requests-toolbelt>=1.0.0,<1.1.0
 python-slugify>=8.0.0,<8.1.0
 phonenumbers>=8.13.0,<8.14.0
 email-validator>=2.1.0,<2.2.0
+tblib>=2.0.0,<3.0.0
 
 # Development Tools (lightweight)
 django-debug-toolbar>=4.2.0,<4.3.0

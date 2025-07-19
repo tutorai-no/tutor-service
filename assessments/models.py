@@ -113,31 +113,41 @@ class Flashcard(models.Model):
         """Calculate mastery level based on performance."""
         if self.total_reviews == 0:
             return 'new'
-        elif self.success_rate >= 0.9 and self.repetitions >= 5:
+        elif self.repetitions >= 8 and self.success_rate >= 0.9 and self.ease_factor >= 2.5:
             return 'mastered'
-        elif self.success_rate >= 0.7:
+        elif self.repetitions >= 3 and self.success_rate >= 0.7:
             return 'learning'
-        else:
+        elif self.success_rate < 0.5 or self.ease_factor < 2.0:
             return 'difficult'
+        else:
+            return 'learning'
     
     def calculate_next_review(self, quality_response):
         """Calculate next review date based on spaced repetition algorithm."""
-        if quality_response >= 3:  # Correct response
-            if self.repetitions == 0:
-                self.interval_days = 1
-            elif self.repetitions == 1:
-                self.interval_days = 6
-            else:
-                self.interval_days = int(self.interval_days * self.ease_factor)
-            
-            self.repetitions += 1
-            self.ease_factor = max(1.3, self.ease_factor + (0.1 - (5 - quality_response) * (0.08 + (5 - quality_response) * 0.02)))
-        else:  # Incorrect response
-            self.repetitions = 0
-            self.interval_days = 1
-            self.ease_factor = max(1.3, self.ease_factor - 0.2)
+        from .services.spaced_repetition import SpacedRepetitionService
         
-        self.next_review_date = timezone.now() + timedelta(days=self.interval_days)
+        # Use the existing spaced repetition service
+        new_ease_factor, new_interval, new_repetitions, next_review_date = SpacedRepetitionService.calculate_next_review(
+            current_ease_factor=self.ease_factor,
+            current_interval=self.interval_days,
+            repetitions=self.repetitions,
+            quality_response=quality_response
+        )
+        
+        # Update flashcard with new parameters
+        self.ease_factor = new_ease_factor
+        self.interval_days = new_interval
+        self.repetitions = new_repetitions
+        self.next_review_date = next_review_date
+        
+        # Update performance tracking
+        self.total_reviews += 1
+        if quality_response >= 3:
+            self.total_correct += 1
+        
+        # Calculate success rate
+        self.success_rate = self.total_correct / self.total_reviews if self.total_reviews > 0 else 0
+        
         self.save()
 
 
