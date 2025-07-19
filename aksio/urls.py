@@ -40,10 +40,6 @@ schema_view = get_schema_view(
 urlpatterns = [
     # Admin panel route
     path("admin/", admin.site.urls),
-    # Authentication URLs (using Django's built-in auth views)
-    path(
-        "accounts/", include("django.contrib.auth.urls")
-    ),  # Includes login/logout views
     # API routes
     path("api/", include("api.urls"), name="api"),
     # Swagger routes

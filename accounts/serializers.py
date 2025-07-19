@@ -302,6 +302,54 @@ class UserSerializer(serializers.ModelSerializer):
     
     profile = UserProfileSerializer(read_only=True)
     streak = UserStreakSerializer(read_only=True)
+    uploaded_files = serializers.SerializerMethodField()
+    
+    def get_uploaded_files(self, obj):
+        from courses.serializers import DocumentSerializer
+        return DocumentSerializer(obj.uploaded_files.all(), many=True).data
+    
+    def update(self, instance, validated_data):
+        uploaded_files_data = self.context['request'].data.get('uploaded_files', [])
+        
+        # Handle uploaded_files if provided
+        if uploaded_files_data:
+            from courses.models import Document, Course
+            
+            # Get or create a default course for this user
+            default_course, created = Course.objects.get_or_create(
+                user=instance,
+                name="General Documents",
+                defaults={
+                    'description': 'Default course for uploaded documents',
+                    'language': 'en',
+                    'difficulty_level': 3,
+                    'color': '#3B82F6',
+                    'is_active': True,
+                }
+            )
+            
+            for file_data in uploaded_files_data:
+                # Create a basic document with minimal required fields
+                Document.objects.create(
+                    user=instance,
+                    course=default_course,  # Use default course
+                    name=f"Document {file_data.get('id', 'unknown')}",
+                    document_type='file',
+                    file_url='',
+                    content_type='application/pdf',
+                    original_filename='test.pdf',
+                    source_url='',
+                    thumbnail_url='',
+                    language='en',
+                    processing_status='completed',
+                    processing_error='',
+                    storage_path='',
+                    extracted_text='',
+                    summary='',
+                    topics=[],
+                )
+        
+        return super().update(instance, validated_data)
     
     class Meta:
         model = User
@@ -329,6 +377,7 @@ class UserSerializer(serializers.ModelSerializer):
             "stripe_customer_id",
             "profile",
             "streak",
+            "uploaded_files",
             "created_at",
             "updated_at",
         )

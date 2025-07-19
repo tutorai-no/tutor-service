@@ -1,5 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     RequestAccessView,
@@ -25,15 +26,16 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('token-refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('password-reset/', PasswordResetView.as_view(), name='password-reset'),
     path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     
     # User profile endpoints
-    path('profile/', UserProfileView.as_view(), name='user-profile'),
+    path('profile/', UserProfileView.as_view(), name='profile'),
     path('profile-detail/', UserProfileDetailView.as_view(), name='user-profile-detail'),
     
     # User engagement endpoints
-    path('feedback/', UserFeedbackView.as_view(), name='user-feedback'),
+    path('feedback/', UserFeedbackView.as_view(), name='feedback'),
     path('streak/', UserStreakView.as_view(), name='user-streak'),
     path('activity/', UserActivityCreateView.as_view(), name='user-activity-create'),
     path('activity/list/', UserActivityListView.as_view(), name='user-activity-list'),

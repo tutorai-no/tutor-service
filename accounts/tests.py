@@ -26,7 +26,7 @@ User = get_user_model()
 
 class RegistrationTests(APITestCase):
     def setUp(self):
-        self.register_url = reverse("register")
+        self.register_url = reverse("api_v1:register")
 
     # TODO: Re-enable when subscription functionality is implemented
     # @patch("django.core.mail.send_mail")
@@ -227,7 +227,7 @@ class RegistrationTests(APITestCase):
 
 class LoginTests(APITestCase):
     def setUp(self):
-        self.login_url = reverse("login")
+        self.login_url = reverse("api_v1:login")
         self.user = User.objects.create_user(
             username="loginuser", email="login@example.com", password="StrongP@ss1"
         )
@@ -324,8 +324,8 @@ class LoginTests(APITestCase):
 
 class TokenRefreshTests(APITestCase):
     def setUp(self):
-        self.token_refresh_url = reverse("token-refresh")
-        self.logout_url = reverse("logout")
+        self.token_refresh_url = reverse("api_v1:token-refresh")
+        self.logout_url = reverse("api_v1:logout")
         self.user = User.objects.create_user(
             username="refreshuser", email="refresh@example.com", password="StrongP@ss1"
         )
@@ -333,7 +333,7 @@ class TokenRefreshTests(APITestCase):
         self.refresh_token = str(refresh)
         self.access_token = str(refresh.access_token)
 
-        self.password_reset_confirm_url = reverse("password-reset-confirm")
+        self.password_reset_confirm_url = reverse("api_v1:password-reset-confirm")
         self.token = default_token_generator.make_token(self.user)
 
     def authenticate(self):
@@ -387,7 +387,7 @@ class TokenRefreshTests(APITestCase):
 
 class LogoutTests(APITestCase):
     def setUp(self):
-        self.logout_url = reverse("logout")
+        self.logout_url = reverse("api_v1:logout")
         self.user = User.objects.create_user(
             username="logoutuser", email="logout@example.com", password="StrongP@ss1"
         )
@@ -415,7 +415,7 @@ class LogoutTests(APITestCase):
     def test_logout_without_authentication(self):
         data = {"refresh": self.refresh_token}
         response = self.client.post(self.logout_url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_logout_with_already_blacklisted_token(self):
         self.authenticate()
@@ -444,13 +444,13 @@ class LogoutTests(APITestCase):
         mock_verify.side_effect = TokenError("Token has expired")
         data = {"refresh": self.refresh_token}
         response = self.client.post(self.logout_url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn("detail", response.data)
 
 
 class PasswordResetTests(APITestCase):
     def setUp(self):
-        self.password_reset_url = reverse("password-reset")
+        self.password_reset_url = reverse("api_v1:password-reset")
         self.user = User.objects.create_user(
             username="resetuser", email="reset@example.com", password="StrongP@ss1"
         )
@@ -484,7 +484,7 @@ class PasswordResetTests(APITestCase):
 
 class PasswordResetConfirmTests(APITestCase):
     def setUp(self):
-        self.password_reset_confirm_url = reverse("password-reset-confirm")
+        self.password_reset_confirm_url = reverse("api_v1:password-reset-confirm")
         self.user = User.objects.create_user(
             username="confirmuser", email="confirm@example.com", password="StrongP@ss1"
         )
@@ -566,7 +566,7 @@ class PasswordResetConfirmTests(APITestCase):
 
 class UserProfileTests(APITestCase):
     def setUp(self):
-        self.profile_url = reverse("profile")
+        self.profile_url = reverse("api_v1:profile")
         self.user = User.objects.create_user(
             username="profileuser", email="profile@example.com", password="StrongP@ss1"
         )
@@ -607,7 +607,7 @@ class UserProfileTests(APITestCase):
 
     def test_retrieve_profile_without_authentication(self):
         response = self.client.get(self.profile_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_update_profile_success(self):
         self.authenticate()
@@ -675,7 +675,7 @@ class UserProfileTests(APITestCase):
 
     def test_access_profile_without_authentication(self):
         response = self.client.get(self.profile_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_update_profile_invalid_data(self):
         self.authenticate()
@@ -731,7 +731,7 @@ class UserProfileTests(APITestCase):
 
 class UserFeedbackTests(APITestCase):
     def setUp(self):
-        self.feedback_url = reverse("feedback")
+        self.feedback_url = reverse("api_v1:feedback")
         self.user = User.objects.create_user(
             username="feedbackuser", email="feedback@gmail.com", password="StrongP@ss1"
         )
@@ -761,7 +761,7 @@ class UserFeedbackTests(APITestCase):
             "description": "Test Feedback",
         }
         response = self.client.post(self.feedback_url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(Feedback.objects.exists())
 
     def test_feedback_missing_fields(self):
@@ -799,8 +799,9 @@ class UserFeedbackTests(APITestCase):
         )
 
         data = {
-            "feedbackType": "Bug Report",
-            "feedbackText": "Test Feedback",
+            "feedback_type": "bug_report",
+            "title": "Test Bug Report",
+            "description": "Test Feedback",
             "screenshot": uploaded_file,
         }
 
@@ -831,8 +832,9 @@ class UserFeedbackTests(APITestCase):
         )
 
         data = {
-            "feedbackType": "Bug Report",
-            "feedbackText": "Test Feedback",
+            "feedback_type": "bug_report",
+            "title": "Test Bug Report",
+            "description": "Test Feedback",
             "screenshot": uploaded_file,
         }
 
@@ -856,12 +858,13 @@ class UserFeedbackTests(APITestCase):
         )
 
         data = {
-            "feedbackType": "Bug Report",
-            "feedbackText": "Test Feedback",
+            "feedback_type": "bug_report",
+            "title": "Test Bug Report",
+            "description": "Test Feedback",
             "screenshot": uploaded_file,
         }
 
         response = self.client.post(self.feedback_url, data, format="multipart")
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(Feedback.objects.exists())

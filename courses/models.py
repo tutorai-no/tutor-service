@@ -218,7 +218,7 @@ class Document(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name="documents"
+        related_name="uploaded_files"
     )
     course = models.ForeignKey(
         Course, 
