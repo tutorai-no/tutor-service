@@ -303,7 +303,7 @@ class TestAssessmentAPIIntegration(APITestCase):
         }
         
         # Make API request
-        url = f'/api/assessments/{self.assessment.id}/generate_content/'
+        url = f'/api/v1/assessments/{self.assessment.id}/generate_content/'
         data = {
             "topic": "Machine Learning",
             "content": "Sample educational content about ML algorithms",
@@ -356,7 +356,7 @@ class TestAssessmentAPIIntegration(APITestCase):
         }
         
         # Make API request with adaptive flag
-        url = f'/api/assessments/{self.assessment.id}/generate_content/'
+        url = f'/api/v1/assessments/{self.assessment.id}/generate_content/'
         data = {
             "topic": "Data Structures",
             "use_adaptive": True
@@ -380,7 +380,7 @@ class TestAssessmentAPIIntegration(APITestCase):
     def test_assessment_content_generation_error_handling(self):
         """Test API error handling for content generation"""
         # Test with missing assessment
-        url = '/api/assessments/999999/generate_content/'
+        url = '/api/v1/assessments/999999/generate_content/'
         data = {"topic": "Test Topic"}
         
         response = self.client.post(url, data, format='json')
@@ -388,7 +388,7 @@ class TestAssessmentAPIIntegration(APITestCase):
         
         # Test with authentication error
         self.client.force_authenticate(user=None)
-        url = f'/api/assessments/{self.assessment.id}/generate_content/'
+        url = f'/api/v1/assessments/{self.assessment.id}/generate_content/'
         
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -416,15 +416,15 @@ class TestSpacedRepetitionIntegration(TransactionTestCase):
         self.assertEqual(self.flashcard.ease_factor, 2.5)
         self.assertEqual(self.flashcard.interval_days, 1)
         
-        # Simulate successful review (quality 4)
-        self.flashcard.calculate_next_review(quality_response=4)
+        # Simulate perfect review (quality 5) to increase ease factor
+        self.flashcard.calculate_next_review(quality_response=5)
         
         # Verify updates
         self.assertEqual(self.flashcard.total_reviews, 1)
         self.assertEqual(self.flashcard.total_correct, 1)
         self.assertEqual(self.flashcard.success_rate, 1.0)
         self.assertEqual(self.flashcard.repetitions, 1)
-        self.assertGreater(self.flashcard.ease_factor, 2.5)  # Should increase with good response
+        self.assertGreater(self.flashcard.ease_factor, 2.5)  # Should increase with perfect response
         
         # Verify mastery level calculation
         mastery = self.flashcard.mastery_level

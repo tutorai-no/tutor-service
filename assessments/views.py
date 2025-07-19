@@ -342,6 +342,7 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
 class AssessmentViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
     
     def get_queryset(self):
         return Assessment.objects.filter(user=self.request.user)

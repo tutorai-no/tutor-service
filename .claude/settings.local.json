@@ -16,7 +16,12 @@
       "Bash(docker:*)",
       "Bash(true)",
       "Bash(sudo lsof:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh workflow list:*)",
+      "Bash(unzip:*)"
     ],
     "deny": []
   }

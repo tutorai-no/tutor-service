@@ -7,7 +7,6 @@ from django.test import TestCase
 from assessments.services.ai_agents.flashcard_agent import (
     FlashcardGenerationAgent,
     FlashcardItem,
-    FlashcardWrapper,
     FlashcardGenerationPlan,
     FlashcardBatch,
     create_flashcard_agent
@@ -50,32 +49,6 @@ class TestFlashcardItem(TestCase):
         self.assertEqual(len(item.tags), 2)
         self.assertEqual(item.estimated_time_seconds, 30)  # Default
 
-
-class TestFlashcardWrapper(TestCase):
-    """Test FlashcardWrapper model"""
-    
-    def test_flashcard_wrapper_creation(self):
-        """Test creating a flashcard wrapper"""
-        items = [
-            FlashcardItem(
-                question="Question 1",
-                answer="Answer 1",
-                format_type="basic_qa",
-                difficulty_level="easy"
-            ),
-            FlashcardItem(
-                question="Question 2", 
-                answer="Answer 2",
-                format_type="definition",
-                difficulty_level="medium"
-            )
-        ]
-        
-        wrapper = FlashcardWrapper(flashcards=items)
-        
-        self.assertEqual(len(wrapper.flashcards), 2)
-        self.assertEqual(wrapper.flashcards[0].question, "Question 1")
-        self.assertEqual(wrapper.flashcards[1].format_type, "definition")
 
 
 class TestFlashcardGenerationPlan(TestCase):

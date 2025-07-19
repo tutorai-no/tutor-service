@@ -38,6 +38,7 @@ ALLOWED_HOSTS = [
     "46.101.107.247",
     "backend.aksio.app",
     "localhost",
+    "testserver",  # For Django test client
 ]
 
 CSRF_TRUSTED_ORIGINS = [
