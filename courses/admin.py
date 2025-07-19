@@ -4,9 +4,7 @@ from .models import (
     CourseSection, 
     Document, 
     DocumentTag, 
-    DocumentTagAssignment,
-    Chat, 
-    ChatMessage
+    DocumentTagAssignment
 )
 
 
@@ -145,68 +143,3 @@ class DocumentTagAssignmentAdmin(admin.ModelAdmin):
     readonly_fields = ['assigned_at']
 
 
-@admin.register(Chat)
-class ChatAdmin(admin.ModelAdmin):
-    list_display = [
-        'title', 'user', 'course', 'message_count', 'is_pinned', 
-        'is_archived', 'created_at'
-    ]
-    list_filter = ['is_pinned', 'is_archived', 'created_at']
-    search_fields = ['title', 'user__username', 'course__name']
-    readonly_fields = [
-        'id', 'message_count', 'total_tokens_used', 'average_response_time_ms',
-        'created_at', 'updated_at'
-    ]
-    
-    fieldsets = (
-        ('Chat Information', {
-            'fields': ('user', 'course', 'title')
-        }),
-        ('Status', {
-            'fields': ('is_pinned', 'is_archived')
-        }),
-        ('Statistics', {
-            'fields': ('message_count', 'total_tokens_used', 'average_response_time_ms')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-
-@admin.register(ChatMessage)
-class ChatMessageAdmin(admin.ModelAdmin):
-    list_display = [
-        'chat', 'role', 'content_preview', 'token_count', 
-        'is_helpful', 'user_rating', 'created_at'
-    ]
-    list_filter = ['role', 'is_helpful', 'user_rating', 'created_at']
-    search_fields = ['chat__title', 'content']
-    readonly_fields = [
-        'id', 'token_count', 'processing_time_ms', 'model_used', 
-        'temperature', 'context_used', 'created_at'
-    ]
-    
-    def content_preview(self, obj):
-        return obj.content[:50] + "..." if len(obj.content) > 50 else obj.content
-    content_preview.short_description = "Content Preview"
-    
-    fieldsets = (
-        ('Message', {
-            'fields': ('chat', 'role', 'content')
-        }),
-        ('AI Model Information', {
-            'fields': ('model_used', 'temperature', 'token_count', 'processing_time_ms')
-        }),
-        ('Context', {
-            'fields': ('referenced_documents', 'context_used')
-        }),
-        ('User Feedback', {
-            'fields': ('is_helpful', 'user_rating')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )

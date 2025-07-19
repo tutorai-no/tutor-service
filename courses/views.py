@@ -9,18 +9,14 @@ from .models import (
     CourseSection, 
     Document, 
     DocumentTag, 
-    DocumentTagAssignment,
-    Chat, 
-    ChatMessage
+    DocumentTagAssignment
 )
 from .serializers import (
     CourseSerializer, 
     CourseSectionSerializer, 
     DocumentSerializer, 
     DocumentTagSerializer,
-    DocumentTagAssignmentSerializer,
-    ChatSerializer, 
-    ChatMessageSerializer
+    DocumentTagAssignmentSerializer
 )
 
 
@@ -86,26 +82,3 @@ class DocumentTagAssignmentViewSet(viewsets.ModelViewSet):
         )
 
 
-class ChatViewSet(viewsets.ModelViewSet):
-    serializer_class = ChatSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        return Chat.objects.filter(user=self.request.user)
-    
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
-class ChatMessageViewSet(viewsets.ModelViewSet):
-    serializer_class = ChatMessageSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        chat_id = self.kwargs.get('chat_pk')
-        return ChatMessage.objects.filter(chat_id=chat_id, chat__user=self.request.user)
-    
-    def perform_create(self, serializer):
-        chat_id = self.kwargs.get('chat_pk')
-        chat = get_object_or_404(Chat, id=chat_id, user=self.request.user)
-        serializer.save(chat=chat)

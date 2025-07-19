@@ -4,9 +4,7 @@ from .models import (
     CourseSection, 
     Document, 
     DocumentTag, 
-    DocumentTagAssignment,
-    Chat, 
-    ChatMessage
+    DocumentTagAssignment
 )
 
 
@@ -86,31 +84,3 @@ class DocumentTagAssignmentSerializer(serializers.ModelSerializer):
         read_only_fields = ['assigned_at']
 
 
-class ChatMessageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ChatMessage
-        fields = [
-            'id', 'role', 'content', 'token_count', 'processing_time_ms',
-            'model_used', 'temperature', 'referenced_documents', 'context_used',
-            'is_helpful', 'user_rating', 'created_at'
-        ]
-        read_only_fields = [
-            'id', 'token_count', 'processing_time_ms', 'model_used', 'temperature',
-            'context_used', 'created_at'
-        ]
-
-
-class ChatSerializer(serializers.ModelSerializer):
-    messages = ChatMessageSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Chat
-        fields = [
-            'id', 'title', 'is_pinned', 'is_archived', 'message_count',
-            'total_tokens_used', 'average_response_time_ms', 'messages',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = [
-            'id', 'message_count', 'total_tokens_used', 'average_response_time_ms',
-            'messages', 'created_at', 'updated_at'
-        ]

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "refactor/project-structure"]
   pull_request:
     branches: ["main"]
 
@@ -113,9 +113,9 @@ jobs:
       contents: read
       id-token: write  # Required for Workload Identity Federation
       
-    # Only runs if CI was successful and on main branch
+    # Only runs if CI was successful and on specified branches
     needs: [build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/refactor/project-structure') && github.event_name == 'push'
     
     steps:
       - name: Checkout code
