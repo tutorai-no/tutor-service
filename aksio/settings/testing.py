@@ -16,7 +16,7 @@ if os.getenv("DATABASE_HOST"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("DATABASE_NAME", "test_aksio_db"),
+            "NAME": os.getenv("DATABASE_NAME", "aksio_db"),
             "USER": os.getenv("DATABASE_USER", "aksio_user"),
             "PASSWORD": os.getenv("DATABASE_PASSWORD", "aksio_password"),
             "HOST": os.getenv("DATABASE_HOST", "db"),
@@ -24,6 +24,9 @@ if os.getenv("DATABASE_HOST"):
             "OPTIONS": {
                 "application_name": "aksio-backend-test",
             },
+            "TEST": {
+                "NAME": "test_" + os.getenv("DATABASE_NAME", "aksio_db"),
+            }
         }
     }
 else:
