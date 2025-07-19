@@ -1,7 +1,6 @@
 """
 Unit tests for FlashcardGenerationService
 """
-import pytest
 from unittest.mock import Mock, patch, MagicMock
 from django.test import TestCase
 from django.contrib.auth import get_user_model
@@ -28,8 +27,8 @@ class TestFlashcardGenerationService(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.service = FlashcardGenerationService()
-        self.user = UserFactory()
-        self.course = CourseFactory(user=self.user)
+        self.user = UserFactory.create()
+        self.course = CourseFactory.create(user=self.user)
     
     def test_service_initialization(self):
         """Test service initialization"""

@@ -1,7 +1,6 @@
 """
 Unit tests for FlashcardGenerationAgent
 """
-import pytest
 from unittest.mock import Mock, patch, MagicMock
 from django.test import TestCase
 

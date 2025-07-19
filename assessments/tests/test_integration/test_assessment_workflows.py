@@ -1,7 +1,6 @@
 """
 Integration tests for end-to-end assessment workflows
 """
-import pytest
 from unittest.mock import Mock, patch
 from django.test import TestCase, TransactionTestCase
 from django.contrib.auth import get_user_model
@@ -27,8 +26,8 @@ class TestEndToEndFlashcardWorkflow(TransactionTestCase):
     """Test complete flashcard generation workflow"""
     
     def setUp(self):
-        self.user = UserFactory()
-        self.course = CourseFactory(user=self.user)
+        self.user = UserFactory.create()
+        self.course = CourseFactory.create(user=self.user)
         
         # Mock external dependencies
         self.mock_llm_patcher = patch('assessments.services.ai_agents.base_agent.ChatOpenAI')
@@ -150,8 +149,8 @@ class TestEndToEndQuizWorkflow(TransactionTestCase):
     """Test complete quiz generation workflow"""
     
     def setUp(self):
-        self.user = UserFactory()
-        self.course = CourseFactory(user=self.user)
+        self.user = UserFactory.create()
+        self.course = CourseFactory.create(user=self.user)
         
         # Mock external dependencies
         self.mock_llm_patcher = patch('assessments.services.ai_agents.base_agent.ChatOpenAI')
@@ -249,9 +248,9 @@ class TestAssessmentAPIIntegration(APITestCase):
     """Test assessment API endpoints with agentic AI integration"""
     
     def setUp(self):
-        self.user = UserFactory()
-        self.course = CourseFactory(user=self.user)
-        self.assessment = AssessmentFactory(user=self.user, course=self.course)
+        self.user = UserFactory.create()
+        self.course = CourseFactory.create(user=self.user)
+        self.assessment = AssessmentFactory.create(user=self.user, course=self.course)
         
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
@@ -399,8 +398,8 @@ class TestSpacedRepetitionIntegration(TransactionTestCase):
     """Test spaced repetition integration with flashcard workflow"""
     
     def setUp(self):
-        self.user = UserFactory()
-        self.course = CourseFactory(user=self.user)
+        self.user = UserFactory.create()
+        self.course = CourseFactory.create(user=self.user)
         self.flashcard = Flashcard.objects.create(
             user=self.user,
             course=self.course,

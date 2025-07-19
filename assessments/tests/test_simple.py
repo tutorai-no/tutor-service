@@ -77,13 +77,13 @@ class TestSpacedRepetitionService(TestCase):
             current_ease_factor=2.5,
             current_interval=1,
             repetitions=0,
-            quality_response=4  # Good response
+            quality_response=5  # Perfect recall - should increase ease factor
         )
         
         # First repetition should give interval of 1
         self.assertEqual(interval, 1)
         self.assertEqual(repetitions, 1)
-        self.assertGreater(ease_factor, 2.5)  # Should increase with good response
+        self.assertGreater(ease_factor, 2.5)  # Should increase with perfect response
         self.assertIsNotNone(next_date)
     
     def test_calculate_next_review_incorrect_response(self):
@@ -159,7 +159,7 @@ class TestModelFactories(TestCase):
     
     def test_user_factory(self):
         """Test user factory"""
-        user = UserFactory()
+        user = UserFactory.create()
         
         self.assertIsNotNone(user.username)
         self.assertIsNotNone(user.email)
@@ -168,7 +168,7 @@ class TestModelFactories(TestCase):
     
     def test_course_factory(self):
         """Test course factory"""
-        course = CourseFactory()
+        course = CourseFactory.create()
         
         self.assertIsNotNone(course.name)
         self.assertIsNotNone(course.course_code)
@@ -177,7 +177,7 @@ class TestModelFactories(TestCase):
     
     def test_flashcard_factory(self):
         """Test flashcard factory"""
-        flashcard = FlashcardFactory()
+        flashcard = FlashcardFactory.create()
         
         self.assertIsNotNone(flashcard.question)
         self.assertIsNotNone(flashcard.answer)

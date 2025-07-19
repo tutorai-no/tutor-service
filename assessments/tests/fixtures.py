@@ -1,13 +1,11 @@
 """
 Test fixtures and mock objects for assessments tests
 """
-import pytest
 from unittest.mock import Mock, MagicMock, patch
 from typing import Dict, List, Any
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-import factory
-from factory.django import DjangoModelFactory
+import uuid
 
 from courses.models import Course
 from assessments.models import Flashcard, Quiz, QuizQuestion, Assessment
@@ -15,97 +13,144 @@ from assessments.services.ai_agents.base_agent import GenerationContext, Content
 
 User = get_user_model()
 
+# Counter for unique test data
+_test_counter = 0
 
-class UserFactory(DjangoModelFactory):
-    """Factory for creating test users"""
-    
-    class Meta:
-        model = User
-    
-    username = factory.Sequence(lambda n: f"testuser{n}")
-    email = factory.LazyAttribute(lambda obj: f"{obj.username}@test.com")
-    first_name = factory.Faker('first_name')
-    last_name = factory.Faker('last_name')
-    is_active = True
+def get_next_counter():
+    global _test_counter
+    _test_counter += 1
+    return _test_counter
 
 
-class CourseFactory(DjangoModelFactory):
-    """Factory for creating test courses"""
+class UserFactory:
+    """Simple factory for creating test users"""
     
-    class Meta:
-        model = Course
-    
-    name = factory.Faker('sentence', nb_words=3)
-    description = factory.Faker('text')
-    course_code = factory.Sequence(lambda n: f"COURSE{n:03d}")
-    semester = "Fall 2024"
-    user = factory.SubFactory(UserFactory)
+    @staticmethod
+    def create(**kwargs):
+        counter = get_next_counter()
+        defaults = {
+            'username': f'testuser{counter}',
+            'email': f'testuser{counter}@test.com',
+            'first_name': f'Test{counter}',
+            'last_name': f'User{counter}',
+            'is_active': True,
+        }
+        defaults.update(kwargs)
+        return User.objects.create_user(**defaults)
 
 
-class FlashcardFactory(DjangoModelFactory):
-    """Factory for creating test flashcards"""
+class CourseFactory:
+    """Simple factory for creating test courses"""
     
-    class Meta:
-        model = Flashcard
-    
-    user = factory.SubFactory(UserFactory)
-    course = factory.SubFactory(CourseFactory)
-    question = factory.Faker('sentence', nb_words=8)
-    answer = factory.Faker('text', max_nb_chars=200)
-    explanation = factory.Faker('text', max_nb_chars=150)
-    difficulty_level = factory.Iterator(['easy', 'medium', 'hard'])
-    tags = factory.LazyFunction(lambda: ['test', 'generated'])
-    generated_by_ai = True
+    @staticmethod
+    def create(**kwargs):
+        counter = get_next_counter()
+        if 'user' not in kwargs:
+            kwargs['user'] = UserFactory.create()
+        
+        defaults = {
+            'name': f'Test Course {counter}',
+            'description': f'Test course description {counter}',
+            'course_code': f'COURSE{counter:03d}',
+            'semester': 'Fall 2024',
+            'language': 'en',
+            'difficulty_level': 3,
+        }
+        defaults.update(kwargs)
+        return Course.objects.create(**defaults)
 
 
-class QuizFactory(DjangoModelFactory):
-    """Factory for creating test quizzes"""
+class FlashcardFactory:
+    """Simple factory for creating test flashcards"""
     
-    class Meta:
-        model = Quiz
-    
-    user = factory.SubFactory(UserFactory)
-    course = factory.SubFactory(CourseFactory)
-    title = factory.Faker('sentence', nb_words=4)
-    description = factory.Faker('text')
-    quiz_type = factory.Iterator(['practice', 'assessment', 'exam'])
-    time_limit_minutes = 30
-    max_attempts = 3
-    passing_score = 70.0
+    @staticmethod
+    def create(**kwargs):
+        counter = get_next_counter()
+        if 'user' not in kwargs:
+            kwargs['user'] = UserFactory.create()
+        if 'course' not in kwargs:
+            kwargs['course'] = CourseFactory.create(user=kwargs['user'])
+        
+        defaults = {
+            'question': f'Test question {counter}?',
+            'answer': f'Test answer {counter}',
+            'explanation': f'Test explanation {counter}',
+            'difficulty_level': 'medium',
+            'tags': ['test', 'generated'],
+            'generated_by_ai': True,
+        }
+        defaults.update(kwargs)
+        return Flashcard.objects.create(**defaults)
 
 
-class QuizQuestionFactory(DjangoModelFactory):
-    """Factory for creating test quiz questions"""
+class QuizFactory:
+    """Simple factory for creating test quizzes"""
     
-    class Meta:
-        model = QuizQuestion
-    
-    quiz = factory.SubFactory(QuizFactory)
-    question_text = factory.Faker('sentence', nb_words=10)
-    question_type = factory.Iterator(['multiple_choice', 'short_answer', 'true_false'])
-    difficulty_level = factory.Iterator(['easy', 'medium', 'hard'])
-    order = factory.Sequence(lambda n: n + 1)
-    points = 1
-    answer_options = factory.LazyFunction(lambda: ['Option A', 'Option B', 'Option C', 'Option D'])
-    correct_answers = factory.LazyFunction(lambda: ['Option A'])
-    explanation = factory.Faker('text', max_nb_chars=100)
+    @staticmethod
+    def create(**kwargs):
+        counter = get_next_counter()
+        if 'user' not in kwargs:
+            kwargs['user'] = UserFactory.create()
+        if 'course' not in kwargs:
+            kwargs['course'] = CourseFactory.create(user=kwargs['user'])
+        
+        defaults = {
+            'title': f'Test Quiz {counter}',
+            'description': f'Test quiz description {counter}',
+            'quiz_type': 'practice',
+            'time_limit_minutes': 30,
+            'max_attempts': 3,
+            'passing_score': 70.0,
+        }
+        defaults.update(kwargs)
+        return Quiz.objects.create(**defaults)
 
 
-class AssessmentFactory(DjangoModelFactory):
-    """Factory for creating test assessments"""
+class QuizQuestionFactory:
+    """Simple factory for creating test quiz questions"""
     
-    class Meta:
-        model = Assessment
+    @staticmethod
+    def create(**kwargs):
+        counter = get_next_counter()
+        if 'quiz' not in kwargs:
+            kwargs['quiz'] = QuizFactory.create()
+        
+        defaults = {
+            'question_text': f'Test question {counter}?',
+            'question_type': 'multiple_choice',
+            'difficulty_level': 'medium',
+            'order': counter,
+            'points': 1,
+            'answer_options': ['Option A', 'Option B', 'Option C', 'Option D'],
+            'correct_answers': ['Option A'],
+            'explanation': f'Test explanation {counter}',
+        }
+        defaults.update(kwargs)
+        return QuizQuestion.objects.create(**defaults)
+
+
+class AssessmentFactory:
+    """Simple factory for creating test assessments"""
     
-    user = factory.SubFactory(UserFactory)
-    course = factory.SubFactory(CourseFactory)
-    title = factory.Faker('sentence', nb_words=3)
-    description = factory.Faker('text')
-    assessment_type = factory.Iterator(['formative', 'summative'])
-    include_flashcards = True
-    include_quizzes = True
-    flashcard_count = 10
-    quiz_count = 5
+    @staticmethod
+    def create(**kwargs):
+        counter = get_next_counter()
+        if 'user' not in kwargs:
+            kwargs['user'] = UserFactory.create()
+        if 'course' not in kwargs:
+            kwargs['course'] = CourseFactory.create(user=kwargs['user'])
+        
+        defaults = {
+            'title': f'Test Assessment {counter}',
+            'description': f'Test assessment description {counter}',
+            'assessment_type': 'formative',
+            'include_flashcards': True,
+            'include_quizzes': True,
+            'flashcard_count': 10,
+            'quiz_count': 5,
+        }
+        defaults.update(kwargs)
+        return Assessment.objects.create(**defaults)
 
 
 class MockAIResponse:
@@ -267,9 +312,9 @@ class BaseTestCase(TestCase):
     
     def setUp(self):
         """Set up test data"""
-        self.user = UserFactory()
-        self.course = CourseFactory(user=self.user)
-        self.assessment = AssessmentFactory(user=self.user, course=self.course)
+        self.user = UserFactory.create()
+        self.course = CourseFactory.create(user=self.user)
+        self.assessment = AssessmentFactory.create(user=self.user, course=self.course)
         
         # Mock external dependencies
         self.mock_llm_patcher = patch('assessments.services.ai_agents.base_agent.ChatOpenAI')
@@ -291,55 +336,5 @@ class BaseTestCase(TestCase):
         self.mock_parser_patcher.stop()
 
 
-@pytest.fixture
-def user():
-    """Pytest fixture for test user"""
-    return UserFactory()
-
-
-@pytest.fixture
-def course(user):
-    """Pytest fixture for test course"""
-    return CourseFactory(user=user)
-
-
-@pytest.fixture
-def assessment(user, course):
-    """Pytest fixture for test assessment"""
-    return AssessmentFactory(user=user, course=course)
-
-
-@pytest.fixture
-def mock_llm():
-    """Pytest fixture for mock LLM"""
-    return MockLLM()
-
-
-@pytest.fixture
-def mock_retrieval_client():
-    """Pytest fixture for mock retrieval client"""
-    return MockRetrievalClient()
-
-
-@pytest.fixture
-def generation_context():
-    """Pytest fixture for generation context"""
-    return create_mock_generation_context()
-
-
-@pytest.fixture
-def content_analysis():
-    """Pytest fixture for content analysis"""
-    return create_mock_content_analysis()
-
-
-@pytest.fixture
-def mock_flashcard_data():
-    """Pytest fixture for mock flashcard data"""
-    return create_mock_flashcard_data()
-
-
-@pytest.fixture
-def mock_quiz_data():
-    """Pytest fixture for mock quiz data"""
-    return create_mock_quiz_data()
+# Django test case base class handles fixture creation through setUp method
+# No pytest fixtures needed when using Django's test framework
