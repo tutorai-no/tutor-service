@@ -22,7 +22,8 @@
       "Bash(git push:*)",
       "Bash(gh workflow list:*)",
       "Bash(unzip:*)",
-      "Bash(gh run list:*)"
+      "Bash(gh run list:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

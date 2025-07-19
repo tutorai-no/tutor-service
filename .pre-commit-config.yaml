@@ -1,0 +1,139 @@
+# Pre-commit hooks for code quality and formatting
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+default_language_version:
+  python: python3.11
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.12.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        args: [--config=pyproject.toml]
+
+  # Import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--settings-path=pyproject.toml]
+
+  # Flake8 linting
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-docstrings
+          - flake8-django
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-simplify
+        args: [--config=setup.cfg]
+
+  # Security linting
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        exclude: ^tests/
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - django-stubs
+          - djangorestframework-stubs
+          - types-requests
+          - types-redis
+          - types-python-dateutil
+        args: [--config-file=pyproject.toml]
+        exclude: ^(migrations/|tests/)
+
+  # Django-specific checks
+  - repo: local
+    hooks:
+      - id: django-check
+        name: Django Check
+        entry: python manage.py check
+        language: system
+        pass_filenames: false
+        files: \.py$
+
+      - id: django-migrations-check
+        name: Django Migrations Check
+        entry: python manage.py makemigrations --check --dry-run
+        language: system
+        pass_filenames: false
+        files: \.py$
+
+  # Documentation
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: [--config=setup.cfg]
+        exclude: ^(migrations/|tests/)
+
+  # Additional Python quality checks
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+        args: [--py311-plus]
+
+  # Remove unused imports
+  - repo: https://github.com/pycqa/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args:
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --remove-duplicate-keys
+          - --in-place
+
+  # Check for common security issues
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: ^(\.secrets\.baseline|poetry\.lock)$
+
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [django-check, django-migrations-check]
+  submodules: false

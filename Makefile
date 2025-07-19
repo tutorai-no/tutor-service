@@ -113,27 +113,43 @@ test-fast: ## Run tests with parallel execution
 	@echo "$(YELLOW)Running tests in parallel...$(NC)"
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend python -m pytest -n auto
 
-# Code Quality
+# Code Quality Commands
 lint: ## Run linting
 	@echo "$(YELLOW)Running linting...$(NC)"
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend flake8 .
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend mypy .
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend flake8 --config=setup.cfg
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend mypy --config-file=pyproject.toml .
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend bandit -c pyproject.toml -r . -x tests/,migrations/
 
-format: ## Format code
+format: ## Format code with all tools
 	@echo "$(YELLOW)Formatting code...$(NC)"
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend black .
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend isort .
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend autoflake --remove-all-unused-imports --remove-unused-variables --remove-duplicate-keys --in-place --recursive . --exclude=migrations,venv,.venv,env,.env,__pycache__,.git
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend pyupgrade --py311-plus $$(find . -name "*.py" -not -path "./migrations/*" -not -path "./venv/*" -not -path "./.venv/*")
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend isort . --settings-path=pyproject.toml
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend black . --config=pyproject.toml
 
-check: ## Run all checks (lint, test, security)
+check: ## Run all checks (lint, test, security, django)
 	@echo "$(YELLOW)Running all checks...$(NC)"
+	$(MAKE) format
 	$(MAKE) lint
+	$(MAKE) django-check
 	$(MAKE) test
 	$(MAKE) security-check
 
 security-check: ## Run security checks
 	@echo "$(YELLOW)Running security checks...$(NC)"
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend bandit -r .
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend safety check
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend bandit -c pyproject.toml -r . -x tests/,migrations/
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend detect-secrets scan --baseline .secrets.baseline --all-files --exclude-files 'poetry.lock|\.secrets\.baseline'
+
+django-check: ## Run Django system checks
+	@echo "$(YELLOW)Running Django checks...$(NC)"
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend python manage.py check
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend python manage.py makemigrations --check --dry-run
+
+pre-commit: ## Install and run pre-commit hooks
+	@echo "$(YELLOW)Installing pre-commit hooks...$(NC)"
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend pre-commit install
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend pre-commit install --hook-type commit-msg
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) exec backend pre-commit run --all-files
 
 # Backup and Restore
 backup: ## Create database backup

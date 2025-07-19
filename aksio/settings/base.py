@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "billing",
     "core",
     "api",
+    "document_processing",
     # Django built-in apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -303,3 +304,22 @@ RATE_LIMIT_ANONYMOUS = os.getenv("RATE_LIMIT_ANONYMOUS", "20/min")
 
 # WebSocket Settings (for future chat implementation)
 WEBSOCKET_ENABLED = os.getenv("WEBSOCKET_ENABLED", "False").lower() == "true"
+
+# Neo4j Database Settings (Knowledge Graph)
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+
+# Embedding Model Settings
+EMBEDDING_MODEL_TYPE = os.getenv("EMBEDDING_MODEL_TYPE", "sentence_transformers")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+
+# OpenAI Settings
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Add logging for document_processing app
+LOGGING['loggers']['document_processing'] = {
+    'handlers': ['console', 'file'],
+    'level': LOG_LEVEL,
+    'propagate': False,
+}

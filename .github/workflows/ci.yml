@@ -132,7 +132,19 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+          # Verify authentication first
+          gcloud auth list
+          gcloud config list
+          
+          # Configure Docker for Artifact Registry
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      - name: Verify Artifact Registry access
+        run: |
+          # Test access to the repository
+          gcloud artifacts repositories describe ${REPOSITORY} \
+            --location=${REGION} \
+            --project=${PROJECT_ID}
 
       - name: Build and Push Docker image
         run: |
@@ -142,9 +154,16 @@ jobs:
           # Build the image
           docker build -t ${IMAGE_TAG} -t ${IMAGE_LATEST} .
           
-          # Push both tags
-          docker push ${IMAGE_TAG}
-          docker push ${IMAGE_LATEST}
+          # Push both tags with retry logic
+          for i in {1..3}; do
+            if docker push ${IMAGE_TAG} && docker push ${IMAGE_LATEST}; then
+              echo "✅ Successfully pushed images"
+              break
+            else
+              echo "❌ Push attempt $i failed, retrying..."
+              sleep 10
+            fi
+          done
           
   dependabot:
     name: 'Dependabot'
