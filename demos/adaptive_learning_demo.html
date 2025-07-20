@@ -576,7 +576,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/courses/courses/`, {
+                const response = await fetch(`${API_BASE}/courses/`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
@@ -655,7 +655,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/courses/courses/`, {
+                const response = await fetch(`${API_BASE}/courses/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${authToken}`,

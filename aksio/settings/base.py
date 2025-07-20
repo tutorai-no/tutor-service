@@ -2,9 +2,9 @@
 Base settings for aksio project.
 """
 
-from pathlib import Path
-from datetime import timedelta
 import os
+from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -280,24 +280,30 @@ LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "1000"))
 
 # Document Processing Settings
-DOCUMENT_UPLOAD_MAX_SIZE = int(os.getenv("DOCUMENT_UPLOAD_MAX_SIZE", "50")) * 1024 * 1024  # 50MB
+DOCUMENT_UPLOAD_MAX_SIZE = (
+    int(os.getenv("DOCUMENT_UPLOAD_MAX_SIZE", "50")) * 1024 * 1024
+)  # 50MB
 DOCUMENT_ALLOWED_TYPES = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
-    'text/plain',
-    'text/markdown',
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+    "text/plain",
+    "text/markdown",
 ]
 
 # Feature Flags
 ENABLE_AI_FEATURES = os.getenv("ENABLE_AI_FEATURES", "True").lower() == "true"
-ENABLE_DOCUMENT_PROCESSING = os.getenv("ENABLE_DOCUMENT_PROCESSING", "True").lower() == "true"
+ENABLE_DOCUMENT_PROCESSING = (
+    os.getenv("ENABLE_DOCUMENT_PROCESSING", "True").lower() == "true"
+)
 ENABLE_REAL_TIME_CHAT = os.getenv("ENABLE_REAL_TIME_CHAT", "False").lower() == "true"
 
 # External Service URLs
 SCRAPER_SERVICE_URL = os.getenv("SCRAPER_SERVICE_URL", "http://localhost:8080")
 RETRIEVER_SERVICE_URL = os.getenv("RETRIEVER_SERVICE_URL", "http://localhost:8002")
-USE_MOCK_RETRIEVAL_SERVICE = os.getenv("USE_MOCK_RETRIEVAL_SERVICE", "True").lower() == "true"
+USE_MOCK_RETRIEVAL_SERVICE = (
+    os.getenv("USE_MOCK_RETRIEVAL_SERVICE", "True").lower() == "true"
+)
 
 # Rate Limiting
 RATE_LIMIT_AUTHENTICATED = os.getenv("RATE_LIMIT_AUTHENTICATED", "100/min")
@@ -319,8 +325,8 @@ EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Add logging for document_processing app
-LOGGING['loggers']['document_processing'] = {
-    'handlers': ['console', 'file'],
-    'level': LOG_LEVEL,
-    'propagate': False,
+LOGGING["loggers"]["document_processing"] = {
+    "handlers": ["console", "file"],
+    "level": LOG_LEVEL,
+    "propagate": False,
 }

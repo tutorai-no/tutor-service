@@ -1,24 +1,25 @@
 import uuid
 from io import BytesIO
-from PIL import Image
+from unittest.mock import patch
 
-from django.core import mail
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.urls import reverse
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from rest_framework_simplejwt.tokens import RefreshToken
+
+from PIL import Image
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
     OutstandingToken,
 )
-from rest_framework_simplejwt.exceptions import TokenError
-from unittest.mock import patch
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import UserFeedback as Feedback
+
 # TODO: Import Subscription model once billing app is properly implemented
 
 User = get_user_model()
@@ -745,7 +746,7 @@ class UserFeedbackTests(APITestCase):
         self.assertFalse(Feedback.objects.exists())
         self.authenticate()
         data = {
-            "feedback_type": "bug_report", 
+            "feedback_type": "bug_report",
             "title": "Test Bug Report",
             "description": "Test Feedback",
         }
@@ -756,7 +757,7 @@ class UserFeedbackTests(APITestCase):
     def test_unauthenticated_feedback(self):
         self.assertFalse(Feedback.objects.exists())
         data = {
-            "feedback_type": "bug_report", 
+            "feedback_type": "bug_report",
             "title": "Test Bug Report",
             "description": "Test Feedback",
         }

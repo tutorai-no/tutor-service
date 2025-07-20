@@ -1,36 +1,34 @@
 import logging
 
-from datetime import datetime
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.views import APIView
-from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
-from django.contrib.auth.tokens import default_token_generator
 
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from accounts.models import (
+    UserActivity,
+    UserProfile,
+    UserStreak,
+)
 from accounts.serializers import (
-    RegisterSerializer,
     LoginSerializer,
-    PasswordResetSerializer,
     PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
+    RegisterSerializer,
+    UserActivitySerializer,
     UserApplicationSerializer,
     UserFeedbackSerializer,
-    UserSerializer,
     UserProfileSerializer,
+    UserSerializer,
     UserStreakSerializer,
-    UserActivitySerializer,
-)
-from accounts.models import (
-    UserFeedback,
-    UserStreak,
-    UserActivity,
-    UserApplication,
-    UserProfile,
 )
 
 logger = logging.getLogger(__name__)
@@ -205,4 +203,6 @@ class UserActivityListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return UserActivity.objects.filter(user=self.request.user).order_by("-created_at")
+        return UserActivity.objects.filter(user=self.request.user).order_by(
+            "-created_at"
+        )

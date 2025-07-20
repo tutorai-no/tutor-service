@@ -1,23 +1,24 @@
-from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.validators import FileExtensionValidator
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
-from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import FileExtensionValidator, RegexValidator
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
+
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 from accounts.models import (
     User,
-    UserProfile,
     UserActivity,
-    UserStreak,
-    UserFeedback,
     UserApplication,
+    UserFeedback,
+    UserProfile,
+    UserStreak,
 )
 
 User = get_user_model()
@@ -67,7 +68,9 @@ class UserApplicationSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        if attrs["acquisition_source"] == "Other" and not attrs.get("acquisition_details"):
+        if attrs["acquisition_source"] == "Other" and not attrs.get(
+            "acquisition_details"
+        ):
             raise serializers.ValidationError(
                 {
                     "acquisition_details": "This field is required when 'Other' is selected."
@@ -138,9 +141,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
-        
+
         user = User.objects.create_user(**validated_data)
-        
+
         # Send welcome email
         send_mail(
             subject="Welcome to Aksio",
@@ -299,58 +302,59 @@ class UserSerializer(serializers.ModelSerializer):
             UniqueValidator(queryset=User.objects.all()),
         ],
     )
-    
+
     profile = UserProfileSerializer(read_only=True)
     streak = UserStreakSerializer(read_only=True)
     uploaded_files = serializers.SerializerMethodField()
-    
+
     def get_uploaded_files(self, obj):
         from courses.serializers import DocumentSerializer
+
         return DocumentSerializer(obj.uploaded_files.all(), many=True).data
-    
+
     def update(self, instance, validated_data):
-        uploaded_files_data = self.context['request'].data.get('uploaded_files', [])
-        
+        uploaded_files_data = self.context["request"].data.get("uploaded_files", [])
+
         # Handle uploaded_files if provided
         if uploaded_files_data:
-            from courses.models import Document, Course
-            
+            from courses.models import Course, Document
+
             # Get or create a default course for this user
             default_course, created = Course.objects.get_or_create(
                 user=instance,
                 name="General Documents",
                 defaults={
-                    'description': 'Default course for uploaded documents',
-                    'language': 'en',
-                    'difficulty_level': 3,
-                    'color': '#3B82F6',
-                    'is_active': True,
-                }
+                    "description": "Default course for uploaded documents",
+                    "language": "en",
+                    "difficulty_level": 3,
+                    "color": "#3B82F6",
+                    "is_active": True,
+                },
             )
-            
+
             for file_data in uploaded_files_data:
                 # Create a basic document with minimal required fields
                 Document.objects.create(
                     user=instance,
                     course=default_course,  # Use default course
                     name=f"Document {file_data.get('id', 'unknown')}",
-                    document_type='file',
-                    file_url='',
-                    content_type='application/pdf',
-                    original_filename='test.pdf',
-                    source_url='',
-                    thumbnail_url='',
-                    language='en',
-                    processing_status='completed',
-                    processing_error='',
-                    storage_path='',
-                    extracted_text='',
-                    summary='',
+                    document_type="file",
+                    file_url="",
+                    content_type="application/pdf",
+                    original_filename="test.pdf",
+                    source_url="",
+                    thumbnail_url="",
+                    language="en",
+                    processing_status="completed",
+                    processing_error="",
+                    storage_path="",
+                    extracted_text="",
+                    summary="",
                     topics=[],
                 )
-        
+
         return super().update(instance, validated_data)
-    
+
     class Meta:
         model = User
         fields = (
@@ -382,14 +386,14 @@ class UserSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = [
-            "id", 
-            "is_verified", 
-            "last_active_at", 
+            "id",
+            "is_verified",
+            "last_active_at",
             "stripe_customer_id",
             "profile",
             "streak",
-            "created_at", 
-            "updated_at"
+            "created_at",
+            "updated_at",
         ]
 
 

@@ -1,14 +1,15 @@
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication
+
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 # Swagger schema view configuration
 schema_view = get_schema_view(
     openapi.Info(
         title="Aksio API",
-        default_version='v1',
+        default_version="v1",
         description="""
         Aksio is an intelligent learning platform that transforms how higher education 
         students master their curriculum through AI-powered study planning and 

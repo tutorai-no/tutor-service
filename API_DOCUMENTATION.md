@@ -249,7 +249,7 @@ POST /api/v1/assessments/quiz-attempts/{attempt_id}/complete/
 
 #### Generate Assessment Content
 ```http
-POST /api/v1/assessments/assessments/{assessment_id}/generate_content/
+POST /api/v1/assessments/{assessment_id}/generate_content/
 {
   "topic": "Calculus Derivatives",
   "content": "Focus on power rule, product rule, and chain rule",
@@ -1167,7 +1167,7 @@ while True:
     time.sleep(5)
 
 # 3. Generate assessment content
-generation_response = post(f"/api/v1/assessments/assessments/{assessment_id}/generate_content/", {
+generation_response = post(f"/api/v1/assessments/{assessment_id}/generate_content/", {
     "topic": "Calculus Derivatives",
     "document_ids": [doc_id],
     "flashcard_count": 20,
@@ -1211,7 +1211,7 @@ POST /api/v1/courses/{course_id}/documents/upload/
 GET /api/v1/courses/{course_id}/documents/{doc_id}/processing_status/
 
 # Assessment Generation
-POST /api/v1/assessments/assessments/{assessment_id}/generate_content/
+POST /api/v1/assessments/{assessment_id}/generate_content/
 
 # Chat
 POST /api/v1/chat/chats/

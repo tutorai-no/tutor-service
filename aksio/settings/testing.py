@@ -2,8 +2,9 @@
 Testing settings for aksio project.
 """
 
-from .base import *
 import os
+
+from .base import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -26,7 +27,7 @@ if os.getenv("DATABASE_HOST"):
             },
             "TEST": {
                 "NAME": "test_" + os.getenv("DATABASE_NAME", "aksio_db"),
-            }
+            },
         }
     }
 else:
@@ -62,7 +63,7 @@ else:
     MIGRATION_MODULES = DisableMigrations()
 
 # Logging for testing
-LOGGING["handlers"]["console"]["level"] = "CRITICAL" 
+LOGGING["handlers"]["console"]["level"] = "CRITICAL"
 LOGGING["loggers"]["django"]["level"] = "CRITICAL"
 
 # Disable caching for testing

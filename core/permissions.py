@@ -33,6 +33,6 @@ class IsCourseOwner(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Check if object has a course field
-        if hasattr(obj, 'course'):
+        if hasattr(obj, "course"):
             return obj.course.owner == request.user
         return False
