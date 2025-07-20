@@ -349,6 +349,10 @@ class PerformanceAnalysisService(AdaptiveLearningService):
             )
         }
     
+    def _analyze_flashcard_retention(self, user, course, time_period_days: int) -> Dict[str, Any]:
+        """Analyze flashcard retention performance."""
+        return self._analyze_flashcard_performance(user, course, time_period_days)
+    
     def _analyze_flashcard_performance(self, user, course, time_period_days: int) -> Dict[str, Any]:
         """Analyze flashcard review performance."""
         from assessments.models import FlashcardReview
@@ -1257,6 +1261,134 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         overall_confidence = (data_confidence + trend_confidence) / 2
         
         return round(overall_confidence * 100, 1)
+    
+    def _analyze_time_efficiency(self, attempts) -> Dict[str, Any]:
+        """Analyze time efficiency of quiz attempts."""
+        if not attempts:
+            return {
+                'average_time': 0,
+                'efficiency_score': 0,
+                'time_vs_performance': 'no_data'
+            }
+        
+        total_time = 0
+        total_score = 0
+        count = 0
+        
+        for attempt in attempts:
+            # Handle both dict and object attempts
+            if isinstance(attempt, dict):
+                time_taken = attempt.get('time_taken', 0)
+                score = attempt.get('score', 0)
+            else:
+                time_taken = getattr(attempt, 'time_taken', 0) if hasattr(attempt, 'time_taken') else 0
+                score = getattr(attempt, 'score', 0) if hasattr(attempt, 'score') else 0
+            
+            if time_taken:
+                total_time += time_taken
+                total_score += score
+                count += 1
+        
+        if count == 0:
+            return {
+                'average_time': 0,
+                'efficiency_score': 0,
+                'time_vs_performance': 'no_data'
+            }
+        
+        avg_time = round(total_time / count, 1)
+        avg_score = round(total_score / count, 1)
+        
+        # Calculate efficiency score (higher score in less time = better)
+        if avg_time > 0:
+            efficiency = (avg_score / avg_time) * 100
+        else:
+            efficiency = 0
+        
+        # Determine time vs performance relationship
+        if avg_score >= 80 and avg_time <= 300:  # Good score in reasonable time
+            relationship = 'optimal'
+        elif avg_score >= 80 and avg_time > 300:  # Good score but slow
+            relationship = 'accurate_but_slow'
+        elif avg_score < 80 and avg_time <= 300:  # Poor score despite quick time
+            relationship = 'rushed'
+        else:
+            relationship = 'needs_improvement'
+        
+        return {
+            'average_time': avg_time,
+            'efficiency_score': round(efficiency, 1),
+            'time_vs_performance': relationship
+        }
+    
+    def _analyze_difficulty_distribution(self, reviews) -> Dict[str, float]:
+        """Analyze difficulty distribution of flashcard reviews."""
+        if not reviews:
+            return {
+                'easy': 0.0,
+                'medium': 0.0,
+                'hard': 0.0
+            }
+        
+        total = len(reviews)
+        easy_count = sum(1 for r in reviews if r.get('difficulty') == 'easy')
+        medium_count = sum(1 for r in reviews if r.get('difficulty') == 'medium')
+        hard_count = sum(1 for r in reviews if r.get('difficulty') == 'hard')
+        
+        return {
+            'easy': round((easy_count / total) * 100, 1) if total > 0 else 0.0,
+            'medium': round((medium_count / total) * 100, 1) if total > 0 else 0.0,
+            'hard': round((hard_count / total) * 100, 1) if total > 0 else 0.0
+        }
+    
+    def _identify_adaptation_triggers(self, performance_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Identify triggers for real-time adaptation."""
+        triggers = []
+        
+        # Check quiz performance
+        quiz_perf = performance_data.get('quiz_performance', {})
+        if quiz_perf.get('average_score', 100) < 50:
+            triggers.append({
+                'type': 'low_quiz_scores',
+                'severity': 'high',
+                'recommendation': 'Reduce difficulty or provide more practice'
+            })
+        
+        if quiz_perf.get('improvement_trend') == 'Declining':
+            triggers.append({
+                'type': 'declining_performance',
+                'severity': 'medium',
+                'recommendation': 'Review recent topics and adjust pacing'
+            })
+        
+        # Check study sessions
+        study_sessions = performance_data.get('study_sessions', {})
+        if study_sessions.get('completion_rate', 100) < 50:
+            triggers.append({
+                'type': 'low_completion_rate',
+                'severity': 'high',
+                'recommendation': 'Shorten session duration or reduce workload'
+            })
+        
+        # Check learning progress
+        learning_prog = performance_data.get('learning_progress', {})
+        if learning_prog.get('average_mastery_level', 5) < 2:
+            triggers.append({
+                'type': 'low_mastery',
+                'severity': 'high',
+                'recommendation': 'Focus on fundamentals and increase review'
+            })
+        
+        return triggers
+    
+    def _calculate_overall_score(self, component_scores: Dict[str, float]) -> float:
+        """Calculate overall performance score from components."""
+        # Simple average of all component scores
+        scores = list(component_scores.values())
+        if not scores:
+            return 0.0
+        
+        return round(sum(scores) / len(scores), 1)
 
 
 # Global service instance

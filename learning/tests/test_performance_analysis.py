@@ -340,10 +340,10 @@ class TestPerformanceAnalysisService(TestCase):
             password='testpass123'
         )
         
-        result = self.service.analyze_adaptive_performance(
+        result = self.service.analyze_comprehensive_performance(
             user=new_user,
             course=self.course,
-            days=30
+            time_period_days=30
         )
         
         self.assertTrue(result['success'])
@@ -353,10 +353,10 @@ class TestPerformanceAnalysisService(TestCase):
     def test_performance_analysis_different_time_periods(self):
         """Test performance analysis for different time periods."""
         for days in [7, 14, 30, 90]:
-            result = self.service.analyze_adaptive_performance(
+            result = self.service.analyze_comprehensive_performance(
                 user=self.user,
                 course=self.course,
-                days=days
+                time_period_days=days
             )
             
             self.assertTrue(result['success'], f"Failed for {days} days")

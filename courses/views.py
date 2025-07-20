@@ -8,7 +8,6 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.utils import timezone
-from core.services.retrieval_client import get_retrieval_client
 
 logger = logging.getLogger(__name__)
 
@@ -394,47 +393,133 @@ class DocumentViewSet(viewsets.ModelViewSet):
     
     def _coordinate_file_upload(self, document, uploaded_file, user):
         """Coordinate file upload with retrieval service (async streaming)."""
+        retrieval_service_url = getattr(settings, 'RETRIEVER_SERVICE_URL', None)
+        
+        if not retrieval_service_url:
+            logger.warning("RETRIEVER_SERVICE_URL not configured, simulating upload")
+            return {
+                'success': True,
+                'file_url': f'/documents/{document.id}/{uploaded_file.name}',
+                'storage_path': f'documents/{user.id}/{document.id}',
+                'processing_id': f'proc_{document.id}',
+                'estimated_time_minutes': 5
+            }
+        
         try:
-            # Get the retrieval client (will use mock if configured)
-            retrieval_client = get_retrieval_client()
-            
             # Reset file pointer for reading
             uploaded_file.seek(0)
             
-            # Read file content
-            file_content = uploaded_file.read()
-            uploaded_file.seek(0)
+            # Prepare multipart payload for retrieval service
+            # Format: files=(filename, file_data, content_type), uuids=document_id
+            files = [
+                ('files', (uploaded_file.name, uploaded_file, uploaded_file.content_type)),
+                ('uuids', (None, str(document.id)))
+            ]
             
-            # Upload document using the retrieval client
-            result = retrieval_client.upload_document(
-                document_id=str(document.id),
-                content=file_content,
-                filename=uploaded_file.name,
-                content_type=uploaded_file.content_type,
-                user_id=str(user.id)
+            # Prepare headers (no authentication needed for now)
+            headers = {'Accept': 'application/json'}
+            
+            # Use streaming upload endpoint - corrected to use /stream/upload/
+            upload_url = f"{retrieval_service_url}/stream/upload/"
+            
+            # Start the upload and get streaming response
+            response = requests.post(
+                upload_url,
+                files=files,
+                headers=headers,
+                stream=True,
+                timeout=60  # Longer timeout for streaming
             )
             
-            if result.get('success'):
-                logger.info(f"Document {document.id} uploaded successfully")
-                return {
-                    'success': True,
-                    'file_url': result.get('file_url', f'/documents/{document.id}/{uploaded_file.name}'),
-                    'storage_path': result.get('storage_path', f'documents/{user.id}/{document.id}'),
-                    'processing_id': result.get('processing_id', f'proc_{document.id}'),
-                    'graph_id': result.get('graph_id'),
-                    'chunks_processed': result.get('chunks_processed', 0),
-                    'estimated_time_minutes': result.get('estimated_time_minutes', 5)
-                }
-            else:
-                error_msg = result.get('error', 'Unknown upload error')
-                logger.error(f"Document upload failed: {error_msg}")
+            if response.status_code != 200:
+                logger.error(f"Retrieval service upload failed: {response.status_code} - {response.text}")
                 return {
                     'success': False,
-                    'error': error_msg
+                    'error': f"Upload service error: {response.status_code}"
+                }
+            
+            # Process the streaming response
+            processing_started = False
+            graph_id = None
+            chunks_processed = 0
+            
+            try:
+                for line in response.iter_lines(decode_unicode=True):
+                    if not line.strip():
+                        continue
+                    
+                    try:
+                        result = json.loads(line)
+                        
+                        # Check for processing status updates
+                        if result.get('status') == 'chunk_processed':
+                            chunks_processed += 1
+                            processing_started = True
+                            
+                        elif result.get('status') == 'processing_complete':
+                            graph_id = result.get('graph_id')
+                            total_chunks = result.get('statistics', {}).get('total_chunks', 0)
+                            
+                            logger.info(f"Document {document.id} processing complete: {total_chunks} chunks")
+                            
+                            return {
+                                'success': True,
+                                'file_url': f'/retrieval/{graph_id}/document/{document.id}',
+                                'storage_path': f'graphs/{graph_id}/documents/{document.id}',
+                                'processing_id': str(graph_id),
+                                'graph_id': str(graph_id),
+                                'chunks_processed': chunks_processed,
+                                'estimated_time_minutes': 0  # Already complete
+                            }
+                            
+                        elif 'error' in result:
+                            logger.error(f"Processing error: {result.get('error')}")
+                            return {
+                                'success': False,
+                                'error': f"Processing error: {result.get('error')}"
+                            }
+                            
+                    except json.JSONDecodeError:
+                        # Skip invalid JSON lines
+                        continue
+                        
+            except Exception as stream_error:
+                logger.error(f"Error processing stream: {str(stream_error)}")
+                
+                # If we got some processing, return partial success
+                if processing_started and graph_id:
+                    return {
+                        'success': True,
+                        'file_url': f'/retrieval/{graph_id}/document/{document.id}',
+                        'storage_path': f'graphs/{graph_id}/documents/{document.id}',
+                        'processing_id': str(graph_id),
+                        'chunks_processed': chunks_processed,
+                        'estimated_time_minutes': 1
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': f"Stream processing error: {str(stream_error)}"
+                    }
+            
+            # If we reach here, processing may still be ongoing
+            if processing_started:
+                return {
+                    'success': True,
+                    'file_url': f'/retrieval/processing/document/{document.id}',
+                    'storage_path': f'processing/documents/{document.id}',
+                    'processing_id': f'proc_{document.id}',
+                    'chunks_processed': chunks_processed,
+                    'estimated_time_minutes': 2
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': "No processing results received"
                 }
                 
-        except Exception as e:
-            logger.error(f"Error during document upload: {str(e)}")
+        except requests.RequestException as e:
+            logger.error(f"Error contacting retrieval service: {str(e)}")
             return {
                 'success': False,
                 'error': f"Service communication error: {str(e)}"
@@ -442,17 +527,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
     
     def _coordinate_url_processing(self, document, source_url, user):
         """Coordinate URL processing with retrieval service."""
+        retrieval_service_url = getattr(settings, 'RETRIEVER_SERVICE_URL', None)
+        
+        if not retrieval_service_url:
+            logger.warning("RETRIEVER_SERVICE_URL not configured, simulating processing")
+            return {
+                'success': True,
+                'processing_id': f'url_proc_{document.id}',
+                'estimated_time_minutes': 3
+            }
+        
         try:
-            # Get the retrieval client (will use mock if configured)
-            retrieval_client = get_retrieval_client()
-            
-            # Process URL using the retrieval client
-            result = retrieval_client.process_url(
-                url=source_url,
-                document_id=str(document.id),
-                user_id=str(user.id),
-                course_id=str(document.course.id),
-                processing_options={
+            data = {
+                'document_id': str(document.id),
+                'user_id': str(user.id),
+                'course_id': str(document.course.id),
+                'source_url': source_url,
+                'processing_options': {
                     'extract_text': True,
                     'generate_summary': True,
                     'extract_topics': True,
@@ -460,25 +551,30 @@ class DocumentViewSet(viewsets.ModelViewSet):
                     'follow_links': False,
                     'max_depth': 1
                 }
+            }
+            
+            response = requests.post(
+                f"{retrieval_service_url}/api/documents/process-url",
+                json=data,
+                timeout=30
             )
             
-            if result.get('success'):
-                logger.info(f"URL processing initiated for document {document.id}")
+            if response.status_code == 201:
+                result = response.json()
                 return {
                     'success': True,
-                    'processing_id': result.get('processing_id', f'url_proc_{document.id}'),
+                    'processing_id': result.get('processing_id'),
                     'estimated_time_minutes': result.get('estimated_time_minutes', 3)
                 }
             else:
-                error_msg = result.get('error', 'Unknown URL processing error')
-                logger.error(f"URL processing failed: {error_msg}")
+                logger.error(f"URL processing failed: {response.status_code} - {response.text}")
                 return {
                     'success': False,
-                    'error': error_msg
+                    'error': f"URL processing service error: {response.status_code}"
                 }
                 
-        except Exception as e:
-            logger.error(f"Error during URL processing: {str(e)}")
+        except requests.RequestException as e:
+            logger.error(f"Error contacting retrieval service for URL processing: {str(e)}")
             return {
                 'success': False,
                 'error': f"Service communication error: {str(e)}"

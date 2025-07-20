@@ -65,8 +65,8 @@ services:
       
       # External Services
       - SCRAPER_SERVICE_URL=${SCRAPER_SERVICE_URL:-http://scraper-service:8080}
-      - RETRIEVER_SERVICE_URL=${RETRIEVER_SERVICE_URL:-http://retriever-service:8002}
-      - USE_MOCK_RETRIEVAL_SERVICE=${USE_MOCK_RETRIEVAL_SERVICE:-True}
+      - RETRIEVER_SERVICE_URL=${RETRIEVER_SERVICE_URL:-http://scraper-service:8080}
+      - USE_MOCK_RETRIEVAL_SERVICE=${USE_MOCK_RETRIEVAL_SERVICE:-False}
       
       # Logging
       - LOGGING_LEVEL=${LOGGING_LEVEL:-INFO}
