@@ -29,7 +29,25 @@
       "Bash(git reset:*)",
       "Bash(sed:*)",
       "Bash(scriptsformat-code.bat)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(gcloud config get-value:*)",
+      "Bash(terraform:*)",
+      "Bash(/c/ProgramData/chocolatey/bin/terraform init)",
+      "Bash(/c/ProgramData/chocolatey/bin/terraform plan)",
+      "Bash(gcloud auth:*)",
+      "Bash(gcloud projects describe:*)",
+      "Bash(gcloud secrets delete:*)",
+      "Bash(head:*)",
+      "Bash(gcloud sql instances list:*)",
+      "Bash(gcloud artifacts repositories list:*)",
+      "Bash(gcloud sql databases list:*)",
+      "Bash(gcloud sql instances describe:*)",
+      "Bash(gcloud sql instances patch:*)",
+      "Bash(gcloud sql instances delete:*)",
+      "Bash(gcloud artifacts repositories describe:*)",
+      "Bash(gcloud artifacts docker images list:*)",
+      "Bash(gcloud artifacts repositories delete:*)",
+      "Bash(gcloud run services:*)"
     ],
     "deny": []
   }

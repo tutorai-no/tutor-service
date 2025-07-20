@@ -85,7 +85,7 @@ resource "google_sql_database_instance" "aksio_db" {
   deletion_protection = var.environment == "prod"
   
   settings {
-    tier              = var.environment == "prod" ? "db-n1-standard-1" : "db-f1-micro"
+    tier              = var.environment == "prod" ? "db-custom-1-3840" : "db-f1-micro"
     availability_type = "ZONAL"  # Cheaper than REGIONAL
     disk_size         = var.environment == "prod" ? 50 : 20
     disk_type         = "PD_SSD"
@@ -132,7 +132,7 @@ resource "google_secret_manager_secret" "django_secret" {
   secret_id = "${local.name_prefix}-django-secret"
   
   replication {
-    automatic = true
+    auto {}
   }
   
   labels = local.labels
@@ -140,31 +140,14 @@ resource "google_secret_manager_secret" "django_secret" {
   depends_on = [google_project_service.required_apis]
 }
 
-resource "google_secret_manager_secret_version" "django_secret_version" {
-  secret      = google_secret_manager_secret.django_secret.id
-  secret_data = random_password.django_secret.result
-}
-
-resource "google_secret_manager_secret" "db_password" {
-  secret_id = "${local.name_prefix}-db-password"
-  
-  replication {
-    automatic = true
-  }
-  
-  labels = local.labels
-}
-
-resource "google_secret_manager_secret_version" "db_password_version" {
-  secret      = google_secret_manager_secret.db_password.id
-  secret_data = random_password.db_password.result
-}
+# Note: Secret versions will be created separately after infrastructure setup
+# These can be populated using gcloud commands after terraform apply
 
 resource "google_secret_manager_secret" "openai_api_key" {
   secret_id = "${local.name_prefix}-openai-key"
   
   replication {
-    automatic = true
+    auto {}
   }
   
   labels = local.labels
@@ -242,118 +225,115 @@ resource "google_project_iam_member" "cloud_run_sa_bindings" {
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
-# Cloud Run Service
-resource "google_cloud_run_service" "aksio_backend" {
-  name     = "${local.name_prefix}-backend"
-  location = var.region
-  
-  template {
-    metadata {
-      annotations = {
-        "autoscaling.knative.dev/maxScale"        = "10"
-        "autoscaling.knative.dev/minScale"        = "0"
-        "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.aksio_db.connection_name
-        "run.googleapis.com/execution-environment" = "gen2"
-      }
-    }
-    
-    spec {
-      service_account_name = google_service_account.cloud_run_sa.email
-      
-      containers {
-        image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.aksio_registry.repository_id}/aksio-backend:latest"
-        
-        ports {
-          container_port = 8000
-        }
-        
-        env {
-          name  = "DJANGO_SETTINGS_MODULE"
-          value = "aksio.settings.production"
-        }
-        
-        env {
-          name  = "DJANGO_DEBUG"
-          value = "False"
-        }
-        
-        env {
-          name  = "DJANGO_ALLOWED_HOSTS"
-          value = var.domain_name
-        }
-        
-        env {
-          name = "DJANGO_SECRET_KEY"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.django_secret.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        
-        env {
-          name = "DATABASE_URL"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.db_password.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        
-        env {
-          name = "OPENAI_API_KEY"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.openai_api_key.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        
-        env {
-          name  = "GCS_BUCKET_NAME"
-          value = google_storage_bucket.aksio_static.name
-        }
-        
-        env {
-          name  = "GCS_MEDIA_BUCKET_NAME"
-          value = google_storage_bucket.aksio_media.name
-        }
-        
-        resources {
-          limits = {
-            cpu    = "1000m"
-            memory = "1Gi"
-          }
-        }
-      }
-    }
-  }
-  
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-  
-  depends_on = [google_project_service.required_apis]
-}
-
-# Allow unauthenticated access to Cloud Run service
-resource "google_cloud_run_service_iam_binding" "public_access" {
-  location = google_cloud_run_service.aksio_backend.location
-  service  = google_cloud_run_service.aksio_backend.name
-  role     = "roles/run.invoker"
-  members = [
-    "allUsers"
-  ]
-}
+# Cloud Run Service - Commented out until Docker image is available
+# Uncomment this after building and pushing your Docker image to the registry
+# 
+# resource "google_cloud_run_service" "aksio_backend" {
+#   name     = "${local.name_prefix}-backend"
+#   location = var.region
+#   
+#   template {
+#     metadata {
+#       annotations = {
+#         "autoscaling.knative.dev/maxScale"        = "10"
+#         "autoscaling.knative.dev/minScale"        = "0"
+#         "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.aksio_db.connection_name
+#         "run.googleapis.com/execution-environment" = "gen2"
+#       }
+#     }
+#     
+#     spec {
+#       service_account_name = google_service_account.cloud_run_sa.email
+#       
+#       containers {
+#         image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.aksio_registry.repository_id}/aksio-backend:latest"
+#         
+#         ports {
+#           container_port = 8000
+#         }
+#         
+#         env {
+#           name  = "DJANGO_SETTINGS_MODULE"
+#           value = "aksio.settings.production"
+#         }
+#         
+#         env {
+#           name  = "DJANGO_DEBUG"
+#           value = "False"
+#         }
+#         
+#         env {
+#           name  = "DJANGO_ALLOWED_HOSTS"
+#           value = var.domain_name
+#         }
+#         
+#         env {
+#           name = "DJANGO_SECRET_KEY"
+#           value_from {
+#             secret_key_ref {
+#               name = google_secret_manager_secret.django_secret.secret_id
+#               key  = "latest"
+#             }
+#           }
+#         }
+#         
+#         env {
+#           name  = "DATABASE_URL"
+#           value = "postgresql://aksio:${random_password.db_password.result}@/${google_sql_database.aksio_database.name}?host=/cloudsql/${google_sql_database_instance.aksio_db.connection_name}"
+#         }
+#         
+#         env {
+#           name = "OPENAI_API_KEY"
+#           value_from {
+#             secret_key_ref {
+#               name = google_secret_manager_secret.openai_api_key.secret_id
+#               key  = "latest"
+#             }
+#           }
+#         }
+#         
+#         env {
+#           name  = "GCS_BUCKET_NAME"
+#           value = google_storage_bucket.aksio_static.name
+#         }
+#         
+#         env {
+#           name  = "GCS_MEDIA_BUCKET_NAME"
+#           value = google_storage_bucket.aksio_media.name
+#         }
+#         
+#         resources {
+#           limits = {
+#             cpu    = "1000m"
+#             memory = "1Gi"
+#           }
+#         }
+#       }
+#     }
+#   }
+#   
+#   traffic {
+#     percent         = 100
+#     latest_revision = true
+#   }
+#   
+#   depends_on = [google_project_service.required_apis]
+# }
+# 
+# # Allow unauthenticated access to Cloud Run service
+# resource "google_cloud_run_service_iam_binding" "public_access" {
+#   location = google_cloud_run_service.aksio_backend.location
+#   service  = google_cloud_run_service.aksio_backend.name
+#   role     = "roles/run.invoker"
+#   members = [
+#     "allUsers"
+#   ]
+# }
 
 # Outputs
-output "cloud_run_url" {
-  value = google_cloud_run_service.aksio_backend.status[0].url
-}
+# output "cloud_run_url" {
+#   value = google_cloud_run_service.aksio_backend.status[0].url
+# }
 
 output "database_connection_name" {
   value = google_sql_database_instance.aksio_db.connection_name

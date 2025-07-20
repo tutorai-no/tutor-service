@@ -8,6 +8,7 @@ from .views import (
     StudySessionViewSet,
     LearningProgressViewSet,
     LearningAnalyticsViewSet,
+    AdaptiveLearningViewSet,
 )
 
 app_name = 'learning'
@@ -19,6 +20,7 @@ router.register(r'goals', StudyGoalViewSet, basename='study-goal')
 router.register(r'study-sessions', StudySessionViewSet, basename='study-session')
 router.register(r'progress', LearningProgressViewSet, basename='learning-progress')
 router.register(r'analytics', LearningAnalyticsViewSet, basename='learning-analytics')
+router.register(r'adaptive', AdaptiveLearningViewSet, basename='adaptive-learning')
 
 urlpatterns = [
     path('', include(router.urls)),

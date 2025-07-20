@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q, Count, Avg, Sum, F, Max, Min
@@ -8,6 +8,12 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+# Import adaptive learning services
+from .services.study_plan_generator import get_study_plan_generator
+from .services.performance_analysis import get_performance_analysis_service
+from .services.review_scheduling import get_review_scheduling_service
+from .services.progress_prediction import get_progress_prediction_service
 
 logger = logging.getLogger(__name__)
 
@@ -87,32 +93,47 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def generate_schedule(self, request, pk=None):
-        """Generate an optimal study schedule."""
+        """Generate an optimal study schedule using adaptive learning."""
         study_plan = self.get_object()
         
         # Get parameters
-        hours_per_day = request.data.get('hours_per_day', 2)
-        preferred_times = request.data.get('preferred_times', ['evening'])
-        include_weekends = request.data.get('include_weekends', True)
+        plan_type = request.data.get('plan_type', 'weekly')
+        target_date = request.data.get('target_date')
+        preferences = request.data.get('preferences', {})
         
-        # Generate schedule based on plan and preferences
-        schedule_data = self._generate_optimal_schedule(
-            study_plan, hours_per_day, preferred_times, include_weekends
+        # Parse target date if provided
+        if target_date:
+            try:
+                target_date = datetime.fromisoformat(target_date).date()
+            except (ValueError, TypeError):
+                target_date = None
+        
+        # Use adaptive study plan generator
+        generator = get_study_plan_generator()
+        result = generator.generate_adaptive_study_plan(
+            user=request.user,
+            course=study_plan.course,
+            plan_type=plan_type,
+            target_date=target_date,
+            preferences=preferences
         )
         
-        # Save schedule if requested
-        if request.data.get('save_schedule', False):
-            schedule = StudySchedule.objects.create(
-                user=request.user,
-                study_plan=study_plan,
-                schedule_data=schedule_data,
-                hours_per_day=hours_per_day,
-                preferred_times=preferred_times,
-                include_weekends=include_weekends
+        if result['success']:
+            # Update study plan with adaptive data
+            study_plan.plan_data = result['plan_data']
+            study_plan.save()
+            
+            return Response({
+                'schedule': result['plan_data']['schedule'],
+                'adaptations_made': result['plan_data']['adaptations_made'],
+                'recommendations': result['recommendations'],
+                'estimated_completion': result['plan_data']['estimated_completion']
+            })
+        else:
+            return Response(
+                {'error': result.get('error', 'Failed to generate adaptive schedule')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            return Response(StudyScheduleSerializer(schedule).data)
-        
-        return Response(schedule_data)
     
     @action(detail=True, methods=['get'])
     def recommendations(self, request, pk=None):
@@ -167,6 +188,94 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         }
         
         return Response(dashboard_data)
+    
+    @action(detail=True, methods=['post'])
+    def adapt_plan(self, request, pk=None):
+        """Adapt existing study plan based on recent performance."""
+        study_plan = self.get_object()
+        performance_update = request.data.get('performance_update', {})
+        
+        # Use adaptive study plan generator to adapt plan
+        generator = get_study_plan_generator()
+        result = generator.adapt_existing_plan(study_plan, performance_update)
+        
+        if result['success']:
+            # Update study plan with new adaptations
+            study_plan.plan_data = result['updated_plan_data']
+            study_plan.save()
+            
+            return Response({
+                'adaptations_made': result['adaptations_made'],
+                'recommendations': result['recommendations'],
+                'updated_schedule': result['updated_plan_data']['schedule']
+            })
+        else:
+            return Response(
+                {'error': result.get('error', 'Failed to adapt plan')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def performance_analysis(self, request, pk=None):
+        """Get comprehensive performance analysis for the study plan."""
+        study_plan = self.get_object()
+        time_period = int(request.query_params.get('days', 30))
+        
+        # Use performance analysis service
+        performance_service = get_performance_analysis_service()
+        analysis = performance_service.analyze_comprehensive_performance(
+            user=request.user,
+            course=study_plan.course,
+            time_period_days=time_period
+        )
+        
+        return Response(analysis)
+    
+    @action(detail=True, methods=['get'])
+    def progress_prediction(self, request, pk=None):
+        """Get progress prediction for course completion."""
+        study_plan = self.get_object()
+        target_mastery_level = int(request.query_params.get('mastery_level', 4))
+        
+        # Use progress prediction service
+        prediction_service = get_progress_prediction_service()
+        prediction = prediction_service.predict_course_completion(
+            user=request.user,
+            course=study_plan.course,
+            target_mastery_level=target_mastery_level
+        )
+        
+        return Response(prediction)
+    
+    @action(detail=True, methods=['get'])
+    def review_schedule(self, request, pk=None):
+        """Get intelligent review schedule for the course."""
+        study_plan = self.get_object()
+        target_retention = float(request.query_params.get('target_retention', 0.85))
+        
+        # Use review scheduling service
+        review_service = get_review_scheduling_service()
+        schedule = review_service.schedule_intelligent_reviews(
+            user=request.user,
+            course=study_plan.course,
+            target_retention=target_retention
+        )
+        
+        return Response(schedule)
+    
+    @action(detail=False, methods=['post'])
+    def real_time_update(self, request):
+        """Process real-time performance update and provide feedback."""
+        recent_activity = request.data
+        
+        # Use performance analysis service for real-time feedback
+        performance_service = get_performance_analysis_service()
+        feedback = performance_service.get_real_time_performance_update(
+            user=request.user,
+            recent_activity=recent_activity
+        )
+        
+        return Response(feedback)
     
     def _generate_optimal_schedule(self, study_plan, hours_per_day, preferred_times, include_weekends):
         """Generate an optimal study schedule based on goals and preferences."""
@@ -742,6 +851,40 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         longest_streak = max(longest_streak, temp_streak)
         
         return {'current': current_streak, 'longest': longest_streak}
+    
+    @action(detail=True, methods=['post'])
+    def update_review_schedule(self, request, pk=None):
+        """Update review schedule based on session performance."""
+        session = self.get_object()
+        
+        if session.status != 'completed':
+            return Response(
+                {'error': 'Can only update review schedule for completed sessions'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Extract performance data from session
+        performance_data = {
+            'correct': request.data.get('performance_rating', 3) >= 3,
+            'response_time': session.duration_minutes * 60 / max(1, len(session.topics_covered)),
+            'difficulty': 'medium',  # Default
+            'confidence': request.data.get('confidence_rating', 3)
+        }
+        
+        # Update review schedule for each topic covered
+        review_service = get_review_scheduling_service()
+        results = []
+        
+        for topic in session.topics_covered:
+            result = review_service.update_review_schedule_realtime(
+                user=request.user,
+                item_id=topic,
+                item_type='topic',
+                performance=performance_data
+            )
+            results.append(result)
+        
+        return Response({'review_updates': results})
 
 
 class LearningProgressViewSet(viewsets.ModelViewSet):
@@ -957,6 +1100,148 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
             path_analysis.append(analysis)
         
         return Response({'learning_paths': path_analysis})
+    
+    @action(detail=False, methods=['get'])
+    def adaptive_performance_analysis(self, request):
+        """Get adaptive performance analysis with personalized insights."""
+        time_period = int(request.query_params.get('days', 30))
+        course_id = request.query_params.get('course_id')
+        
+        # Get course if specified
+        course = None
+        if course_id:
+            try:
+                from courses.models import Course
+                course = Course.objects.get(id=course_id, user=request.user)
+            except Course.DoesNotExist:
+                return Response(
+                    {'error': 'Course not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Use adaptive performance analysis service
+        performance_service = get_performance_analysis_service()
+        analysis = performance_service.analyze_comprehensive_performance(
+            user=request.user,
+            course=course,
+            time_period_days=time_period
+        )
+        
+        return Response(analysis)
+    
+    @action(detail=False, methods=['get'])
+    def performance_trajectory(self, request):
+        """Get predicted performance trajectory."""
+        prediction_days = int(request.query_params.get('prediction_days', 30))
+        course_id = request.query_params.get('course_id')
+        
+        # Get course if specified
+        course = None
+        if course_id:
+            try:
+                from courses.models import Course
+                course = Course.objects.get(id=course_id, user=request.user)
+            except Course.DoesNotExist:
+                return Response(
+                    {'error': 'Course not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Use performance analysis service
+        performance_service = get_performance_analysis_service()
+        trajectory = performance_service.predict_performance_trajectory(
+            user=request.user,
+            course=course,
+            prediction_days=prediction_days
+        )
+        
+        return Response(trajectory)
+    
+    @action(detail=False, methods=['get'])
+    def completion_predictions(self, request):
+        """Get completion predictions for all active courses."""
+        # Get active study plans
+        active_plans = StudyPlan.objects.filter(
+            user=request.user,
+            is_active=True
+        )
+        
+        prediction_service = get_progress_prediction_service()
+        predictions = []
+        
+        for plan in active_plans:
+            prediction = prediction_service.predict_course_completion(
+                user=request.user,
+                course=plan.course
+            )
+            
+            if prediction['success']:
+                predictions.append({
+                    'course_id': str(plan.course.id),
+                    'course_name': plan.course.name,
+                    'study_plan_id': str(plan.id),
+                    'prediction': prediction
+                })
+        
+        return Response({'course_predictions': predictions})
+    
+    @action(detail=False, methods=['get'])
+    def optimal_schedules(self, request):
+        """Get optimal schedule recommendations for all courses."""
+        target_date_str = request.query_params.get('target_date')
+        weekly_hours = float(request.query_params.get('weekly_hours', 20))
+        
+        # Parse target date
+        target_date = None
+        if target_date_str:
+            try:
+                target_date = datetime.fromisoformat(target_date_str).date()
+            except (ValueError, TypeError):
+                pass
+        
+        # Get active study plans
+        active_plans = StudyPlan.objects.filter(
+            user=request.user,
+            is_active=True
+        )
+        
+        prediction_service = get_progress_prediction_service()
+        schedules = []
+        
+        for plan in active_plans:
+            if target_date:
+                schedule = prediction_service.predict_optimal_study_schedule(
+                    user=request.user,
+                    course=plan.course,
+                    target_completion_date=target_date,
+                    weekly_hours_available=weekly_hours
+                )
+                
+                if schedule['success']:
+                    schedules.append({
+                        'course_id': str(plan.course.id),
+                        'course_name': plan.course.name,
+                        'study_plan_id': str(plan.id),
+                        'optimal_schedule': schedule
+                    })
+        
+        return Response({'optimal_schedules': schedules})
+    
+    @action(detail=False, methods=['get'])
+    def review_load_optimization(self, request):
+        """Get review load optimization for all courses."""
+        target_daily_reviews = int(request.query_params.get('target_daily_reviews', 50))
+        max_daily_reviews = int(request.query_params.get('max_daily_reviews', 100))
+        
+        # Use review scheduling service
+        review_service = get_review_scheduling_service()
+        optimization = review_service.optimize_daily_review_load(
+            user=request.user,
+            target_daily_reviews=target_daily_reviews,
+            max_daily_reviews=max_daily_reviews
+        )
+        
+        return Response(optimization)
     
     def _calculate_learning_velocity(self, user, start_date):
         """Calculate how fast the user is learning."""
@@ -1201,3 +1486,359 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
                 'time_remaining_ratio': round(time_ratio, 2),
             }
         }
+
+
+class AdaptiveLearningViewSet(viewsets.ViewSet):
+    """ViewSet for adaptive learning features and AI-powered recommendations."""
+    
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=['post'])
+    def generate_adaptive_plan(self, request):
+        """Generate a completely new adaptive study plan."""
+        course_id = request.data.get('course_id')
+        plan_type = request.data.get('plan_type', 'weekly')
+        target_date = request.data.get('target_date')
+        preferences = request.data.get('preferences', {})
+        
+        # Get course
+        try:
+            from courses.models import Course
+            course = Course.objects.get(id=course_id, user=request.user)
+        except Course.DoesNotExist:
+            return Response(
+                {'error': 'Course not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Parse target date
+        if target_date:
+            try:
+                target_date = datetime.fromisoformat(target_date).date()
+            except (ValueError, TypeError):
+                target_date = None
+        
+        # Generate adaptive study plan
+        generator = get_study_plan_generator()
+        result = generator.generate_adaptive_study_plan(
+            user=request.user,
+            course=course,
+            plan_type=plan_type,
+            target_date=target_date,
+            preferences=preferences
+        )
+        
+        if result['success']:
+            # Create new study plan with adaptive data
+            study_plan = StudyPlan.objects.create(
+                user=request.user,
+                course=course,
+                name=f"Adaptive {plan_type.title()} Plan for {course.name}",
+                description="AI-generated adaptive study plan",
+                plan_data=result['plan_data'],
+                start_date=timezone.now().date(),
+                end_date=target_date,
+                is_active=True
+            )
+            
+            # Deactivate other plans for the same course
+            StudyPlan.objects.filter(
+                user=request.user,
+                course=course,
+                is_active=True
+            ).exclude(id=study_plan.id).update(is_active=False)
+            
+            return Response({
+                'study_plan_id': str(study_plan.id),
+                'plan_data': result['plan_data'],
+                'recommendations': result['recommendations']
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                {'error': result.get('error', 'Failed to generate adaptive plan')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'])
+    def process_study_session(self, request):
+        """Process completed study session and adapt learning."""
+        session_data = request.data
+        course_id = session_data.get('course_id')
+        
+        # Get course
+        try:
+            from courses.models import Course
+            course = Course.objects.get(id=course_id, user=request.user)
+        except Course.DoesNotExist:
+            return Response(
+                {'error': 'Course not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Process real-time performance update
+        performance_service = get_performance_analysis_service()
+        feedback = performance_service.get_real_time_performance_update(
+            user=request.user,
+            recent_activity={
+                'type': 'study_session',
+                'duration_minutes': session_data.get('duration_minutes', 0),
+                'productivity_rating': session_data.get('productivity_rating', 3),
+                'completed': session_data.get('completed', True),
+                'topics_covered': session_data.get('topics_covered', [])
+            }
+        )
+        
+        # Update review schedules for covered topics
+        review_service = get_review_scheduling_service()
+        review_updates = []
+        
+        for topic in session_data.get('topics_covered', []):
+            performance_data = {
+                'correct': session_data.get('understanding_score', 70) >= 70,
+                'response_time': session_data.get('duration_minutes', 30) * 60 / max(1, len(session_data.get('topics_covered', [topic]))),
+                'difficulty': 'medium',
+                'mastery_level': session_data.get('mastery_level', 3)
+            }
+            
+            update_result = review_service.update_review_schedule_realtime(
+                user=request.user,
+                item_id=topic,
+                item_type='topic',
+                performance=performance_data
+            )
+            review_updates.append(update_result)
+        
+        # Check if study plan needs adaptation
+        active_plan = StudyPlan.objects.filter(
+            user=request.user,
+            course=course,
+            is_active=True
+        ).first()
+        
+        adaptation_result = None
+        if active_plan:
+            generator = get_study_plan_generator()
+            adaptation_result = generator.adapt_existing_plan(
+                active_plan,
+                performance_update=feedback
+            )
+            
+            if adaptation_result.get('success') and adaptation_result.get('adaptations_made'):
+                active_plan.plan_data = adaptation_result['updated_plan_data']
+                active_plan.save()
+        
+        return Response({
+            'performance_feedback': feedback,
+            'review_updates': review_updates,
+            'plan_adaptation': adaptation_result,
+            'recommendations': adaptation_result.get('recommendations', []) if adaptation_result else []
+        })
+    
+    @action(detail=False, methods=['get'])
+    def learning_insights(self, request):
+        """Get comprehensive learning insights and recommendations."""
+        course_id = request.query_params.get('course_id')
+        time_period = int(request.query_params.get('days', 30))
+        
+        # Get course if specified
+        course = None
+        if course_id:
+            try:
+                from courses.models import Course
+                course = Course.objects.get(id=course_id, user=request.user)
+            except Course.DoesNotExist:
+                return Response(
+                    {'error': 'Course not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Get comprehensive performance analysis
+        performance_service = get_performance_analysis_service()
+        performance_analysis = performance_service.analyze_comprehensive_performance(
+            user=request.user,
+            course=course,
+            time_period_days=time_period
+        )
+        
+        # Get performance trajectory
+        trajectory = performance_service.predict_performance_trajectory(
+            user=request.user,
+            course=course,
+            prediction_days=30
+        )
+        
+        # Get review schedule optimization
+        review_service = get_review_scheduling_service()
+        review_optimization = review_service.optimize_daily_review_load(
+            user=request.user,
+            target_daily_reviews=50,
+            max_daily_reviews=100
+        )
+        
+        # Get progress predictions
+        predictions = []
+        if course:
+            prediction_service = get_progress_prediction_service()
+            prediction = prediction_service.predict_course_completion(
+                user=request.user,
+                course=course
+            )
+            if prediction.get('success'):
+                predictions.append(prediction)
+        
+        return Response({
+            'performance_analysis': performance_analysis,
+            'performance_trajectory': trajectory,
+            'review_optimization': review_optimization,
+            'completion_predictions': predictions,
+            'learning_summary': {
+                'overall_score': performance_analysis.get('overall_score', 0),
+                'performance_category': performance_analysis.get('performance_category', 'unknown'),
+                'main_strengths': performance_analysis.get('strengths_weaknesses', {}).get('strengths', []),
+                'improvement_areas': performance_analysis.get('strengths_weaknesses', {}).get('weaknesses', []),
+                'key_recommendations': performance_analysis.get('recommendations', [])[:3]
+            }
+        })
+    
+    @action(detail=False, methods=['post'])
+    def manual_override(self, request):
+        """Allow manual override of adaptive recommendations."""
+        study_plan_id = request.data.get('study_plan_id')
+        override_type = request.data.get('override_type')  # 'schedule', 'difficulty', 'review_frequency'
+        override_data = request.data.get('override_data', {})
+        
+        # Get study plan
+        try:
+            study_plan = StudyPlan.objects.get(
+                id=study_plan_id,
+                user=request.user
+            )
+        except StudyPlan.DoesNotExist:
+            return Response(
+                {'error': 'Study plan not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Apply manual override
+        current_plan_data = study_plan.plan_data or {}
+        
+        if override_type == 'schedule':
+            # Allow manual schedule modifications
+            schedule = current_plan_data.get('schedule', [])
+            session_id = override_data.get('session_id')
+            new_date = override_data.get('new_date')
+            new_time = override_data.get('new_time')
+            
+            for session in schedule:
+                if session.get('session_id') == session_id:
+                    if new_date:
+                        session['date'] = new_date
+                    if new_time:
+                        session['start_time'] = new_time
+                    session['manually_modified'] = True
+                    break
+            
+            current_plan_data['schedule'] = schedule
+        
+        elif override_type == 'difficulty':
+            # Allow difficulty adjustments
+            difficulty_adjustment = override_data.get('adjustment', 0)  # -1, 0, 1
+            current_plan_data['difficulty_override'] = difficulty_adjustment
+        
+        elif override_type == 'review_frequency':
+            # Allow review frequency changes
+            frequency_days = override_data.get('frequency_days', 3)
+            current_plan_data['review_frequency_override'] = frequency_days
+        
+        # Add override tracking
+        overrides = current_plan_data.get('manual_overrides', [])
+        overrides.append({
+            'timestamp': timezone.now().isoformat(),
+            'type': override_type,
+            'data': override_data,
+            'user_reason': request.data.get('reason', '')
+        })
+        current_plan_data['manual_overrides'] = overrides
+        
+        # Save updated plan
+        study_plan.plan_data = current_plan_data
+        study_plan.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Manual override applied for {override_type}',
+            'updated_plan_data': current_plan_data
+        })
+    
+    @action(detail=False, methods=['get'])
+    def adaptive_dashboard(self, request):
+        """Get adaptive learning dashboard with all key metrics."""
+        # Get performance analysis for all courses
+        performance_service = get_performance_analysis_service()
+        overall_analysis = performance_service.analyze_comprehensive_performance(
+            user=request.user,
+            course=None,  # All courses
+            time_period_days=30
+        )
+        
+        # Get active study plans with predictions
+        active_plans = StudyPlan.objects.filter(
+            user=request.user,
+            is_active=True
+        )
+        
+        prediction_service = get_progress_prediction_service()
+        plan_predictions = []
+        
+        for plan in active_plans:
+            prediction = prediction_service.predict_course_completion(
+                user=request.user,
+                course=plan.course
+            )
+            
+            if prediction.get('success'):
+                plan_predictions.append({
+                    'study_plan_id': str(plan.id),
+                    'course_name': plan.course.name,
+                    'prediction': prediction
+                })
+        
+        # Get review schedule summary
+        review_service = get_review_scheduling_service()
+        review_summary = review_service.optimize_daily_review_load(
+            user=request.user,
+            target_daily_reviews=50,
+            max_daily_reviews=100
+        )
+        
+        # Calculate adaptive insights
+        dashboard_data = {
+            'overall_performance': {
+                'score': overall_analysis.get('overall_score', 0),
+                'category': overall_analysis.get('performance_category', 'unknown'),
+                'trend': overall_analysis.get('trends', {}).get('overall_trend', 'stable')
+            },
+            'active_plans': len(active_plans),
+            'completion_predictions': plan_predictions,
+            'review_workload': {
+                'today': review_summary.get('load_metrics', {}).get('average_daily_reviews', 0),
+                'this_week': review_summary.get('load_metrics', {}).get('peak_load_day', 0),
+                'optimization_needed': len(review_summary.get('recommendations', []))
+            },
+            'key_strengths': overall_analysis.get('strengths_weaknesses', {}).get('strengths', [])[:3],
+            'improvement_areas': overall_analysis.get('strengths_weaknesses', {}).get('weaknesses', [])[:3],
+            'priority_recommendations': overall_analysis.get('recommendations', [])[:5],
+            'adaptation_status': {
+                'plans_adapted_this_week': StudyPlan.objects.filter(
+                    user=request.user,
+                    updated_at__gte=timezone.now() - timedelta(days=7)
+                ).count(),
+                'manual_overrides_this_week': sum(
+                    len(plan.plan_data.get('manual_overrides', [])) 
+                    for plan in active_plans 
+                    if plan.plan_data
+                )
+            }
+        }
+        
+        return Response(dashboard_data)

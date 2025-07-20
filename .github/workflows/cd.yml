@@ -11,7 +11,7 @@ on:
 env:
   PROJECT_ID: production-466308
   REGION: europe-west1
-  REPOSITORY: aksio
+  REPOSITORY: aksio-prod-registry
   SERVICE: aksio-backend
   CLOUD_SQL_CONNECTION_NAME: ${{ secrets.CLOUD_SQL_CONNECTION_NAME }}
 
