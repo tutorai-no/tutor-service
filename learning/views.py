@@ -19,10 +19,16 @@ from .services.study_plan_generator import get_study_plan_generator
 logger = logging.getLogger(__name__)
 
 from .models import (
+    LearningProgress,
+    StudyGoal,
     StudyPlan,
+    StudyRecommendation,
     StudySession,
 )
 from .serializers import (
+    LearningProgressSerializer,
+    StudyGoalCreateSerializer,
+    StudyGoalSerializer,
     StudyPlanCreateSerializer,
     StudyPlanDetailSerializer,
     StudyPlanSerializer,
@@ -135,7 +141,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
 
         # Save recommendations
         for rec_data in recommendations:
-            LearningRecommendation.objects.create(
+            StudyRecommendation.objects.create(
                 user=request.user, study_plan=study_plan, **rec_data
             )
 
@@ -150,7 +156,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         active_plans = self.get_queryset().filter(is_active=True)
 
         # Upcoming milestones
-        upcoming_goals = LearningGoal.objects.filter(
+        upcoming_goals = StudyGoal.objects.filter(
             study_plan__user=user,
             status__in=["not_started", "in_progress"],
             target_date__gte=timezone.now(),
@@ -158,7 +164,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         ).order_by("target_date")[:5]
 
         # Recent progress
-        recent_progress = ProgressEntry.objects.filter(
+        recent_progress = LearningProgress.objects.filter(
             user=user, created_at__gte=timezone.now() - timedelta(days=7)
         ).order_by("-created_at")[:10]
 
@@ -167,8 +173,8 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
 
         dashboard_data = {
             "active_plans": StudyPlanSerializer(active_plans, many=True).data,
-            "upcoming_goals": LearningGoalSerializer(upcoming_goals, many=True).data,
-            "recent_progress": ProgressEntrySerializer(recent_progress, many=True).data,
+            "upcoming_goals": StudyGoalSerializer(upcoming_goals, many=True).data,
+            "recent_progress": LearningProgressSerializer(recent_progress, many=True).data,
             "study_streak": study_streak,
             "weekly_hours": self._calculate_weekly_hours(user),
             "completion_rate": self._calculate_completion_rate(user),
@@ -465,12 +471,12 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
 
     def _calculate_completion_rate(self, user):
         """Calculate overall goal completion rate."""
-        total_goals = LearningGoal.objects.filter(study_plan__user=user).count()
+        total_goals = StudyGoal.objects.filter(study_plan__user=user).count()
 
         if total_goals == 0:
             return 0
 
-        completed_goals = LearningGoal.objects.filter(
+        completed_goals = StudyGoal.objects.filter(
             study_plan__user=user, status="completed"
         ).count()
 
@@ -485,14 +491,14 @@ class StudyGoalViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
         if self.action == "create":
-            return LearningGoalCreateSerializer
+            return StudyGoalCreateSerializer
         elif self.action in ["retrieve", "update", "partial_update"]:
-            return LearningGoalDetailSerializer
-        return LearningGoalSerializer
+            return StudyGoalSerializer
+        return StudyGoalSerializer
 
     def get_queryset(self):
         """Get learning goals for the authenticated user."""
-        return LearningGoal.objects.filter(study_plan__user=self.request.user)
+        return StudyGoal.objects.filter(study_plan__user=self.request.user)
 
     def perform_create(self, serializer):
         """Create a new learning goal."""
@@ -513,7 +519,7 @@ class StudyGoalViewSet(viewsets.ModelViewSet):
         goal.save()
 
         # Create progress entry
-        ProgressEntry.objects.create(
+        LearningProgress.objects.create(
             user=request.user,
             study_plan=goal.study_plan,
             goal=goal,
@@ -544,7 +550,7 @@ class StudyGoalViewSet(viewsets.ModelViewSet):
             goal.save()
 
             # Create progress entry
-            ProgressEntry.objects.create(
+            LearningProgress.objects.create(
                 user=request.user,
                 study_plan=goal.study_plan,
                 goal=goal,
@@ -557,7 +563,7 @@ class StudyGoalViewSet(viewsets.ModelViewSet):
                 },
             )
 
-        return Response(LearningGoalDetailSerializer(goal).data)
+        return Response(StudyGoalSerializer(goal).data)
 
     @action(detail=True, methods=["get"])
     def resources(self, request, pk=None):
@@ -582,7 +588,7 @@ class StudyGoalViewSet(viewsets.ModelViewSet):
             .order_by("target_date")
         )
 
-        serializer = LearningGoalSerializer(goals, many=True)
+        serializer = StudyGoalSerializer(goals, many=True)
         return Response(serializer.data)
 
     def _generate_resource_recommendations(self, goal):
@@ -704,7 +710,7 @@ class StudySessionViewSet(viewsets.ModelViewSet):
                 progress = update.get("progress_percentage")
                 if goal_id and progress is not None:
                     try:
-                        goal = LearningGoal.objects.get(
+                        goal = StudyGoal.objects.get(
                             id=goal_id, study_plan__user=request.user
                         )
                         goal.progress_percentage = min(100, max(0, progress))
@@ -713,11 +719,11 @@ class StudySessionViewSet(viewsets.ModelViewSet):
                         if goal.progress_percentage == 100:
                             goal.status = "completed"
                         goal.save()
-                    except LearningGoal.DoesNotExist:
+                    except StudyGoal.DoesNotExist:
                         pass
 
             # Create progress entry
-            ProgressEntry.objects.create(
+            LearningProgress.objects.create(
                 user=request.user,
                 study_plan=session.study_plan,
                 progress_type="study_session",
@@ -918,13 +924,11 @@ class LearningProgressViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
-        if self.action == "create":
-            return ProgressEntryCreateSerializer
-        return ProgressEntrySerializer
+        return LearningProgressSerializer
 
     def get_queryset(self):
         """Get progress entries for the authenticated user."""
-        return ProgressEntry.objects.filter(user=self.request.user)
+        return LearningProgress.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         """Create a new progress entry."""
@@ -951,7 +955,7 @@ class LearningProgressViewSet(viewsets.ModelViewSet):
             date_key = entry.created_at.date().isoformat()
             if date_key not in timeline:
                 timeline[date_key] = []
-            timeline[date_key].append(ProgressEntrySerializer(entry).data)
+            timeline[date_key].append(LearningProgressSerializer(entry).data)
 
         return Response(timeline)
 
@@ -1002,14 +1006,14 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
         total_study_hours = round(total_study_minutes / 60, 1)
 
         # Goal completion analytics
-        goals = LearningGoal.objects.filter(study_plan__user=user)
+        goals = StudyGoal.objects.filter(study_plan__user=user)
         completed_goals = goals.filter(
             status="completed", actual_completion_date__gte=start_date
         ).count()
 
         # Progress over time
         progress_by_week = (
-            ProgressEntry.objects.filter(user=user, created_at__gte=start_date)
+            LearningProgress.objects.filter(user=user, created_at__gte=start_date)
             .annotate(week=TruncWeek("created_at"))
             .values("week")
             .annotate(
@@ -1053,7 +1057,7 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
 
         # Goal completion trends
         goal_trends = (
-            LearningGoal.objects.filter(
+            StudyGoal.objects.filter(
                 study_plan__user=user, actual_completion_date__gte=start_date
             )
             .annotate(month=TruncMonth("actual_completion_date"))
@@ -1251,7 +1255,7 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
 
     def _calculate_learning_velocity(self, user, start_date):
         """Calculate how fast the user is learning."""
-        goals_completed = LearningGoal.objects.filter(
+        goals_completed = StudyGoal.objects.filter(
             study_plan__user=user,
             status="completed",
             actual_completion_date__gte=start_date,
@@ -1361,29 +1365,15 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
 
     def _analyze_knowledge_progress(self, user, start_date):
         """Analyze progress across different knowledge areas."""
-        knowledge_areas = KnowledgeArea.objects.filter(user=user)
-
+        # TODO: Implement KnowledgeArea model or remove this functionality
+        # For now, return empty list to prevent crashes
         progress = []
-        for area in knowledge_areas:
-            area_progress = {
-                "area": area.name,
-                "proficiency_level": area.proficiency_level,
-                "goals_in_area": area.related_goals.count(),
-                "completed_goals": area.related_goals.filter(
-                    status="completed"
-                ).count(),
-                "recent_activity": (
-                    area.last_studied.isoformat() if area.last_studied else None
-                ),
-            }
-            progress.append(area_progress)
-
         return progress
 
     def _identify_improvement_areas(self, user):
         """Identify areas that need improvement."""
         # Find goals with low progress
-        struggling_goals = LearningGoal.objects.filter(
+        struggling_goals = StudyGoal.objects.filter(
             study_plan__user=user,
             status="in_progress",
             progress_percentage__lt=50,
@@ -1414,7 +1404,7 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
                 incomplete_prereqs = [
                     p
                     for p in goal.prerequisites
-                    if LearningGoal.objects.filter(
+                    if StudyGoal.objects.filter(
                         id=p, status__in=["not_started", "in_progress"]
                     ).exists()
                 ]

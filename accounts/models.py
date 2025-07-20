@@ -348,7 +348,7 @@ class UserStreak(models.Model):
         # Only update total study tracking if there was actual activity today
         if study_activity_today:
             self.total_study_days += 1
-        
+
         # Always increment session count since this method represents a study session
         self.total_study_sessions += 1
 

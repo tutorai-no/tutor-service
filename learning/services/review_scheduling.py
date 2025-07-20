@@ -225,9 +225,9 @@ class ReviewSchedulingService(AdaptiveLearningService):
                         "id": str(flashcard.id),
                         "type": "flashcard",
                         "title": (
-                            flashcard.front[:50] + "..."
-                            if len(flashcard.front) > 50
-                            else flashcard.front
+                            flashcard.question[:50] + "..."
+                            if len(flashcard.question) > 50
+                            else flashcard.question
                         ),
                         "difficulty": "medium",
                         "last_reviewed": None,
@@ -248,11 +248,11 @@ class ReviewSchedulingService(AdaptiveLearningService):
                             "id": str(flashcard.id),
                             "type": "flashcard",
                             "title": (
-                                flashcard.front[:50] + "..."
-                                if len(flashcard.front) > 50
-                                else flashcard.front
+                                flashcard.question[:50] + "..."
+                                if len(flashcard.question) > 50
+                                else flashcard.question
                             ),
-                            "difficulty": last_review.difficulty,
+                            "difficulty": self._map_quality_to_difficulty(last_review.quality_response),
                             "last_reviewed": last_review.created_at.date().isoformat(),
                             "next_review_date": next_review.isoformat(),
                             "priority": self._calculate_review_priority(last_review),
@@ -769,9 +769,20 @@ class ReviewSchedulingService(AdaptiveLearningService):
 
         return recommendations
 
+    def _map_quality_to_difficulty(self, quality_response: int) -> str:
+        """Map quality_response to difficulty level."""
+        if quality_response >= 4:
+            return "easy"
+        elif quality_response == 3:
+            return "medium"
+        elif quality_response in [1, 2]:
+            return "hard"
+        else:  # quality_response == 0
+            return "again"
+
     def _calculate_next_flashcard_review(self, flashcard, last_review):
         """Calculate next review date for a flashcard."""
-        difficulty = last_review.difficulty
+        difficulty = self._map_quality_to_difficulty(last_review.quality_response)
         days_since_review = (timezone.now().date() - last_review.created_at.date()).days
 
         # Simple interval calculation
