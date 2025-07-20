@@ -60,8 +60,10 @@ class TestProgressPredictionService(TestCase):
             user=self.user,
             course=self.course,
             title="Django Practice",
-            duration_minutes=60,
-            completed=True,
+            session_type="practice",
+            scheduled_start=timezone.now(),
+            scheduled_end=timezone.now() + timedelta(hours=1),
+            status="completed",
         )
 
     def test_service_initialization(self):
@@ -249,8 +251,10 @@ class TestProgressPredictionService(TestCase):
                 user=self.user,
                 course=self.course,
                 title=f"Session {i}",
-                duration_minutes=45 + i * 15,
-                completed=True,
+                session_type="practice",
+                scheduled_start=timezone.now() - timedelta(days=i),
+                scheduled_end=timezone.now() - timedelta(days=i) + timedelta(minutes=45 + i * 15),
+                status="completed",
                 created_at=timezone.now() - timedelta(days=i),
             )
 
@@ -441,8 +445,10 @@ class TestProgressPredictionService(TestCase):
                 user=self.user,
                 course=self.course,
                 title=f"Daily Session {i}",
-                duration_minutes=60,
-                completed=True,
+                session_type="practice",
+                scheduled_start=date,
+                scheduled_end=date + timedelta(hours=1),
+                status="completed",
                 created_at=date,
             )
 

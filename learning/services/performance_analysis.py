@@ -413,8 +413,8 @@ class PerformanceAnalysisService(AdaptiveLearningService):
                 "review_efficiency": 0,
             }
 
-        # Retention rate (easy + medium responses)
-        successful_reviews = reviews.filter(difficulty__in=["easy", "medium"]).count()
+        # Retention rate (quality_response >= 3 considered successful)
+        successful_reviews = reviews.filter(quality_response__gte=3).count()
         total_reviews = reviews.count()
         retention_rate = (successful_reviews / total_reviews) * 100
 
@@ -424,12 +424,12 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         # Review efficiency
         review_efficiency = self._calculate_review_efficiency(reviews)
 
-        # Difficulty distribution
+        # Quality distribution (mapped from quality_response)
         difficulty_dist = {
-            "easy": reviews.filter(difficulty="easy").count(),
-            "medium": reviews.filter(difficulty="medium").count(),
-            "hard": reviews.filter(difficulty="hard").count(),
-            "again": reviews.filter(difficulty="again").count(),
+            "easy": reviews.filter(quality_response__gte=4).count(),  # 4-5: Easy
+            "medium": reviews.filter(quality_response=3).count(),     # 3: Medium
+            "hard": reviews.filter(quality_response__in=[1, 2]).count(),  # 1-2: Hard
+            "again": reviews.filter(quality_response=0).count(),     # 0: Again
         }
 
         return {
@@ -908,7 +908,7 @@ class PerformanceAnalysisService(AdaptiveLearningService):
                 "-created_at"
             )[:3]
 
-            if all(review.difficulty == "easy" for review in recent_reviews):
+            if all(review.quality_response >= 4 for review in recent_reviews):
                 mastered_count += 1
 
         return mastered_count
@@ -924,9 +924,9 @@ class PerformanceAnalysisService(AdaptiveLearningService):
 
         for review in reviews.filter(response_time__isnull=False):
             # Optimal response time: 2-5 seconds
-            response_time = review.response_time
+            response_time = review.response_time_seconds
 
-            if review.difficulty in ["easy", "medium"]:
+            if review.quality_response >= 3:
                 if 2 <= response_time <= 5:
                     efficiency = 100
                 elif response_time < 2:
@@ -1469,9 +1469,9 @@ class PerformanceAnalysisService(AdaptiveLearningService):
             return {"easy": 0.0, "medium": 0.0, "hard": 0.0}
 
         total = len(reviews)
-        easy_count = sum(1 for r in reviews if r.get("difficulty") == "easy")
-        medium_count = sum(1 for r in reviews if r.get("difficulty") == "medium")
-        hard_count = sum(1 for r in reviews if r.get("difficulty") == "hard")
+        easy_count = sum(1 for r in reviews if r.get("quality_response", 0) >= 4)
+        medium_count = sum(1 for r in reviews if r.get("quality_response", 0) == 3)
+        hard_count = sum(1 for r in reviews if r.get("quality_response", 0) in [1, 2])
 
         return {
             "easy": round((easy_count / total) * 100, 1) if total > 0 else 0.0,

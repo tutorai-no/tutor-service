@@ -831,10 +831,10 @@ class ReviewSchedulingService(AdaptiveLearningService):
     def _analyze_difficulty_patterns(self, reviews) -> dict[str, Any]:
         """Analyze patterns in difficulty responses."""
         difficulty_counts = {
-            "easy": reviews.filter(difficulty="easy").count(),
-            "medium": reviews.filter(difficulty="medium").count(),
-            "hard": reviews.filter(difficulty="hard").count(),
-            "again": reviews.filter(difficulty="again").count(),
+            "easy": reviews.filter(quality_response__gte=4).count(),
+            "medium": reviews.filter(quality_response=3).count(),
+            "hard": reviews.filter(quality_response__in=[1, 2]).count(),
+            "again": reviews.filter(quality_response=0).count(),
         }
 
         total = sum(difficulty_counts.values())
