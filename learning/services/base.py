@@ -69,7 +69,7 @@ class StudyMetrics:
             
             attempts = QuizAttempt.objects.filter(
                 user=self.user,
-                created_at__gte=self.start_date
+                started_at__gte=self.start_date
             )
             
             if self.course:
@@ -99,12 +99,12 @@ class StudyMetrics:
             )
             
             if self.course:
-                sessions = sessions.filter(study_plan__course=self.course)
+                sessions = sessions.filter(course=self.course)
             
             total_sessions = sessions.count()
             total_hours = sum(
-                session.duration_hours for session in sessions 
-                if session.duration_hours
+                session.duration_actual.total_seconds() / 3600 for session in sessions 
+                if session.duration_actual
             )
             avg_productivity = sessions.aggregate(
                 avg_prod=Avg('productivity_rating')
@@ -136,7 +136,7 @@ class StudyMetrics:
                 reviews = reviews.filter(flashcard__course=self.course)
             
             total_reviews = reviews.count()
-            correct_reviews = reviews.filter(difficulty__in=['easy', 'medium']).count()
+            correct_reviews = reviews.filter(quality_response__gte=3).count()
             retention_rate = (correct_reviews / total_reviews * 100) if total_reviews > 0 else 0
             
             self._cache['flashcard_retention'] = {
@@ -186,7 +186,7 @@ class StudyMetrics:
         )
         
         if self.course:
-            sessions = sessions.filter(study_plan__course=self.course)
+            sessions = sessions.filter(course=self.course)
         
         # Group by hour of day and calculate average productivity
         hourly_productivity = {}
@@ -221,8 +221,8 @@ class StudyMetrics:
         if attempts.count() < 3:
             return 'insufficient_data'
         
-        recent_scores = list(attempts.order_by('-created_at')[:5].values_list('score', flat=True))
-        older_scores = list(attempts.order_by('-created_at')[5:10].values_list('score', flat=True))
+        recent_scores = list(attempts.order_by('-started_at')[:5].values_list('score', flat=True))
+        older_scores = list(attempts.order_by('-started_at')[5:10].values_list('score', flat=True))
         
         if not older_scores:
             return 'insufficient_data'
@@ -259,7 +259,7 @@ class StudyMetrics:
         if not sessions.exists():
             return 0.0
         
-        completed_sessions = sessions.filter(session_completed=True).count()
+        completed_sessions = sessions.filter(status='completed').count()
         total_sessions = sessions.count()
         
         return (completed_sessions / total_sessions) * 100
@@ -270,10 +270,10 @@ class StudyMetrics:
             return 'insufficient_data'
         
         recent_correct = reviews.order_by('-created_at')[:20].filter(
-            difficulty__in=['easy', 'medium']
+            quality_response__gte=3
         ).count()
         older_correct = reviews.order_by('-created_at')[20:40].filter(
-            difficulty__in=['easy', 'medium']
+            quality_response__gte=3
         ).count()
         
         recent_rate = recent_correct / 20 if recent_correct else 0
@@ -293,7 +293,8 @@ class StudyMetrics:
         sessions = StudySession.objects.filter(
             user=self.user,
             created_at__gte=self.start_date,
-            duration_minutes__isnull=False,
+            actual_start__isnull=False,
+            actual_end__isnull=False,
             productivity_rating__isnull=False
         )
         
@@ -301,7 +302,8 @@ class StudyMetrics:
         duration_productivity = {}
         
         for session in sessions:
-            duration_range = self._get_duration_range(session.duration_minutes)
+            duration_minutes = session.duration_actual.total_seconds() / 60 if session.duration_actual else 0
+            duration_range = self._get_duration_range(int(duration_minutes))
             if duration_range not in duration_productivity:
                 duration_productivity[duration_range] = []
             duration_productivity[duration_range].append(session.productivity_rating)

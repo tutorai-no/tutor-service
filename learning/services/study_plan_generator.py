@@ -80,6 +80,22 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
                 'cognitive_load_distribution': self._analyze_cognitive_load(schedule)
             }
             
+            # Create StudyPlan object in database
+            from learning.models import StudyPlan
+            study_plan = StudyPlan.objects.create(
+                user=user,
+                course=course,
+                title=f"{plan_type.title()} Study Plan - {course.name}",
+                description=f"AI-generated {plan_type} study plan for {course.name}",
+                plan_type=plan_type,
+                start_date=timezone.now().date(),
+                end_date=timezone.now().date() + timedelta(weeks=12),
+                daily_study_hours=study_parameters['daily_hours'],
+                study_days_per_week=study_parameters['study_days_per_week'],
+                status='active',
+                plan_data=plan_data
+            )
+            
             # Log adaptation decisions
             self.log_adaptation(
                 str(user.id),
@@ -88,12 +104,14 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
                     'plan_type': plan_type,
                     'adaptations': plan_data['adaptations_made'],
                     'total_sessions': len(schedule),
-                    'estimated_weeks': len(set(s['week'] for s in schedule))
+                    'estimated_weeks': len(set(s['week'] for s in schedule)),
+                    'study_plan_id': str(study_plan.id)
                 }
             )
             
             return {
                 'success': True,
+                'study_plan_id': study_plan.id,
                 'plan_data': plan_data,
                 'recommendations': self._generate_plan_recommendations(performance_analysis)
             }
@@ -103,6 +121,7 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
             return {
                 'success': False,
                 'error': str(e),
+                'study_plan_id': None,
                 'plan_data': {},
                 'recommendations': []
             }
