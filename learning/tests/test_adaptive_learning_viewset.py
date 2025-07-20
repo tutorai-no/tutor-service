@@ -69,7 +69,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_generate_adaptive_plan_success(self):
         """Test successful adaptive plan generation."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         data = {
             'course_id': str(self.course.id),
             'plan_type': 'weekly',
@@ -92,7 +92,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_generate_adaptive_plan_with_target_date(self):
         """Test adaptive plan generation with target date."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         target_date = (timezone.now().date() + timedelta(days=14)).isoformat()
         
         data = {
@@ -117,7 +117,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_generate_adaptive_plan_missing_course_id(self):
         """Test plan generation with missing course ID."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         data = {
             'plan_type': 'weekly',
             'preferences': {'daily_hours': 2.0}
@@ -130,7 +130,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_generate_adaptive_plan_invalid_course(self):
         """Test plan generation with invalid course ID."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         data = {
             'course_id': '00000000-0000-0000-0000-000000000000',
             'plan_type': 'weekly',
@@ -143,7 +143,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_manual_override_success(self):
         """Test successful manual override."""
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'study_plan_id': str(self.study_plan.id),
             'override_type': 'schedule',
@@ -165,7 +165,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_manual_override_difficulty_adjustment(self):
         """Test manual difficulty adjustment override."""
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'study_plan_id': str(self.study_plan.id),
             'override_type': 'difficulty',
@@ -183,7 +183,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_manual_override_review_frequency(self):
         """Test manual review frequency override."""
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'study_plan_id': str(self.study_plan.id),
             'override_type': 'review_frequency',
@@ -201,7 +201,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_manual_override_missing_data(self):
         """Test manual override with missing required data."""
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'override_type': 'schedule',
             'reason': 'Test reason'
@@ -214,7 +214,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_manual_override_invalid_study_plan(self):
         """Test manual override with invalid study plan ID."""
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'study_plan_id': '00000000-0000-0000-0000-000000000000',
             'override_type': 'schedule',
@@ -228,7 +228,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_adaptive_dashboard_success(self):
         """Test successful adaptive dashboard retrieval."""
-        url = reverse('learning:adaptive-learning-adaptive-dashboard')
+        url = '/api/v1/learning/adaptive/adaptive-dashboard/'
         
         response = self.client.get(url)
         
@@ -249,7 +249,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_adaptive_dashboard_with_course_filter(self):
         """Test adaptive dashboard with course filter."""
-        url = reverse('learning:adaptive-learning-adaptive-dashboard')
+        url = '/api/v1/learning/adaptive/adaptive-dashboard/'
         
         response = self.client.get(url, {'course_id': str(self.course.id)})
         
@@ -263,9 +263,9 @@ class TestAdaptiveLearningViewSet(TestCase):
         self.client.credentials()  # Remove authentication
         
         urls = [
-            reverse('learning:adaptive-learning-generate-adaptive-plan'),
-            reverse('learning:adaptive-learning-manual-override'),
-            reverse('learning:adaptive-learning-adaptive-dashboard'),
+            '/api/v1/learning/adaptive/generate-adaptive-plan/',
+            '/api/v1/learning/adaptive/manual-override/',
+            '/api/v1/learning/adaptive/adaptive-dashboard/',
         ]
         
         for url in urls:
@@ -274,7 +274,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_different_plan_types(self):
         """Test generation of different plan types."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         
         plan_types = ['weekly', 'monthly', 'exam_prep', 'custom']
         
@@ -296,7 +296,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_invalid_override_type(self):
         """Test manual override with invalid override type."""
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'study_plan_id': str(self.study_plan.id),
             'override_type': 'invalid_type',
@@ -324,7 +324,7 @@ class TestAdaptiveLearningViewSet(TestCase):
             user=other_user
         )
         
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         data = {
             'course_id': str(other_course.id),
             'plan_type': 'weekly',
@@ -358,7 +358,7 @@ class TestAdaptiveLearningViewSet(TestCase):
             status='active'
         )
         
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'study_plan_id': str(other_plan.id),
             'override_type': 'schedule',
@@ -373,7 +373,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_preferences_validation(self):
         """Test validation of preferences in plan generation."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         
         # Test with invalid daily hours
         data = {
@@ -402,7 +402,7 @@ class TestAdaptiveLearningViewSet(TestCase):
             completion_percentage=90.0
         )
         
-        url = reverse('learning:adaptive-learning-adaptive-dashboard')
+        url = '/api/v1/learning/adaptive/adaptive-dashboard/'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -431,7 +431,7 @@ class TestAdaptiveLearningViewSet(TestCase):
         access_token = str(refresh.access_token)
         new_client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
         
-        url = reverse('learning:adaptive-learning-adaptive-dashboard')
+        url = '/api/v1/learning/adaptive/adaptive-dashboard/'
         response = new_client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -446,7 +446,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_concurrent_plan_generation(self):
         """Test handling of concurrent plan generation requests."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         data = {
             'course_id': str(self.course.id),
             'plan_type': 'weekly',
@@ -470,7 +470,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_large_preferences_object(self):
         """Test handling of large preferences object."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         
         # Create large preferences object
         large_preferences = {
@@ -504,7 +504,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     @patch('learning.views.logger')
     def test_service_error_handling(self, mock_logger):
         """Test API error handling when services fail."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         
         # Use non-existent course to trigger service error
         data = {
@@ -524,7 +524,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_dashboard_recommendations_structure(self):
         """Test that dashboard recommendations have proper structure."""
-        url = reverse('learning:adaptive-learning-adaptive-dashboard')
+        url = '/api/v1/learning/adaptive/adaptive-dashboard/'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -541,7 +541,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_manual_override_logs_changes(self):
         """Test that manual overrides are properly logged."""
-        url = reverse('learning:adaptive-learning-manual-override')
+        url = '/api/v1/learning/adaptive/manual-override/'
         data = {
             'study_plan_id': str(self.study_plan.id),
             'override_type': 'schedule',
@@ -564,7 +564,7 @@ class TestAdaptiveLearningViewSet(TestCase):
     
     def test_plan_generation_response_format(self):
         """Test that plan generation response has correct format."""
-        url = reverse('learning:adaptive-learning-generate-adaptive-plan')
+        url = '/api/v1/learning/adaptive/generate-adaptive-plan/'
         data = {
             'course_id': str(self.course.id),
             'plan_type': 'weekly',

@@ -53,7 +53,8 @@
       "Bash(powershell:*)",
       "Bash(cmd //c \"gh run list --repo The-TutorAI-project/aksio-backend --branch refactor/project-structure --limit 5\")",
       "Bash(gh run view:*)",
-      "Bash(pre-commit run:*)"
+      "Bash(pre-commit run:*)",
+      "Bash(./scripts/format-code.sh:*)"
     ],
     "deny": []
   }

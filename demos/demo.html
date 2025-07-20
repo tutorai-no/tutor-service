@@ -1027,7 +1027,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/courses/${selectedCourseId}/documents/upload/`, {
+                const response = await fetch(`${API_BASE}/courses/courses/${selectedCourseId}/documents/upload/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${authToken}`
@@ -1058,7 +1058,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/courses/${selectedCourseId}/documents/`, {
+                const response = await fetch(`${API_BASE}/courses/courses/${selectedCourseId}/documents/`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }

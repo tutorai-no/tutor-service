@@ -50,6 +50,9 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_HTTPONLY = False  # Allows Swagger UI to access CSRF token
 
+# Ensure trailing slashes are handled correctly
+APPEND_SLASH = True
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.SessionAuthentication",
