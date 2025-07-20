@@ -20,7 +20,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Flashcard
         fields = [
-            'id', 'question', 'answer', 'explanation', 'difficulty_level',
+            'id', 'course', 'section', 'question', 'answer', 'explanation', 'difficulty_level',
             'tags', 'source_content', 'ease_factor', 'interval_days',
             'repetitions', 'next_review_date', 'total_reviews', 'total_correct',
             'success_rate', 'is_active', 'is_starred', 'generated_by_ai',
@@ -103,7 +103,7 @@ class QuizSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = [
-            'id', 'title', 'description', 'quiz_type', 'status',
+            'id', 'course', 'section', 'title', 'description', 'quiz_type', 'status',
             'time_limit_minutes', 'max_attempts', 'passing_score',
             'shuffle_questions', 'show_correct_answers', 'show_explanations',
             'allow_retakes', 'generated_by_ai', 'ai_model_used',

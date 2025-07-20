@@ -1,13 +1,18 @@
 """
 Flashcard Generation Service
 
-High-level service that orchestrates agentic AI flashcard generation
-with business logic, validation, and database integration.
+Advanced flashcard generation service with sophisticated multi-format generation.
+Migrated and enhanced from src/learning_materials/flashcards/flashcards_service.py
 """
 import logging
 from typing import Dict, List, Any, Optional
 from django.db import transaction
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from pydantic import BaseModel
+from langchain.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
 
 from assessments.models import Flashcard
 from courses.models import Course
@@ -16,6 +21,127 @@ from ..ai_agents.flashcard_agent import create_flashcard_agent
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+class FlashcardData(BaseModel):
+    """Pydantic model for individual flashcard data."""
+    front: str
+    back: str
+    page_num: Optional[int] = None
+    document_name: Optional[str] = None
+
+
+class FlashcardWrapper(BaseModel):
+    """Wrapper for multiple flashcards from sophisticated generation."""
+    flashcards: List[FlashcardData]
+
+
+class AdvancedFlashcardGenerator:
+    """
+    Advanced flashcard generator with multi-format support.
+    Migrated from src/learning_materials/flashcards/flashcards_service.py
+    """
+    
+    def __init__(self):
+        self.model = ChatOpenAI(
+            temperature=0,
+            api_key=getattr(settings, 'OPENAI_API_KEY', None),
+            model=getattr(settings, 'LLM_MODEL', 'gpt-4o-mini')
+        )
+        self.parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
+    
+    def generate_flashcards(
+        self, 
+        content: str, 
+        language: str = "en",
+        page_num: Optional[int] = None,
+        document_name: Optional[str] = None
+    ) -> List[FlashcardData]:
+        """
+        Generate sophisticated multi-format flashcards from content.
+        
+        Args:
+            content: Source content for flashcard generation
+            language: Language code for generation
+            page_num: Optional page number for context
+            document_name: Optional document name for context
+            
+        Returns:
+            List of generated flashcard data
+        """
+        try:
+            template = self._generate_template(content, language)
+            
+            prompt = PromptTemplate(
+                template="Answer the user query.\n{format_instructions}\n{query}\n",
+                input_variables=["query"],
+                partial_variables={
+                    "format_instructions": self.parser.get_format_instructions()
+                },
+            )
+            
+            # Create the LangChain with prompt, model, and parser
+            chain = prompt | self.model | self.parser
+            
+            # Generate flashcards
+            wrapper = chain.invoke({"query": template})
+            flashcards = wrapper.flashcards
+            
+            # Set context information
+            for flashcard in flashcards:
+                if page_num is not None:
+                    flashcard.page_num = page_num
+                if document_name:
+                    flashcard.document_name = document_name
+            
+            logger.info(f"Generated {len(flashcards)} flashcards using advanced multi-format algorithm")
+            return flashcards
+            
+        except Exception as e:
+            logger.error(f"Error generating advanced flashcards: {str(e)}")
+            return []
+    
+    def _generate_template(self, context: str, language: str = "en") -> str:
+        """
+        Generate sophisticated flashcard template with multiple formats.
+        Migrated from src/ with enhancements.
+        """
+        template = f"""Create flashcards from the provided text using any of the following formats: Standard Q&A, Vocabulary, Fill-in-the-Blank, Multiple Choice, and True/False. Choose the best format(s) based on the content of the text.  
+        
+        The following examples are provided in English solely for guidance on the desired format. Do not include these examples in your final output:
+        
+        1. Q&A:
+        * Front: "What is a question?"
+        * Back: "This is an answer."
+        
+        2. Vocabulary:
+        * Front: "Word"
+        * Back: "This is the definition."
+        
+        3. Fill-in-the-Blank:
+        * Front: "The ... is ____."
+        * Back: "The ... is <answer>."
+        
+        4. Multiple Choice:
+        * Front: "<question> (a) <option1> (b) <option2> (c) <option3>"
+        * Back: "(x) <correct answer>"
+        
+        5. True/False:
+        * Front: "This is a statement."
+        * Back: "True/False"
+        
+        Generate all flashcards in the language corresponding to the language code "{language}". If this code represents a language other than English, ensure that every flashcard (both front and back) is entirely in that language.
+
+        The same information shall not be repeated in multiple flashcards. Each flashcard should focus on a unique piece of information or concept. Avoid generating flashcards that are too similar to each other.
+        
+        Generate flashcards that best represent the content of the text. Do NOT ask questions about meta data from the text, like author or publisher. Each flashcard should be clear, directly derived from the text, and formatted using only the styles listed above.
+        
+        Text:
+        {context}
+        """
+        
+        return template
+    
 
 
 class FlashcardGenerationService:
@@ -28,6 +154,7 @@ class FlashcardGenerationService:
     
     def __init__(self):
         self.orchestrator = ContentGenerationOrchestrator()
+        self.advanced_generator = AdvancedFlashcardGenerator()
         self._setup_agents()
     
     def _setup_agents(self):

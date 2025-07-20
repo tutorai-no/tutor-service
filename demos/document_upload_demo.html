@@ -120,25 +120,97 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             background-color: #f8f9fa;
-            min-height: 200px;
+            min-height: 400px;
+            position: relative;
+            overflow: hidden;
         }
+        
+        .graph-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 350px;
+        }
+        
         .node {
-            display: inline-block;
-            margin: 5px;
-            padding: 8px 12px;
-            background-color: #007bff;
+            position: absolute;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
-            border-radius: 20px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            max-width: 200px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .node:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,123,255,0.4);
+            background: linear-gradient(135deg, #0056b3, #004494);
+        }
+        
+        .node.concept { background: linear-gradient(135deg, #28a745, #1e7e34); }
+        .node.topic { background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; }
+        .node.entity { background: linear-gradient(135deg, #dc3545, #c82333); }
+        .node.definition { background: linear-gradient(135deg, #6f42c1, #5a32a3); }
+        .node.example { background: linear-gradient(135deg, #fd7e14, #e8590c); }
+        
+        .edge {
+            position: absolute;
+            background-color: rgba(108, 117, 125, 0.8);
+            height: 2px;
+            transform-origin: left center;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .edge::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid rgba(108, 117, 125, 0.8);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+        
+        .edge-label {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            color: #495057;
+            border: 1px solid rgba(108, 117, 125, 0.3);
+            white-space: nowrap;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .graph-controls {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .graph-controls button {
+            padding: 5px 10px;
             font-size: 12px;
         }
-        .edge {
-            display: block;
-            margin: 5px 0;
-            padding: 5px;
-            background-color: #e9ecef;
-            border-radius: 4px;
-            font-size: 11px;
-            color: #495057;
+        
+        .graph-stats {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: auto;
         }
     </style>
 </head>
@@ -209,10 +281,21 @@
 
     <div class="container">
         <h2>🕸️ Knowledge Graph Visualization</h2>
-        <div id="graph-viz" class="graph-viz">
-            <p>Knowledge graph nodes and edges will appear here as they are created...</p>
+        <div class="graph-controls">
+            <button onclick="clearGraph()">Clear Graph</button>
+            <button onclick="reorganizeGraph()">Reorganize Layout</button>
+            <button onclick="togglePhysics()" id="physics-btn">Enable Physics</button>
+            <div class="graph-stats" id="graph-stats">
+                Nodes: 0 | Edges: 0
+            </div>
         </div>
-        <button onclick="clearGraph()">Clear Graph</button>
+        <div id="graph-viz" class="graph-viz">
+            <div id="graph-container" class="graph-container">
+                <p style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #6c757d; font-style: italic;">
+                    Knowledge graph nodes and edges will appear here as they are created...
+                </p>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -457,26 +540,271 @@
             }
         }
 
+        // Graph visualization variables
+        let graphNodes = new Map();
+        let graphEdges = new Array();
+        let physicsEnabled = false;
+        let animationId = null;
+
         // Add node to graph visualization
         function addNodeToGraph(node) {
-            const graphViz = document.getElementById('graph-viz');
-            if (graphViz.children.length === 1 && graphViz.children[0].tagName === 'P') {
-                graphViz.innerHTML = '';
+            const graphContainer = document.getElementById('graph-container');
+            
+            // Remove placeholder text if it exists
+            const placeholder = graphContainer.querySelector('p');
+            if (placeholder) {
+                placeholder.remove();
             }
             
+            // Create node element
             const nodeElement = document.createElement('div');
-            nodeElement.className = 'node';
+            nodeElement.className = `node ${node.type.toLowerCase()}`;
             nodeElement.textContent = `${node.type}: ${node.title}`;
-            graphViz.appendChild(nodeElement);
+            nodeElement.id = `node-${node.id || node.title.replace(/\s+/g, '-').toLowerCase()}`;
+            nodeElement.title = `Type: ${node.type}\nTitle: ${node.title}\nID: ${node.id || 'N/A'}`;
+            
+            // Position node randomly initially
+            const containerRect = graphContainer.getBoundingClientRect();
+            const x = Math.random() * (containerRect.width - 200) + 100;
+            const y = Math.random() * (containerRect.height - 50) + 25;
+            
+            nodeElement.style.left = x + 'px';
+            nodeElement.style.top = y + 'px';
+            
+            // Add click handler
+            nodeElement.addEventListener('click', () => highlightConnectedNodes(nodeElement));
+            
+            // Store node data
+            graphNodes.set(nodeElement.id, {
+                element: nodeElement,
+                data: node,
+                x: x,
+                y: y,
+                vx: 0,
+                vy: 0
+            });
+            
+            graphContainer.appendChild(nodeElement);
+            updateGraphStats();
+            
+            // Auto-reorganize if we have enough nodes
+            if (graphNodes.size > 1) {
+                setTimeout(reorganizeGraph, 100);
+            }
         }
 
         // Add edge to graph visualization
         function addEdgeToGraph(edge) {
-            const graphViz = document.getElementById('graph-viz');
+            const graphContainer = document.getElementById('graph-container');
+            
+            // Store edge data
+            graphEdges.push(edge);
+            
+            // Create visual edge connection
+            createVisualEdge(edge);
+            updateGraphStats();
+        }
+
+        // Create visual edge between nodes
+        function createVisualEdge(edge) {
+            const fromNodeId = `node-${edge.from.replace(/\s+/g, '-').toLowerCase()}`;
+            const toNodeId = `node-${edge.to.replace(/\s+/g, '-').toLowerCase()}`;
+            
+            const fromNode = document.getElementById(fromNodeId);
+            const toNode = document.getElementById(toNodeId);
+            
+            if (!fromNode || !toNode) return;
+            
+            const graphContainer = document.getElementById('graph-container');
+            
+            // Calculate positions
+            const fromRect = fromNode.getBoundingClientRect();
+            const toRect = toNode.getBoundingClientRect();
+            const containerRect = graphContainer.getBoundingClientRect();
+            
+            const fromX = fromRect.left - containerRect.left + fromRect.width / 2;
+            const fromY = fromRect.top - containerRect.top + fromRect.height / 2;
+            const toX = toRect.left - containerRect.left + toRect.width / 2;
+            const toY = toRect.top - containerRect.top + toRect.height / 2;
+            
+            // Calculate edge properties
+            const length = Math.sqrt(Math.pow(toX - fromX, 2) + Math.pow(toY - fromY, 2));
+            const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
+            
+            // Create edge element
             const edgeElement = document.createElement('div');
             edgeElement.className = 'edge';
-            edgeElement.textContent = `${edge.from} → ${edge.to} (${edge.type})`;
-            graphViz.appendChild(edgeElement);
+            edgeElement.style.left = fromX + 'px';
+            edgeElement.style.top = fromY + 'px';
+            edgeElement.style.width = length + 'px';
+            edgeElement.style.transform = `rotate(${angle}deg)`;
+            
+            // Create edge label
+            const labelElement = document.createElement('div');
+            labelElement.className = 'edge-label';
+            labelElement.textContent = edge.type;
+            labelElement.style.left = (fromX + toX) / 2 - 25 + 'px';
+            labelElement.style.top = (fromY + toY) / 2 - 10 + 'px';
+            
+            graphContainer.appendChild(edgeElement);
+            graphContainer.appendChild(labelElement);
+        }
+
+        // Highlight connected nodes
+        function highlightConnectedNodes(clickedNode) {
+            // Reset all nodes
+            document.querySelectorAll('.node').forEach(node => {
+                node.style.opacity = '0.3';
+            });
+            
+            // Highlight clicked node
+            clickedNode.style.opacity = '1';
+            
+            // Find connected nodes
+            const clickedTitle = clickedNode.textContent.split(': ')[1];
+            graphEdges.forEach(edge => {
+                if (edge.from === clickedTitle || edge.to === clickedTitle) {
+                    const connectedTitle = edge.from === clickedTitle ? edge.to : edge.from;
+                    const connectedNodeId = `node-${connectedTitle.replace(/\s+/g, '-').toLowerCase()}`;
+                    const connectedNode = document.getElementById(connectedNodeId);
+                    if (connectedNode) {
+                        connectedNode.style.opacity = '1';
+                    }
+                }
+            });
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                document.querySelectorAll('.node').forEach(node => {
+                    node.style.opacity = '1';
+                });
+            }, 3000);
+        }
+
+        // Reorganize graph layout
+        function reorganizeGraph() {
+            if (graphNodes.size === 0) return;
+            
+            const graphContainer = document.getElementById('graph-container');
+            const containerRect = graphContainer.getBoundingClientRect();
+            const centerX = containerRect.width / 2;
+            const centerY = containerRect.height / 2;
+            
+            // Simple circular layout
+            const nodeArray = Array.from(graphNodes.values());
+            const angleStep = (2 * Math.PI) / nodeArray.length;
+            const radius = Math.min(centerX, centerY) * 0.6;
+            
+            nodeArray.forEach((nodeData, index) => {
+                const angle = index * angleStep;
+                const x = centerX + radius * Math.cos(angle) - 100;
+                const y = centerY + radius * Math.sin(angle) - 25;
+                
+                nodeData.x = x;
+                nodeData.y = y;
+                nodeData.element.style.left = x + 'px';
+                nodeData.element.style.top = y + 'px';
+            });
+            
+            // Redraw edges
+            redrawAllEdges();
+            addEvent('Graph', 'Layout reorganized');
+        }
+
+        // Redraw all edges
+        function redrawAllEdges() {
+            // Remove existing edges
+            document.querySelectorAll('.edge, .edge-label').forEach(el => el.remove());
+            
+            // Redraw all edges
+            graphEdges.forEach(edge => createVisualEdge(edge));
+        }
+
+        // Toggle physics simulation
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            const btn = document.getElementById('physics-btn');
+            
+            if (physicsEnabled) {
+                btn.textContent = 'Disable Physics';
+                startPhysicsSimulation();
+                addEvent('Graph', 'Physics simulation enabled');
+            } else {
+                btn.textContent = 'Enable Physics';
+                stopPhysicsSimulation();
+                addEvent('Graph', 'Physics simulation disabled');
+            }
+        }
+
+        // Start physics simulation
+        function startPhysicsSimulation() {
+            if (animationId) return;
+            
+            function simulate() {
+                if (!physicsEnabled) return;
+                
+                // Simple force-directed layout
+                const nodes = Array.from(graphNodes.values());
+                
+                // Apply forces
+                nodes.forEach(node => {
+                    let fx = 0, fy = 0;
+                    
+                    // Repulsion from other nodes
+                    nodes.forEach(other => {
+                        if (node === other) return;
+                        const dx = node.x - other.x;
+                        const dy = node.y - other.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy) + 1;
+                        const force = 100 / (distance * distance);
+                        fx += (dx / distance) * force;
+                        fy += (dy / distance) * force;
+                    });
+                    
+                    // Attraction to center
+                    const centerX = 300;
+                    const centerY = 175;
+                    const dx = centerX - node.x;
+                    const dy = centerY - node.y;
+                    fx += dx * 0.01;
+                    fy += dy * 0.01;
+                    
+                    // Apply forces
+                    node.vx = (node.vx + fx) * 0.9;
+                    node.vy = (node.vy + fy) * 0.9;
+                    
+                    // Update position
+                    node.x += node.vx;
+                    node.y += node.vy;
+                    
+                    // Boundary constraints
+                    node.x = Math.max(10, Math.min(590, node.x));
+                    node.y = Math.max(10, Math.min(340, node.y));
+                    
+                    // Update DOM
+                    node.element.style.left = node.x + 'px';
+                    node.element.style.top = node.y + 'px';
+                });
+                
+                redrawAllEdges();
+                animationId = requestAnimationFrame(simulate);
+            }
+            
+            simulate();
+        }
+
+        // Stop physics simulation
+        function stopPhysicsSimulation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        // Update graph statistics
+        function updateGraphStats() {
+            const statsElement = document.getElementById('graph-stats');
+            statsElement.textContent = `Nodes: ${graphNodes.size} | Edges: ${graphEdges.length}`;
         }
 
         // Clear events
@@ -487,7 +815,19 @@
 
         // Clear graph
         function clearGraph() {
-            document.getElementById('graph-viz').innerHTML = '<p>Knowledge graph nodes and edges will appear here as they are created...</p>';
+            const graphContainer = document.getElementById('graph-container');
+            graphContainer.innerHTML = '<p style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #6c757d; font-style: italic;">Knowledge graph nodes and edges will appear here as they are created...</p>';
+            
+            // Reset data structures
+            graphNodes.clear();
+            graphEdges.length = 0;
+            
+            // Stop physics if running
+            if (physicsEnabled) {
+                togglePhysics();
+            }
+            
+            updateGraphStats();
             addEvent('System', 'Graph visualization cleared');
         }
 

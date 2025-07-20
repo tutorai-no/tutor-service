@@ -10,7 +10,7 @@ from typing import Tuple
 
 
 class SpacedRepetitionService:
-    """Service for managing spaced repetition algorithm."""
+    """Legacy SM-2 implementation for backward compatibility."""
     
     @staticmethod
     def calculate_next_review(

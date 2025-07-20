@@ -170,6 +170,11 @@ class QuizViewSet(viewsets.ModelViewSet):
         return Quiz.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
+        # Validate that the course belongs to the user
+        course = serializer.validated_data.get('course')
+        if course and course.user != self.request.user:
+            from rest_framework import serializers as rest_serializers
+            raise rest_serializers.ValidationError("Course must belong to the authenticated user")
         serializer.save(user=self.request.user)
     
     @action(detail=True, methods=['get'])

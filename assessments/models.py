@@ -75,6 +75,7 @@ class Flashcard(models.Model):
         help_text="Success rate (0.0 to 1.0)"
     )
     
+    
     # Status
     is_active = models.BooleanField(default=True)
     is_starred = models.BooleanField(default=False)
@@ -149,6 +150,7 @@ class Flashcard(models.Model):
         self.success_rate = self.total_correct / self.total_reviews if self.total_reviews > 0 else 0
         
         self.save()
+    
 
 
 class FlashcardReview(models.Model):

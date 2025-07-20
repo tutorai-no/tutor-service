@@ -250,6 +250,71 @@ class UserStreak(models.Model):
         """Check if current streak is still active."""
         from datetime import date, timedelta
         return self.last_activity_date >= date.today() - timedelta(days=1)
+    
+    def check_if_broken_streak(self):
+        """
+        Sophisticated streak checking with 36-hour grace period.
+        Migrated from src/accounts/models.py
+        """
+        from datetime import datetime, timedelta
+        
+        now = datetime.now()
+        last_activity_datetime = datetime.combine(self.last_activity_date, datetime.min.time())
+        
+        # 36-hour grace period (more forgiving than 24 hours)
+        grace_period = timedelta(hours=36)
+        
+        if (now - last_activity_datetime) > grace_period:
+            # Streak is broken
+            if self.current_streak_days > self.longest_streak_days:
+                self.longest_streak_days = self.current_streak_days
+            
+            self.current_streak_days = 0
+            self.current_streak_start = now.date()
+            self.last_activity_date = now.date()
+            self.save()
+            return True  # Streak was broken
+        
+        return False  # Streak intact
+    
+    def increment_streak(self):
+        """
+        Advanced streak increment logic.
+        Migrated and enhanced from src/accounts/models.py
+        """
+        from datetime import datetime
+        
+        today = datetime.now().date()
+        
+        # Check if streak should be broken first
+        if self.check_if_broken_streak():
+            # Streak was just broken, so we start fresh
+            self.current_streak_days = 1
+            self.current_streak_start = today
+            self.last_activity_date = today
+        else:
+            # Only increment if this is a new day
+            if self.last_activity_date < today:
+                self.current_streak_days += 1
+                self.last_activity_date = today
+                
+                # Update longest streak if needed
+                if self.current_streak_days > self.longest_streak_days:
+                    self.longest_streak_days = self.current_streak_days
+                
+                # Check for milestone achievements
+                milestones = [7, 14, 30, 60, 90, 180, 365]
+                for milestone in milestones:
+                    if (self.current_streak_days == milestone and 
+                        milestone not in self.streak_milestones_achieved):
+                        self.streak_milestones_achieved.append(milestone)
+        
+        # Update total study tracking
+        self.total_study_days += 1
+        self.total_study_sessions += 1
+        
+        self.save()
+        return self.current_streak_days
 
 
 class UserFeedback(models.Model):

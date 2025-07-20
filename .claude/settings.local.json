@@ -26,7 +26,8 @@
       "Bash(chmod:*)",
       "Bash(mv:*)",
       "Bash(pip install:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }
