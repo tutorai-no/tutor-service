@@ -349,6 +349,167 @@ Return a properly formatted JSON response with nodes and edges.
         
         return cleaned
     
+    def save_hierarchical_graph_to_neo4j(self, graph_data: Dict[str, Any]) -> bool:
+        """
+        Save hierarchical topic graph data to Neo4j.
+        
+        Args:
+            graph_data: Dictionary containing hierarchical nodes and edges
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.neo4j_client or not self.neo4j_client.is_connected():
+            logger.error("Neo4j client not available")
+            return False
+        
+        try:
+            course_id = graph_data.get("course_id")
+            if not course_id:
+                logger.error("No course_id in graph data")
+                return False
+            
+            # Create a unique graph_id for this course
+            graph_id = f"course_hierarchy_{course_id}"
+            
+            # Save nodes with proper types
+            nodes_saved = 0
+            for node_data in graph_data.get("nodes", []):
+                # Add graph_id to node data
+                node_data_with_graph = {
+                    **node_data,
+                    "graph_id": graph_id
+                }
+                if self.neo4j_client.create_node(graph_id, node_data_with_graph):
+                    nodes_saved += 1
+            
+            # Save edges with proper types
+            edges_saved = 0
+            for edge_data in graph_data.get("edges", []):
+                # Add graph_id to edge data
+                edge_data_with_graph = {
+                    **edge_data,
+                    "graph_id": graph_id
+                }
+                if self.neo4j_client.create_edge(graph_id, edge_data_with_graph):
+                    edges_saved += 1
+            
+            logger.info(f"Saved hierarchical graph: {nodes_saved} nodes and {edges_saved} edges for course {course_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving hierarchical graph to Neo4j: {str(e)}")
+            return False
+    
+    def get_course_hierarchy_from_neo4j(self, course_id: str) -> Dict[str, Any]:
+        """
+        Retrieve course hierarchical structure from Neo4j.
+        
+        Args:
+            course_id: ID of the course
+            
+        Returns:
+            Dictionary with hierarchical structure
+        """
+        if not self.neo4j_client or not self.neo4j_client.is_connected():
+            logger.error("Neo4j client not available")
+            return {"course_id": course_id, "nodes": [], "edges": [], "hierarchy": {}}
+        
+        try:
+            graph_id = f"course_hierarchy_{course_id}"
+            
+            # Get all nodes and edges for this course
+            nodes = self.neo4j_client.get_graph_nodes(graph_id)
+            edges = self.neo4j_client.get_graph_edges(graph_id)
+            
+            # Build hierarchical structure
+            hierarchy = self._build_hierarchy_from_graph(nodes, edges)
+            
+            return {
+                "course_id": course_id,
+                "graph_id": graph_id,
+                "nodes": nodes,
+                "edges": edges,
+                "hierarchy": hierarchy
+            }
+            
+        except Exception as e:
+            logger.error(f"Error retrieving course hierarchy from Neo4j: {str(e)}")
+            return {"course_id": course_id, "nodes": [], "edges": [], "hierarchy": {}}
+    
+    def _build_hierarchy_from_graph(self, nodes: List[Dict], edges: List[Dict]) -> Dict[str, Any]:
+        """
+        Build a hierarchical structure from flat nodes and edges.
+        
+        Args:
+            nodes: List of nodes
+            edges: List of edges
+            
+        Returns:
+            Hierarchical structure
+        """
+        # Find the course node
+        course_node = None
+        for node in nodes:
+            if node.get('type') == 'COURSE':
+                course_node = node
+                break
+        
+        if not course_node:
+            logger.warning("No course node found in graph")
+            return {}
+        
+        # Build adjacency list
+        adjacency = {}
+        for edge in edges:
+            from_id = edge.get('from')
+            to_id = edge.get('to')
+            edge_type = edge.get('type', '')
+            
+            if from_id not in adjacency:
+                adjacency[from_id] = []
+            adjacency[from_id].append({
+                'to': to_id,
+                'type': edge_type,
+                'properties': edge.get('properties', {})
+            })
+        
+        # Build node lookup
+        node_lookup = {node['id']: node for node in nodes}
+        
+        # Build hierarchy recursively
+        def build_subtree(node_id: str) -> Dict[str, Any]:
+            node = node_lookup.get(node_id, {})
+            subtree = {
+                'id': node_id,
+                'title': node.get('title', 'Unknown'),
+                'type': node.get('type', 'Unknown'),
+                'properties': node.get('properties', {}),
+                'children': []
+            }
+            
+            # Add children
+            if node_id in adjacency:
+                for edge in adjacency[node_id]:
+                    child_id = edge['to']
+                    if child_id in node_lookup:
+                        child_subtree = build_subtree(child_id)
+                        child_subtree['edge_type'] = edge['type']
+                        child_subtree['edge_properties'] = edge.get('properties', {})
+                        subtree['children'].append(child_subtree)
+            
+            # Sort children by order if available
+            subtree['children'].sort(
+                key=lambda x: x.get('edge_properties', {}).get('order', 999)
+            )
+            
+            return subtree
+        
+        # Build complete hierarchy starting from course node
+        hierarchy = build_subtree(course_node['id'])
+        
+        return hierarchy
+    
     def _canonicalize_id(self, text: str) -> str:
         """Create a canonical ID from text."""
         import re

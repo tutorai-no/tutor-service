@@ -5,7 +5,7 @@ Main document processing service that orchestrates the entire pipeline.
 import logging
 import hashlib
 import uuid
-from typing import Dict, Any, Optional, Generator, Tuple
+from typing import Dict, Any, Optional, Generator, Tuple, List
 from django.utils import timezone
 from django.db import transaction
 from .models import DocumentUpload, DocumentChunk, URLUpload, URLChunk, ProcessingStatus, ProcessingJob
@@ -38,6 +38,14 @@ except ImportError as e:
     get_knowledge_graph_service = lambda: None
 
 try:
+    from .topic_extraction_service import get_topic_extraction_service
+    TOPIC_EXTRACTION_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"topic_extraction_service not available: {e}")
+    TOPIC_EXTRACTION_AVAILABLE = False
+    get_topic_extraction_service = lambda: None
+
+try:
     import tiktoken
     TIKTOKEN_AVAILABLE = True
 except ImportError:
@@ -56,6 +64,7 @@ class DocumentProcessingService:
         self.scraper_client = get_scraper_client() if SCRAPER_AVAILABLE else None
         self.embedding_service = get_embedding_service() if EMBEDDING_AVAILABLE else None
         self.knowledge_graph_service = get_knowledge_graph_service() if KNOWLEDGE_GRAPH_AVAILABLE else None
+        self.topic_extraction_service = get_topic_extraction_service() if TOPIC_EXTRACTION_AVAILABLE else None
         self.tokenizer = tiktoken.get_encoding("cl100k_base") if TIKTOKEN_AVAILABLE else None
     
     def process_document_upload(
@@ -92,9 +101,8 @@ class DocumentProcessingService:
             yield {
                 'event': 'duplicate_detected',
                 'document_id': str(existing_doc.id),
-                'message': f'{filename} already exists'
+                'message': f'{filename} already exists - processing anyway'
             }
-            return
         
         # Create document upload record
         document = DocumentUpload.objects.create(
@@ -120,9 +128,12 @@ class DocumentProcessingService:
             # Extract text using scraper service
             yield {'event': 'extracting_text', 'message': 'Extracting text from document...'}
             
+            # Extract text with TOC if we have a course_id (for better topic extraction)
+            extract_toc = course_id is not None
             extraction_result = self.scraper_client.extract_text_from_file(
                 file_content=file_content,
-                filename=filename
+                filename=filename,
+                extract_toc=extract_toc
             )
             
             if not extraction_result['success']:
@@ -148,6 +159,74 @@ class DocumentProcessingService:
                 'total_chunks': len(chunks),
                 'page_count': extraction_result.get('page_count', 0)
             }
+            
+            # Extract hierarchical topics if we have a course_id
+            if course_id and self.topic_extraction_service:
+                yield {'event': 'extracting_topics', 'message': 'Extracting hierarchical topics...'}
+                
+                # Get full text from chunks
+                full_text = extraction_result.get('text', '')
+                if not full_text and chunks:
+                    full_text = '\n'.join(chunk.get('text', '') for chunk in chunks)
+                
+                try:
+                    # Check if we have TOC data from scraper
+                    toc_data = extraction_result.get('toc', [])
+                    has_toc = extraction_result.get('has_toc', False)
+                    
+                    if has_toc and toc_data:
+                        yield {
+                            'event': 'toc_found',
+                            'message': f'Found TOC with {len(toc_data)} entries',
+                            'toc_entries': len(toc_data)
+                        }
+                        
+                        # Use TOC data to enhance topic extraction
+                        topic_data = self._extract_topics_with_toc(
+                            full_text=full_text,
+                            toc_data=toc_data,
+                            filename=filename
+                        )
+                    else:
+                        # Fallback to regular topic extraction
+                        topic_data = self.topic_extraction_service.extract_hierarchical_topics(
+                            text=full_text,
+                            document_name=filename,
+                            use_llm=True
+                        )
+                    
+                    # Create hierarchical graph structure
+                    graph_structure = self.topic_extraction_service.create_hierarchical_graph_structure(
+                        topic_data=topic_data,
+                        course_id=course_id
+                    )
+                    
+                    # Save to Neo4j
+                    if self.knowledge_graph_service:
+                        success = self.knowledge_graph_service.save_hierarchical_graph_to_neo4j(graph_structure)
+                        
+                        yield {
+                            'event': 'topics_extracted',
+                            'course_name': topic_data['course_name'],
+                            'main_topics': len(topic_data['main_topics']),
+                            'subtopics': len(topic_data['subtopics']),
+                            'saved_to_graph': success
+                        }
+                    else:
+                        yield {
+                            'event': 'topics_extracted',
+                            'course_name': topic_data['course_name'],
+                            'main_topics': len(topic_data['main_topics']),
+                            'subtopics': len(topic_data['subtopics']),
+                            'saved_to_graph': False
+                        }
+                        
+                except Exception as e:
+                    logger.error(f"Error extracting topics: {str(e)}")
+                    yield {
+                        'event': 'topic_extraction_warning',
+                        'warning': f'Could not extract topics: {str(e)}'
+                    }
             
             # Process each chunk
             for chunk_index, chunk_data in enumerate(chunks):
@@ -220,9 +299,8 @@ class DocumentProcessingService:
             yield {
                 'event': 'duplicate_detected',
                 'url_upload_id': str(existing_url.id),
-                'message': f'URL {url} already exists'
+                'message': f'URL {url} already exists - processing anyway'
             }
-            return
         
         # Create URL upload record
         url_upload = URLUpload.objects.create(
@@ -275,6 +353,54 @@ class DocumentProcessingService:
                 'title': url_upload.title,
                 'content_length': url_upload.content_length
             }
+            
+            # Extract hierarchical topics if we have a course_id
+            if course_id and self.topic_extraction_service:
+                yield {'event': 'extracting_topics', 'message': 'Extracting hierarchical topics from URL content...'}
+                
+                # Get full text
+                full_text = scraping_result.get('text', '')
+                
+                try:
+                    # Extract topics
+                    topic_data = self.topic_extraction_service.extract_hierarchical_topics(
+                        text=full_text,
+                        document_name=url_upload.title or url,
+                        use_llm=True
+                    )
+                    
+                    # Create hierarchical graph structure
+                    graph_structure = self.topic_extraction_service.create_hierarchical_graph_structure(
+                        topic_data=topic_data,
+                        course_id=course_id
+                    )
+                    
+                    # Save to Neo4j
+                    if self.knowledge_graph_service:
+                        success = self.knowledge_graph_service.save_hierarchical_graph_to_neo4j(graph_structure)
+                        
+                        yield {
+                            'event': 'topics_extracted',
+                            'course_name': topic_data['course_name'],
+                            'main_topics': len(topic_data['main_topics']),
+                            'subtopics': len(topic_data['subtopics']),
+                            'saved_to_graph': success
+                        }
+                    else:
+                        yield {
+                            'event': 'topics_extracted',
+                            'course_name': topic_data['course_name'],
+                            'main_topics': len(topic_data['main_topics']),
+                            'subtopics': len(topic_data['subtopics']),
+                            'saved_to_graph': False
+                        }
+                        
+                except Exception as e:
+                    logger.error(f"Error extracting topics from URL: {str(e)}")
+                    yield {
+                        'event': 'topic_extraction_warning',
+                        'warning': f'Could not extract topics: {str(e)}'
+                    }
             
             # Process each chunk
             for chunk_index, chunk_data in enumerate(chunks):
@@ -540,6 +666,104 @@ class DocumentProcessingService:
             }
         except URLUpload.DoesNotExist:
             return {'error': 'URL upload not found'}
+    
+    def _extract_topics_with_toc(
+        self, 
+        full_text: str, 
+        toc_data: List[Dict], 
+        filename: str
+    ) -> Dict[str, Any]:
+        """
+        Extract topics using TOC data from scraper service.
+        
+        Args:
+            full_text: Full document text
+            toc_data: TOC entries from scraper
+            filename: Document filename
+            
+        Returns:
+            Dictionary with hierarchical topic structure
+        """
+        if not self.topic_extraction_service:
+            logger.warning("Topic extraction service not available")
+            return {
+                'course_name': filename,
+                'main_topics': [],
+                'subtopics': [],
+                'total_topics': 0,
+                'extraction_method': 'fallback'
+            }
+        
+        try:
+            # Convert TOC data to topic format
+            main_topics = []
+            subtopics = []
+            
+            # Build hierarchical structure from TOC
+            level_parents = {}
+            
+            for i, toc_entry in enumerate(toc_data):
+                title = toc_entry.get('title', f'Topic {i+1}')
+                level = toc_entry.get('level', 1)
+                page_num = toc_entry.get('page', 0)
+                
+                # Generate topic ID
+                topic_id = self.topic_extraction_service._generate_topic_id(title)
+                
+                # Extract keywords from title
+                keywords = self.topic_extraction_service._extract_keywords(title)
+                
+                topic_dict = {
+                    'id': topic_id,
+                    'title': title,
+                    'level': level,
+                    'parent_topic': None,
+                    'parent_id': None,
+                    'description': None,
+                    'keywords': keywords,
+                    'page_references': [page_num] if page_num > 0 else []
+                }
+                
+                if level == 1:
+                    main_topics.append(topic_dict)
+                    level_parents[1] = topic_dict
+                else:
+                    # Find parent topic
+                    parent_level = level - 1
+                    if parent_level in level_parents:
+                        parent = level_parents[parent_level]
+                        topic_dict['parent_topic'] = parent['title']
+                        topic_dict['parent_id'] = parent['id']
+                    
+                    subtopics.append(topic_dict)
+                    level_parents[level] = topic_dict
+            
+            # Determine course name
+            course_name = filename
+            if main_topics:
+                # Use the first few main topics to create a course name
+                topic_names = [t['title'] for t in main_topics[:2]]
+                course_name = ' - '.join(topic_names)
+            
+            topic_data = {
+                'course_name': course_name,
+                'main_topics': main_topics,
+                'subtopics': subtopics,
+                'total_topics': len(main_topics) + len(subtopics),
+                'extraction_method': 'toc_based'
+            }
+            
+            logger.info(f"Extracted {len(main_topics)} main topics and {len(subtopics)} subtopics from TOC")
+            return topic_data
+            
+        except Exception as e:
+            logger.error(f"Error extracting topics from TOC: {str(e)}")
+            # Fallback to regular extraction
+            return self.topic_extraction_service.extract_hierarchical_topics(
+                text=full_text,
+                document_name=filename,
+                use_llm=False  # Use pattern-based as fallback
+            )
     
     def get_graph_data(self, graph_id: str) -> Dict[str, Any]:
         """Get complete graph data for visualization."""

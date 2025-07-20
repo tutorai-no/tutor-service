@@ -27,7 +27,8 @@ class ScraperServiceClient:
         file_content: bytes, 
         filename: str,
         chunk_size: int = 1000,
-        chunk_overlap: int = 200
+        chunk_overlap: int = 200,
+        extract_toc: bool = False
     ) -> Dict[str, Any]:
         """
         Extract text from uploaded file using scraper service.
@@ -37,9 +38,10 @@ class ScraperServiceClient:
             filename: Original filename
             chunk_size: Size of text chunks
             chunk_overlap: Overlap between chunks
+            extract_toc: Whether to extract table of contents
             
         Returns:
-            Dictionary with extracted text and chunks
+            Dictionary with extracted text, chunks, and optionally TOC
         """
         try:
             # For now, use the streaming endpoint which doesn't require auth
@@ -53,7 +55,10 @@ class ScraperServiceClient:
             ]
             
             data = {
-                'uuids': [file_uuid]
+                'uuids': [file_uuid],
+                'extract_toc': extract_toc,
+                'chunk_size': chunk_size,
+                'chunk_overlap': chunk_overlap
             }
             
             response = requests.post(
@@ -67,6 +72,8 @@ class ScraperServiceClient:
                 # Parse streaming response
                 chunks = []
                 full_text = []
+                toc_data = None
+                document_metadata = {'filename': filename}
                 
                 for line in response.iter_lines():
                     if line:
@@ -74,24 +81,42 @@ class ScraperServiceClient:
                         if line_str == '[DONE]':
                             break
                         try:
-                            chunk_data = json.loads(line_str)
-                            chunks.append({
-                                'text': chunk_data.get('text', ''),
-                                'page_num': chunk_data.get('page_num', 0),
-                                'chunk_index': chunk_data.get('chunk_index', 0)
-                            })
-                            full_text.append(chunk_data.get('text', ''))
+                            data = json.loads(line_str)
+                            
+                            # Handle different types of data from streaming response
+                            if 'event' in data:
+                                event_type = data.get('event')
+                                if event_type == 'toc_extracted':
+                                    toc_data = data.get('toc', [])
+                                elif event_type == 'metadata':
+                                    document_metadata.update(data.get('metadata', {}))
+                            elif 'text' in data:
+                                # Regular chunk data
+                                chunks.append({
+                                    'text': data.get('text', ''),
+                                    'page_num': data.get('page_num', 0),
+                                    'chunk_index': data.get('chunk_index', 0)
+                                })
+                                full_text.append(data.get('text', ''))
                         except json.JSONDecodeError:
                             continue
                 
-                logger.info(f"Successfully extracted text from {filename}, got {len(chunks)} chunks")
-                return {
+                result = {
                     'success': True,
                     'text': '\n'.join(full_text),
                     'chunks': chunks,
-                    'metadata': {'filename': filename},
+                    'metadata': document_metadata,
                     'page_count': len(set(c['page_num'] for c in chunks)) if chunks else 0
                 }
+                
+                # Add TOC data if extracted
+                if toc_data is not None:
+                    result['toc'] = toc_data
+                    result['has_toc'] = len(toc_data) > 0
+                    logger.info(f"Extracted TOC with {len(toc_data)} entries from {filename}")
+                
+                logger.info(f"Successfully extracted text from {filename}, got {len(chunks)} chunks")
+                return result
             else:
                 logger.error(f"Scraper service error: {response.status_code} - {response.text}")
                 return {
@@ -194,6 +219,174 @@ class ScraperServiceClient:
                 'metadata': {}
             }
     
+    def extract_toc_from_file(
+        self, 
+        file_content: bytes, 
+        filename: str
+    ) -> Dict[str, Any]:
+        """
+        Extract only table of contents from uploaded file using scraper service.
+        
+        Args:
+            file_content: Raw file bytes
+            filename: Original filename
+            
+        Returns:
+            Dictionary with TOC data
+        """
+        try:
+            url = f"{self.base_url}/api/v1/toc/extract"
+            
+            import uuid
+            file_uuid = str(uuid.uuid4())
+            
+            files = [
+                ('file', (filename, BytesIO(file_content), self._get_content_type(filename)))
+            ]
+            
+            data = {
+                'uuid': file_uuid,
+                'extract_structure': True
+            }
+            
+            response = requests.post(
+                url,
+                files=files,
+                data=data,
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                toc_entries = result.get('toc', [])
+                
+                logger.info(f"Successfully extracted TOC from {filename}, got {len(toc_entries)} entries")
+                return {
+                    'success': True,
+                    'toc': toc_entries,
+                    'has_toc': len(toc_entries) > 0,
+                    'metadata': result.get('metadata', {'filename': filename}),
+                    'document_structure': result.get('structure', {})
+                }
+            else:
+                logger.error(f"TOC extraction error: {response.status_code} - {response.text}")
+                return {
+                    'success': False,
+                    'error': f"HTTP {response.status_code}: {response.text}",
+                    'toc': [],
+                    'has_toc': False,
+                    'metadata': {}
+                }
+                
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout extracting TOC from {filename}")
+            return {
+                'success': False,
+                'error': 'Request timeout',
+                'toc': [],
+                'has_toc': False,
+                'metadata': {}
+            }
+        except Exception as e:
+            logger.error(f"Error extracting TOC from {filename}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'toc': [],
+                'has_toc': False,
+                'metadata': {}
+            }
+    
+    def extract_document_structure(
+        self, 
+        file_content: bytes, 
+        filename: str
+    ) -> Dict[str, Any]:
+        """
+        Extract document structure including headings, TOC, and outline.
+        
+        Args:
+            file_content: Raw file bytes
+            filename: Original filename
+            
+        Returns:
+            Dictionary with document structure data
+        """
+        try:
+            url = f"{self.base_url}/api/v1/structure/extract"
+            
+            import uuid
+            file_uuid = str(uuid.uuid4())
+            
+            files = [
+                ('file', (filename, BytesIO(file_content), self._get_content_type(filename)))
+            ]
+            
+            data = {
+                'uuid': file_uuid,
+                'extract_headings': True,
+                'extract_toc': True,
+                'extract_outline': True,
+                'include_page_refs': True
+            }
+            
+            response = requests.post(
+                url,
+                files=files,
+                data=data,
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                logger.info(f"Successfully extracted document structure from {filename}")
+                return {
+                    'success': True,
+                    'toc': result.get('toc', []),
+                    'headings': result.get('headings', []),
+                    'outline': result.get('outline', {}),
+                    'structure_tree': result.get('structure_tree', {}),
+                    'metadata': result.get('metadata', {'filename': filename}),
+                    'stats': {
+                        'toc_entries': len(result.get('toc', [])),
+                        'heading_count': len(result.get('headings', [])),
+                        'max_depth': result.get('max_depth', 0)
+                    }
+                }
+            else:
+                logger.error(f"Structure extraction error: {response.status_code} - {response.text}")
+                return {
+                    'success': False,
+                    'error': f"HTTP {response.status_code}: {response.text}",
+                    'toc': [],
+                    'headings': [],
+                    'outline': {},
+                    'metadata': {}
+                }
+                
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout extracting structure from {filename}")
+            return {
+                'success': False,
+                'error': 'Request timeout',
+                'toc': [],
+                'headings': [],
+                'outline': {},
+                'metadata': {}
+            }
+        except Exception as e:
+            logger.error(f"Error extracting structure from {filename}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'toc': [],
+                'headings': [],
+                'outline': {},
+                'metadata': {}
+            }
+
     def get_supported_formats(self) -> List[str]:
         """
         Get list of supported file formats from scraper service.

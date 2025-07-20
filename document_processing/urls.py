@@ -11,7 +11,13 @@ from .views import (
     KnowledgeGraphView,
     DocumentListView,
     URLListView,
-    HealthCheckView
+    HealthCheckView,
+    CourseHierarchyView,
+    CourseTopicsView,
+    TopicDetailsView,
+    CourseGraphVisualizationView,
+    DocumentTOCExtractionView,
+    DocumentStructureExtractionView
 )
 
 app_name = 'document_processing'
@@ -34,4 +40,14 @@ urlpatterns = [
     
     # Health check
     path('health/', HealthCheckView.as_view(), name='health-check'),
+    
+    # Hierarchical course structure endpoints
+    path('courses/<str:course_id>/hierarchy/', CourseHierarchyView.as_view(), name='course-hierarchy'),
+    path('courses/<str:course_id>/topics/', CourseTopicsView.as_view(), name='course-topics'),
+    path('courses/<str:course_id>/topics/<str:topic_id>/', TopicDetailsView.as_view(), name='topic-details'),
+    path('courses/<str:course_id>/visualization/', CourseGraphVisualizationView.as_view(), name='course-visualization'),
+    
+    # TOC and structure extraction endpoints
+    path('extract/toc/', DocumentTOCExtractionView.as_view(), name='extract-toc'),
+    path('extract/structure/', DocumentStructureExtractionView.as_view(), name='extract-structure'),
 ]

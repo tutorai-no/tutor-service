@@ -1,0 +1,286 @@
+# Default values for aksio-backend
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Application settings
+app:
+  name: aksio-backend
+  version: "1.0.0"
+
+# Image settings
+image:
+  registry: us-central1-docker.pkg.dev
+  repository: your-project/aksio-registry/aksio-backend
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Deployment settings
+replicaCount: 2
+
+# Resource settings
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Service settings
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+  annotations: {}
+
+# Ingress settings
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: api.aksio.app
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: aksio-backend-tls
+      hosts:
+        - api.aksio.app
+
+# Environment variables
+env:
+  DJANGO_SETTINGS_MODULE: "aksio.settings.production"
+  DJANGO_DEBUG: "False"
+  DJANGO_ALLOWED_HOSTS: "api.aksio.app,localhost,127.0.0.1"
+  LLM_MODEL: "gpt-4o-mini"
+  LLM_TEMPERATURE: "0.7"
+  REDIS_URL: "redis://aksio-backend-redis-master:6379/0"
+
+# Secret environment variables (loaded from Secret Manager)
+secretEnv:
+  DJANGO_SECRET_KEY:
+    secretName: "django-secret"
+    key: "secret-key"
+  DATABASE_URL:
+    secretName: "database-secret"
+    key: "url"
+  OPENAI_API_KEY:
+    secretName: "openai-secret"
+    key: "api-key"
+
+# Health checks
+healthCheck:
+  enabled: true
+  path: "/api/health/"
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Liveness probe
+livenessProbe:
+  enabled: true
+  path: "/api/health/"
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  enabled: true
+  path: "/api/health/"
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1001
+
+# Service account
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: "aksio-prod-sa@your-project.iam.gserviceaccount.com"
+  name: "aksio-backend"
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - aksio-backend
+          topologyKey: kubernetes.io/hostname
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Network policy
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+  egress:
+    enabled: true
+
+# Persistent Volume Claims
+persistence:
+  enabled: true
+  storageClass: "standard-rwo"
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+# ConfigMap for static configuration
+configMap:
+  enabled: true
+  data:
+    nginx.conf: |
+      server {
+          listen 8080;
+          server_name _;
+          root /app/staticfiles;
+          
+          location /static/ {
+              expires 1y;
+              add_header Cache-Control "public, immutable";
+          }
+          
+          location / {
+              proxy_pass http://localhost:8000;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+# Database settings (for development/testing)
+postgresql:
+  enabled: false  # Use Cloud SQL in production
+  auth:
+    postgresPassword: "aksio123"
+    database: "aksio"
+    username: "aksio"
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Redis settings (for development/testing)
+redis:
+  enabled: false  # Use Cloud Memorystore in production
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    path: /metrics
+    port: metrics
+
+# Logging
+logging:
+  level: INFO
+  format: json
+
+# Backup settings
+backup:
+  enabled: true
+  schedule: "0 2 * * *"
+  retention: "7d"
+
+# Migration job
+migration:
+  enabled: true
+  image:
+    repository: your-project/aksio-registry/aksio-backend
+    tag: "latest"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Celery worker (for background tasks)
+celery:
+  enabled: true
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+# External secrets
+externalSecrets:
+  enabled: true
+  secretStore:
+    name: "gcpsm-secret-store"
+    kind: "SecretStore"
+  secrets:
+    - name: "django-secret"
+      key: "projects/your-project/secrets/aksio-prod-django-secret/versions/latest"
+    - name: "database-secret"
+      key: "projects/your-project/secrets/aksio-prod-db-password/versions/latest"
+    - name: "openai-secret"
+      key: "projects/your-project/secrets/openai-api-key/versions/latest"

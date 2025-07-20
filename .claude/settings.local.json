@@ -27,7 +27,9 @@
       "Bash(mv:*)",
       "Bash(pip install:*)",
       "Bash(git reset:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(scriptsformat-code.bat)",
+      "Bash(bash:*)"
     ],
     "deny": []
   }
