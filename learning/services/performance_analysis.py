@@ -460,9 +460,11 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         if course:
             sessions = sessions.filter(study_plan__course=course)
 
-        # Daily activity pattern
+        # Daily activity pattern using Django ORM functions (safer than raw SQL)
+        from django.db.models.functions import TruncDate
+        
         daily_activity = (
-            sessions.extra(select={"day": "date(created_at)"})
+            sessions.annotate(day=TruncDate("created_at"))
             .values("day")
             .annotate(session_count=Count("id"), total_hours=Sum("duration_hours"))
             .order_by("day")

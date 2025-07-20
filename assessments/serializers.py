@@ -454,14 +454,20 @@ class AssessmentStatsSerializer(serializers.ModelSerializer):
             course=obj.course, user=obj.user, is_active=True
         )
 
+        # Fix N+1 query by using database filters instead of property access
+        # Mastery level "mastered" criteria: repetitions >= 8, success_rate >= 0.9, ease_factor >= 2.5
+        mastered_flashcards = flashcards.filter(
+            repetitions__gte=8,
+            success_rate__gte=0.9,
+            ease_factor__gte=2.5
+        ).count()
+
         return {
             "total_flashcards": flashcards.count(),
             "due_flashcards": flashcards.filter(
                 next_review_date__lte=timezone.now()
             ).count(),
-            "mastered_flashcards": len(
-                [f for f in flashcards if f.mastery_level == "mastered"]
-            ),
+            "mastered_flashcards": mastered_flashcards,
             "average_success_rate": flashcards.aggregate(
                 avg_rate=models.Avg("success_rate")
             )["avg_rate"]

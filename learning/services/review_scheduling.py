@@ -307,7 +307,7 @@ class ReviewSchedulingService(AdaptiveLearningService):
 
         # Find concepts where user scored below 75%
         recent_attempts = QuizAttempt.objects.filter(
-            user=user, created_at__gte=timezone.now() - timedelta(days=30), score__lt=75
+            user=user, started_at__gte=timezone.now() - timedelta(days=30), score__lt=75
         )
 
         if course:
@@ -323,7 +323,7 @@ class ReviewSchedulingService(AdaptiveLearningService):
                     "type": "concept",
                     "title": f"Review concepts from: {attempt.quiz.title}",
                     "difficulty": "hard" if attempt.score < 50 else "medium",
-                    "last_reviewed": attempt.created_at.date().isoformat(),
+                    "last_reviewed": attempt.started_at.date().isoformat(),
                     "next_review_date": timezone.now().date().isoformat(),
                     "priority": "high" if attempt.score < 50 else "medium",
                     "estimated_time_minutes": 20,

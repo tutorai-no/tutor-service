@@ -69,7 +69,8 @@ class DocumentUploadStreamView(APIView):
         )
         response["Cache-Control"] = "no-cache"
         # Don't set Connection header - it's a hop-by-hop header not allowed in WSGI
-        response["Access-Control-Allow-Origin"] = "*"
+        # TODO: Configure proper CORS based on environment settings
+        # response["Access-Control-Allow-Origin"] = "*"  # Security risk - commented out
         response["Access-Control-Allow-Headers"] = "Cache-Control"
 
         return response
@@ -114,7 +115,8 @@ class URLUploadStreamView(APIView):
         )
         response["Cache-Control"] = "no-cache"
         # Don't set Connection header - it's a hop-by-hop header not allowed in WSGI
-        response["Access-Control-Allow-Origin"] = "*"
+        # TODO: Configure proper CORS based on environment settings
+        # response["Access-Control-Allow-Origin"] = "*"  # Security risk - commented out
         response["Access-Control-Allow-Headers"] = "Cache-Control"
 
         return response
@@ -223,7 +225,7 @@ class HealthCheckView(APIView):
     Health check for document processing services.
     """
 
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Check health of all document processing services."""
