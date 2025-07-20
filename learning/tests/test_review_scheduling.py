@@ -82,8 +82,8 @@ class TestReviewSchedulingService(TestCase):
         FlashcardReview.objects.create(
             user=self.user,
             flashcard=self.flashcard,
-            difficulty="medium",
-            response_time=5,
+            quality_response=3,
+            response_time_seconds=5,
         )
 
         items = self.service._get_flashcards_for_review(self.user, self.course)
@@ -191,8 +191,8 @@ class TestReviewSchedulingService(TestCase):
         last_review = FlashcardReview.objects.create(
             user=self.user,
             flashcard=self.flashcard,
-            difficulty="medium",
-            response_time=5,
+            quality_response=3,
+            response_time_seconds=5,
             created_at=timezone.now() - timedelta(days=1),
         )
 
@@ -274,8 +274,8 @@ class TestReviewSchedulingService(TestCase):
         FlashcardReview.objects.create(
             user=self.user,
             flashcard=self.flashcard,
-            difficulty="medium",
-            response_time=5,
+            quality_response=3,
+            response_time_seconds=5,
         )
 
         patterns = self.service._analyze_retention_patterns(self.user, self.course)
@@ -375,7 +375,7 @@ class TestReviewSchedulingService(TestCase):
         old_review = FlashcardReview.objects.create(
             user=self.user,
             flashcard=self.flashcard,
-            difficulty="medium",
+            quality_response=3,
             created_at=timezone.now() - timedelta(days=10),
         )
 
@@ -415,9 +415,9 @@ class TestReviewSchedulingService(TestCase):
         """Test difficulty pattern analysis."""
         # Create reviews with different difficulties
         reviews = []
-        for difficulty in ["easy", "easy", "medium", "hard"]:
+        for quality in [4, 4, 3, 1]:  # easy, easy, medium, hard
             review = FlashcardReview.objects.create(
-                user=self.user, flashcard=self.flashcard, difficulty=difficulty
+                user=self.user, flashcard=self.flashcard, quality_response=quality
             )
             reviews.append(review)
 

@@ -303,7 +303,7 @@ class UserStreak(models.Model):
             self.current_streak_days = 0
             self.current_streak_start = now.date()
             self.last_activity_date = now.date()
-            self.save()
+            # Don't save here - let the calling method handle saving
             return True  # Streak was broken
 
         return False  # Streak intact
@@ -316,6 +316,7 @@ class UserStreak(models.Model):
         from datetime import datetime
 
         today = datetime.now().date()
+        study_activity_today = False
 
         # Check if streak should be broken first
         if self.check_if_broken_streak():
@@ -323,11 +324,13 @@ class UserStreak(models.Model):
             self.current_streak_days = 1
             self.current_streak_start = today
             self.last_activity_date = today
+            study_activity_today = True
         else:
             # Only increment if this is a new day
             if self.last_activity_date < today:
                 self.current_streak_days += 1
                 self.last_activity_date = today
+                study_activity_today = True
 
                 # Update longest streak if needed
                 if self.current_streak_days > self.longest_streak_days:
@@ -342,8 +345,11 @@ class UserStreak(models.Model):
                     ):
                         self.streak_milestones_achieved.append(milestone)
 
-        # Update total study tracking
-        self.total_study_days += 1
+        # Only update total study tracking if there was actual activity today
+        if study_activity_today:
+            self.total_study_days += 1
+        
+        # Always increment session count since this method represents a study session
         self.total_study_sessions += 1
 
         self.save()

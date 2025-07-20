@@ -432,12 +432,17 @@ class PerformanceAnalysisService(AdaptiveLearningService):
             "again": reviews.filter(quality_response=0).count(),     # 0: Again
         }
 
+        # Calculate average response time
+        response_times = reviews.filter(response_time_seconds__isnull=False).values_list('response_time_seconds', flat=True)
+        avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+
         return {
             "retention_rate": round(retention_rate, 1),
             "total_reviews": total_reviews,
             "cards_mastered": cards_mastered,
             "review_efficiency": review_efficiency,
             "difficulty_distribution": difficulty_dist,
+            "average_response_time": round(avg_response_time, 1) if avg_response_time else 0,
             "reviews_per_day": round(total_reviews / time_period_days, 1),
         }
 
@@ -922,7 +927,7 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         total_efficiency = 0
         count = 0
 
-        for review in reviews.filter(response_time__isnull=False):
+        for review in reviews.filter(response_time_seconds__isnull=False):
             # Optimal response time: 2-5 seconds
             response_time = review.response_time_seconds
 
