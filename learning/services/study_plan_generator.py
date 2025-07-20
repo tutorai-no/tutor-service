@@ -203,8 +203,16 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
                 'adaptations_made': []
             }
     
-    def _analyze_user_performance(self, metrics: StudyMetrics) -> Dict[str, Any]:
+    def _analyze_user_performance(self, user_or_metrics, course=None) -> Dict[str, Any]:
         """Analyze user performance to inform plan generation."""
+        # Handle both old and new call signatures for backward compatibility
+        if hasattr(user_or_metrics, 'get_quiz_performance'):
+            # New signature with StudyMetrics object
+            metrics = user_or_metrics
+        else:
+            # Old signature with user and course
+            metrics = StudyMetrics(user_or_metrics, course)
+        
         quiz_performance = metrics.get_quiz_performance()
         session_metrics = metrics.get_study_session_metrics()
         flashcard_retention = metrics.get_flashcard_retention()
@@ -216,6 +224,19 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
             quiz_performance, session_metrics, flashcard_retention
         )
         
+        # Add study habits for backward compatibility
+        study_habits = {
+            'optimal_session_length': session_metrics.get('average_duration', 45),
+            'peak_productivity_hours': [optimal_times.get('peak_productivity_hour', 9)],
+            'consistency_score': session_metrics.get('completion_rate', 70) / 100
+        }
+        
+        # Add retention patterns for backward compatibility
+        retention_patterns = {
+            'average_retention': flashcard_retention.get('retention_rate', 70),
+            'forgetting_curve': 'normal'
+        }
+        
         return {
             'quiz_performance': quiz_performance,
             'session_metrics': session_metrics,
@@ -225,7 +246,9 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
             'learning_profile': learning_profile,
             'performance_score': self._calculate_overall_performance_score(
                 quiz_performance, session_metrics, flashcard_retention
-            )
+            ),
+            'study_habits': study_habits,
+            'retention_patterns': retention_patterns
         }
     
     def _analyze_course_structure(self, course) -> Dict[str, Any]:
@@ -365,7 +388,7 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
             
             # Generate sessions for this week
             week_sessions = self._generate_week_sessions(
-                week_start, week_end, week_documents, study_parameters, optimizer
+                week_start, week_end, week_documents, study_parameters, optimizer, preferences
             )
             
             # Add to schedule
@@ -388,7 +411,8 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
         week_end: date,
         documents: List,
         study_parameters: Dict[str, Any],
-        optimizer: TimeSlotOptimizer
+        optimizer: TimeSlotOptimizer,
+        preferences: Dict[str, Any] = None
     ) -> List[Dict[str, Any]]:
         """Generate study sessions for a specific week."""
         sessions = []
@@ -412,7 +436,7 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
                 break
             
             # Skip weekends unless specified
-            if session_date.weekday() >= 5:  # Saturday = 5, Sunday = 6
+            if session_date.weekday() >= 5 and not (preferences or {}).get('include_weekends', False):  # Saturday = 5, Sunday = 6
                 continue
             
             # Create sessions for this day
@@ -822,6 +846,248 @@ class StudyPlanGeneratorService(AdaptiveLearningService):
                 recommendations.append('Share your knowledge by helping other students')
         
         return recommendations
+    
+    def _get_course_topics(self, course) -> List[str]:
+        """Extract topics from course content."""
+        topics = []
+        
+        # Get topics from course documents
+        from courses.models import Document
+        documents = Document.objects.filter(course=course)
+        
+        for doc in documents:
+            # Use document name as topic
+            topics.append(doc.name)
+        
+        # If no documents, return default topics
+        if not topics:
+            topics = [
+                f"{course.name} - Introduction",
+                f"{course.name} - Core Concepts",
+                f"{course.name} - Advanced Topics",
+                f"{course.name} - Practice & Review"
+            ]
+        
+        return topics
+    
+    def _create_optimized_schedule(
+        self,
+        topics: List[str],
+        duration_weeks: int,
+        preferences: Dict[str, Any],
+        performance_analysis: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Create an optimized study schedule."""
+        schedule = []
+        
+        # Distribute topics across weeks
+        topic_distribution = self._distribute_topics_across_weeks(topics, duration_weeks)
+        
+        # Get optimal study times from performance analysis
+        optimal_hours = performance_analysis.get('study_habits', {}).get('peak_productivity_hours', [9, 14, 19])
+        optimal_session_length = performance_analysis.get('study_habits', {}).get('optimal_session_length', 45)
+        
+        # Apply preferences
+        if preferences.get('prefer_short_sessions'):
+            optimal_session_length = min(optimal_session_length, 30)
+        
+        include_weekends = preferences.get('include_weekends', False)
+        
+        # Generate sessions for each week
+        current_date = timezone.now().date()
+        
+        for week_num, week_topics in topic_distribution.items():
+            week_sessions = []
+            days_in_week = 7 if include_weekends else 5
+            
+            for day in range(days_in_week):
+                if day >= 5 and not include_weekends:
+                    break
+                
+                session_date = current_date + timedelta(days=(week_num - 1) * 7 + day)
+                
+                # Create sessions for this day
+                for hour_idx, hour in enumerate(optimal_hours[:2]):  # Max 2 sessions per day
+                    if week_topics:
+                        topic = week_topics[min(day * 2 + hour_idx, len(week_topics) - 1)]
+                        
+                        session = {
+                            'date': session_date.isoformat(),
+                            'start_time': f"{hour:02d}:00",
+                            'duration_minutes': optimal_session_length,
+                            'content': {
+                                'focus_topic': topic,
+                                'tasks': [
+                                    {'title': f'Study: {topic}', 'type': 'reading'},
+                                    {'title': f'Practice: {topic}', 'type': 'practice'}
+                                ]
+                            },
+                            'week': week_num,
+                            'estimated_cognitive_load': 5.0,  # Default medium load
+                            'productivity_prediction': 0.8
+                        }
+                        
+                        schedule.append(session)
+        
+        return schedule
+    
+    def _distribute_topics_across_weeks(self, topics: List[str], weeks: int) -> Dict[int, List[str]]:
+        """Distribute topics evenly across weeks."""
+        distribution = {}
+        topics_per_week = max(1, len(topics) // weeks)
+        
+        for week in range(1, weeks + 1):
+            start_idx = (week - 1) * topics_per_week
+            end_idx = start_idx + topics_per_week
+            
+            if week == weeks:  # Last week gets remaining topics
+                week_topics = topics[start_idx:]
+            else:
+                week_topics = topics[start_idx:end_idx]
+            
+            distribution[week] = week_topics
+        
+        return distribution
+    
+    def _adapt_to_performance_patterns(
+        self,
+        base_schedule: List[Dict[str, Any]],
+        performance_analysis: Dict[str, Any]
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Adapt schedule based on performance patterns."""
+        adapted_schedule = base_schedule.copy()
+        adaptations = []
+        
+        # Check if study times need adjustment
+        peak_hours = performance_analysis.get('study_habits', {}).get('peak_productivity_hours', [])
+        if peak_hours:
+            adaptations.append({
+                'type': 'time_adjustment',
+                'description': 'Adjusted session times to match peak productivity hours',
+                'original_times': [s['start_time'] for s in base_schedule[:3]],
+                'new_times': [f"{h:02d}:00" for h in peak_hours[:3]]
+            })
+            
+            # Update schedule times
+            for i, session in enumerate(adapted_schedule):
+                if i < len(peak_hours):
+                    session['start_time'] = f"{peak_hours[i]:02d}:00"
+        
+        # Check if session duration needs adjustment
+        optimal_length = performance_analysis.get('study_habits', {}).get('optimal_session_length', 45)
+        current_length = base_schedule[0].get('duration_minutes', 60) if base_schedule else 60
+        
+        if abs(optimal_length - current_length) > 15:
+            adaptations.append({
+                'type': 'duration_adjustment',
+                'description': 'Adjusted session duration for optimal focus',
+                'original_duration': current_length,
+                'new_duration': optimal_length
+            })
+            
+            # Update durations
+            for session in adapted_schedule:
+                session['duration_minutes'] = optimal_length
+        
+        # Check for weak topics that need reinforcement
+        weak_topics = performance_analysis.get('quiz_performance', {}).get('weak_topics', [])
+        if weak_topics:
+            adaptations.append({
+                'type': 'content_reinforcement',
+                'description': 'Added review sessions for weak topics',
+                'topics': weak_topics
+            })
+        
+        return adapted_schedule, adaptations
+    
+    def _generate_recommendations(
+        self,
+        plan_data: Dict[str, Any],
+        performance_analysis: Dict[str, Any]
+    ) -> List[Dict[str, str]]:
+        """Generate structured recommendations."""
+        recommendations = []
+        
+        # Check consistency score
+        consistency = performance_analysis.get('study_habits', {}).get('consistency_score', 0.8)
+        if consistency < 0.6:
+            recommendations.append({
+                'title': 'Improve Study Consistency',
+                'description': 'Try to maintain regular study times each day to build a habit',
+                'priority': 'high',
+                'type': 'habit'
+            })
+        
+        # Check quiz performance
+        avg_score = performance_analysis.get('quiz_performance', {}).get('average_score', 70)
+        if avg_score < 70:
+            recommendations.append({
+                'title': 'Focus on Weak Areas',
+                'description': 'Spend extra time reviewing topics where you scored below 70%',
+                'priority': 'high',
+                'type': 'content'
+            })
+        
+        # Check if adaptations were made
+        if plan_data.get('adaptations_made'):
+            recommendations.append({
+                'title': 'Follow Adapted Schedule',
+                'description': 'The schedule has been customized based on your learning patterns',
+                'priority': 'medium',
+                'type': 'schedule'
+            })
+        
+        # General recommendation
+        recommendations.append({
+            'title': 'Take Regular Breaks',
+            'description': 'Use the Pomodoro technique: 25 minutes study, 5 minutes break',
+            'priority': 'low',
+            'type': 'technique'
+        })
+        
+        return recommendations
+    
+    def _calculate_cognitive_load(
+        self,
+        session_data: Dict[str, Any],
+        user_performance: Dict[str, Any]
+    ) -> float:
+        """Calculate cognitive load for a session (1-10 scale)."""
+        base_load = 5.0
+        
+        # Adjust based on session duration
+        duration = session_data.get('duration_minutes', 60)
+        if duration > 90:
+            base_load += 2.0
+        elif duration > 60:
+            base_load += 1.0
+        elif duration < 30:
+            base_load -= 1.0
+        
+        # Adjust based on number of tasks
+        tasks = session_data.get('content', {}).get('tasks', [])
+        task_count = len(tasks)
+        if task_count > 3:
+            base_load += 1.5
+        elif task_count == 1:
+            base_load -= 1.0
+        
+        # Adjust based on task types
+        for task in tasks:
+            if task.get('type') == 'assessment':
+                base_load += 0.5
+            elif task.get('type') == 'coding':
+                base_load += 0.3
+        
+        # Adjust based on user's mastery rate
+        mastery_rate = user_performance.get('learning_velocity', {}).get('mastery_rate', 0.7)
+        if mastery_rate < 0.5:
+            base_load += 1.0  # Struggling learner needs more effort
+        elif mastery_rate > 0.8:
+            base_load -= 0.5  # High performer finds it easier
+        
+        # Ensure within bounds
+        return max(1.0, min(10.0, base_load))
 
 
 # Global service instance

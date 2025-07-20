@@ -1017,7 +1017,6 @@
             }
 
             const formData = new FormData();
-            formData.append('course_id', selectedCourseId);
 
             if (file) {
                 formData.append('file', file);
@@ -1028,7 +1027,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/courses/documents/`, {
+                const response = await fetch(`${API_BASE}/courses/${selectedCourseId}/documents/upload/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${authToken}`
@@ -1059,7 +1058,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/courses/documents/?course_id=${selectedCourseId}`, {
+                const response = await fetch(`${API_BASE}/courses/${selectedCourseId}/documents/`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
@@ -1106,7 +1105,7 @@
 
         async function checkHealth() {
             try {
-                const response = await fetch(`${API_BASE}/health/`, {
+                const response = await fetch('/api/health/', {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }

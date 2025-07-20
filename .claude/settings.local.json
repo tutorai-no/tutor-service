@@ -48,7 +48,12 @@
       "Bash(gcloud artifacts docker images list:*)",
       "Bash(gcloud artifacts repositories delete:*)",
       "Bash(gcloud run services:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(cat:*)",
+      "Bash(powershell:*)",
+      "Bash(cmd //c \"gh run list --repo The-TutorAI-project/aksio-backend --branch refactor/project-structure --limit 5\")",
+      "Bash(gh run view:*)",
+      "Bash(pre-commit run:*)"
     ],
     "deny": []
   }
