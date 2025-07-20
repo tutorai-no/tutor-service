@@ -1506,6 +1506,13 @@ class AdaptiveLearningViewSet(viewsets.ViewSet):
         target_date = request.data.get('target_date')
         preferences = request.data.get('preferences', {})
         
+        # Validate course_id
+        if not course_id:
+            return Response(
+                {'error': 'course_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         # Get course
         try:
             from courses.models import Course
@@ -1538,20 +1545,23 @@ class AdaptiveLearningViewSet(viewsets.ViewSet):
             study_plan = StudyPlan.objects.create(
                 user=request.user,
                 course=course,
-                name=f"Adaptive {plan_type.title()} Plan for {course.name}",
+                title=f"Adaptive {plan_type.title()} Plan for {course.name}",
                 description="AI-generated adaptive study plan",
+                plan_type=plan_type,
                 plan_data=result['plan_data'],
                 start_date=timezone.now().date(),
-                end_date=target_date,
-                is_active=True
+                end_date=target_date or (timezone.now() + timedelta(days=30)).date(),
+                daily_study_hours=preferences.get('daily_hours', 2.0),
+                study_days_per_week=5 if not preferences.get('include_weekends', True) else 7,
+                status='active'
             )
             
             # Deactivate other plans for the same course
             StudyPlan.objects.filter(
                 user=request.user,
                 course=course,
-                is_active=True
-            ).exclude(id=study_plan.id).update(is_active=False)
+                status='active'
+            ).exclude(id=study_plan.id).update(status='paused')
             
             return Response({
                 'study_plan_id': str(study_plan.id),
@@ -1711,6 +1721,27 @@ class AdaptiveLearningViewSet(viewsets.ViewSet):
         study_plan_id = request.data.get('study_plan_id')
         override_type = request.data.get('override_type')  # 'schedule', 'difficulty', 'review_frequency'
         override_data = request.data.get('override_data', {})
+        reason = request.data.get('reason', '')
+        
+        # Validate required fields
+        if not study_plan_id:
+            return Response(
+                {'error': 'study_plan_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not override_type:
+            return Response(
+                {'error': 'override_type is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        valid_override_types = ['schedule', 'difficulty', 'review_frequency']
+        if override_type not in valid_override_types:
+            return Response(
+                {'error': f'Invalid override_type. Must be one of: {", ".join(valid_override_types)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Get study plan
         try:
@@ -1772,7 +1803,12 @@ class AdaptiveLearningViewSet(viewsets.ViewSet):
         return Response({
             'success': True,
             'message': f'Manual override applied for {override_type}',
-            'updated_plan_data': current_plan_data
+            'override_applied': {
+                'type': override_type,
+                'reason': reason,
+                'timestamp': timezone.now().isoformat()
+            },
+            'updated_plan': current_plan_data
         })
     
     @action(detail=False, methods=['get'])
@@ -1789,7 +1825,7 @@ class AdaptiveLearningViewSet(viewsets.ViewSet):
         # Get active study plans with predictions
         active_plans = StudyPlan.objects.filter(
             user=request.user,
-            is_active=True
+            status='active'
         )
         
         prediction_service = get_progress_prediction_service()

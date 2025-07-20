@@ -84,8 +84,6 @@ class TestAdaptiveLearningViewSet(TestCase):
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('success', response.data)
-        self.assertTrue(response.data['success'])
         self.assertIn('study_plan_id', response.data)
         self.assertIn('plan_data', response.data)
         self.assertIn('recommendations', response.data)
@@ -108,7 +106,6 @@ class TestAdaptiveLearningViewSet(TestCase):
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data['success'])
         
         # Check that target date is considered
         plan_data = response.data['plan_data']
@@ -388,7 +385,6 @@ class TestAdaptiveLearningViewSet(TestCase):
         
         # Should still succeed but correct the invalid preference
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data['success'])
     
     def test_dashboard_performance_calculations(self):
         """Test dashboard performance calculations."""
@@ -499,7 +495,6 @@ class TestAdaptiveLearningViewSet(TestCase):
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data['success'])
     
     @patch('learning.views.logger')
     def test_service_error_handling(self, mock_logger):

@@ -440,37 +440,39 @@ class DocumentViewSet(viewsets.ModelViewSet):
             
             # Process the streaming response
             processing_started = False
-            graph_id = None
+            graph_id = str(document.id)  # Use document ID as graph ID
             chunks_processed = 0
+            chunks_text = []
             
             try:
                 for line in response.iter_lines(decode_unicode=True):
                     if not line.strip():
                         continue
                     
+                    # Check for [DONE] marker
+                    if line.strip() == '[DONE]':
+                        processing_started = True
+                        break
+                    
                     try:
                         result = json.loads(line)
                         
-                        # Check for processing status updates
-                        if result.get('status') == 'chunk_processed':
+                        # Handle chunk data from scraper-service
+                        if 'chunk_index' in result and 'text' in result:
+                            chunks_processed += 1
+                            processing_started = True
+                            chunks_text.append(result.get('text', ''))
+                            logger.debug(f"Processed chunk {result.get('chunk_index')} for document {document.id}")
+                            
+                        # Legacy format support
+                        elif result.get('status') == 'chunk_processed':
                             chunks_processed += 1
                             processing_started = True
                             
                         elif result.get('status') == 'processing_complete':
-                            graph_id = result.get('graph_id')
-                            total_chunks = result.get('statistics', {}).get('total_chunks', 0)
-                            
-                            logger.info(f"Document {document.id} processing complete: {total_chunks} chunks")
-                            
-                            return {
-                                'success': True,
-                                'file_url': f'/retrieval/{graph_id}/document/{document.id}',
-                                'storage_path': f'graphs/{graph_id}/documents/{document.id}',
-                                'processing_id': str(graph_id),
-                                'graph_id': str(graph_id),
-                                'chunks_processed': chunks_processed,
-                                'estimated_time_minutes': 0  # Already complete
-                            }
+                            graph_id = result.get('graph_id', str(document.id))
+                            processing_started = True
+                            break
                             
                         elif 'error' in result:
                             logger.error(f"Processing error: {result.get('error')}")
@@ -479,22 +481,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
                                 'error': f"Processing error: {result.get('error')}"
                             }
                             
-                    except json.JSONDecodeError:
-                        # Skip invalid JSON lines
+                    except json.JSONDecodeError as e:
+                        logger.debug(f"Skipping non-JSON line: {line[:50]}...")
                         continue
                         
             except Exception as stream_error:
                 logger.error(f"Error processing stream: {str(stream_error)}")
                 
                 # If we got some processing, return partial success
-                if processing_started and graph_id:
+                if processing_started and chunks_processed > 0:
                     return {
                         'success': True,
-                        'file_url': f'/retrieval/{graph_id}/document/{document.id}',
-                        'storage_path': f'graphs/{graph_id}/documents/{document.id}',
+                        'file_url': f'/documents/{document.id}/{uploaded_file.name}',
+                        'storage_path': f'documents/{user.id}/{document.id}',
                         'processing_id': str(graph_id),
+                        'graph_id': str(graph_id),
                         'chunks_processed': chunks_processed,
-                        'estimated_time_minutes': 1
+                        'estimated_time_minutes': 0
                     }
                 else:
                     return {
@@ -502,15 +505,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
                         'error': f"Stream processing error: {str(stream_error)}"
                     }
             
-            # If we reach here, processing may still be ongoing
-            if processing_started:
+            # If we successfully processed chunks, return success
+            if processing_started and chunks_processed > 0:
+                logger.info(f"Document {document.id} processing complete: {chunks_processed} chunks")
+                
+                # Store extracted text if available
+                if chunks_text:
+                    document.extracted_text = '\n\n'.join(chunks_text)
+                    document.save(update_fields=['extracted_text'])
+                
                 return {
                     'success': True,
-                    'file_url': f'/retrieval/processing/document/{document.id}',
-                    'storage_path': f'processing/documents/{document.id}',
-                    'processing_id': f'proc_{document.id}',
+                    'file_url': f'/documents/{document.id}/{uploaded_file.name}',
+                    'storage_path': f'documents/{user.id}/{document.id}',
+                    'processing_id': str(graph_id),
+                    'graph_id': str(graph_id),
                     'chunks_processed': chunks_processed,
-                    'estimated_time_minutes': 2
+                    'estimated_time_minutes': 0
                 }
             else:
                 return {

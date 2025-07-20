@@ -54,7 +54,8 @@
       "Bash(cmd //c \"gh run list --repo The-TutorAI-project/aksio-backend --branch refactor/project-structure --limit 5\")",
       "Bash(gh run view:*)",
       "Bash(pre-commit run:*)",
-      "Bash(./scripts/format-code.sh:*)"
+      "Bash(./scripts/format-code.sh:*)",
+      "Bash(RETRIEVER_SERVICE_URL=http://scraper-service:8080 docker-compose up -d backend)"
     ],
     "deny": []
   }
