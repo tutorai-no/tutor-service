@@ -83,8 +83,9 @@ class StudyMetrics:
             self._cache["quiz_performance"] = {
                 "average_score": float(avg_score),
                 "total_attempts": total_attempts,
-                "trend": recent_trend,
+                "improvement_trend": recent_trend,
                 "consistency": self._calculate_consistency(attempts),
+                "weak_topics": [],  # TODO: Implement topic analysis when quiz model has topic data
             }
 
         return self._cache["quiz_performance"]

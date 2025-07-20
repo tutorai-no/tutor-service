@@ -288,7 +288,9 @@ class APITester:
             response = self.session.post(f"{self.base_url}/chat/chats/", json=chat_data)
 
             if response.status_code == 201:
-                response.json()["id"]
+                chat_data = response.json()
+                self.log(f"Chat response: {chat_data}")
+                chat_id = chat_data.get("id")
                 self.log("PASS Chat creation successful")
 
                 # Test chat listing

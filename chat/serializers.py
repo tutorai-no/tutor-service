@@ -301,6 +301,7 @@ class ChatCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
         fields = [
+            "id",
             "title",
             "chat_type",
             "course",
@@ -314,11 +315,18 @@ class ChatCreateSerializer(serializers.ModelSerializer):
             "use_document_context",
             "use_assessment_context",
         ]
+        read_only_fields = ["id"]
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make course field optional since it's nullable in the model
+        self.fields['course'].required = False
+        self.fields['section'].required = False
 
     def create(self, validated_data):
         """Create a new chat with user context."""
-        user = self.context["request"].user
-        chat = Chat.objects.create(user=user, **validated_data)
+        # User is already passed from perform_create
+        chat = Chat.objects.create(**validated_data)
         return chat
 
 

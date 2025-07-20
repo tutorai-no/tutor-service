@@ -114,46 +114,54 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
         }
+        /* WCAG Compliant Tab Styles */
         .main-tabs {
             display: flex;
-            border-bottom: 2px solid #e9ecef;
+            border-bottom: 2px solid #dee2e6;
             margin-bottom: 20px;
-            background: linear-gradient(to right, #f8f9fa, #e9ecef);
-            border-radius: 8px 8px 0 0;
+            background: #f8f9fa;
+            border-radius: 4px 4px 0 0;
             overflow: hidden;
+            list-style: none;
+            padding: 0;
+            margin-top: 0;
         }
         .main-tab {
-            padding: 15px 25px;
+            padding: 12px 20px;
             cursor: pointer;
-            border: none;
+            border: 2px solid transparent;
             background: transparent;
-            border-bottom: 3px solid transparent;
             font-size: 16px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: background-color 0.2s ease, color 0.2s ease;
             position: relative;
             flex: 1;
             text-align: center;
+            margin: 0;
+            color: #495057;
+            min-height: 48px; /* WCAG touch target */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .main-tab:focus {
+            outline: 3px solid #0066cc;
+            outline-offset: -3px;
+            z-index: 1;
         }
         .main-tab:hover {
-            background: rgba(0, 123, 255, 0.1);
-            color: #007bff;
+            background: #e9ecef;
+            color: #212529;
         }
-        .main-tab.active {
+        .main-tab[aria-selected="true"] {
             background: white;
-            border-bottom-color: #007bff;
-            color: #007bff;
-            font-weight: bold;
-            box-shadow: 0 -2px 8px rgba(0, 123, 255, 0.2);
+            color: #0066cc;
+            font-weight: 600;
+            border-bottom: 3px solid #0066cc;
+            margin-bottom: -2px;
         }
-        .main-tab.active::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #007bff, #0056b3);
+        .main-tab[aria-selected="true"]:focus {
+            outline-color: #004494;
         }
         .main-tab-content {
             display: none;
@@ -161,34 +169,51 @@
         .main-tab-content.active {
             display: block;
         }
+        /* WCAG Compliant Sub-tab Styles */
         .sub-tabs {
             display: flex;
             border-bottom: 1px solid #dee2e6;
             margin-bottom: 15px;
             background: #f8f9fa;
-            border-radius: 6px;
+            border-radius: 4px;
             overflow: hidden;
+            list-style: none;
+            padding: 0;
         }
         .sub-tab {
-            padding: 10px 20px;
+            padding: 10px 16px;
             cursor: pointer;
-            border: none;
+            border: 2px solid transparent;
             background: transparent;
-            border-bottom: 2px solid transparent;
             font-size: 14px;
-            transition: all 0.3s ease;
+            transition: background-color 0.2s ease, color 0.2s ease;
             flex: 1;
             text-align: center;
+            color: #495057;
+            min-height: 44px; /* WCAG touch target */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        .sub-tab:focus {
+            outline: 2px solid #0066cc;
+            outline-offset: -2px;
+            z-index: 1;
         }
         .sub-tab:hover {
-            background: rgba(0, 123, 255, 0.1);
-            color: #007bff;
+            background: #e9ecef;
+            color: #212529;
         }
-        .sub-tab.active {
+        .sub-tab[aria-selected="true"] {
             background: white;
-            border-bottom-color: #007bff;
-            color: #007bff;
-            font-weight: bold;
+            color: #0066cc;
+            font-weight: 600;
+            border-bottom: 2px solid #0066cc;
+            margin-bottom: -1px;
+        }
+        .sub-tab[aria-selected="true"]:focus {
+            outline-color: #004494;
         }
         .sub-tab-content {
             display: none;
@@ -535,25 +560,25 @@
 
     <!-- Main Content Tabs -->
     <div class="container" id="main-content" style="display: none;">
-        <div class="main-tabs">
-            <button class="main-tab active" onclick="showMainTab('documents')">📄 Documents</button>
-            <button class="main-tab" onclick="showMainTab('study-plans')">📋 Study Plans</button>
-            <button class="main-tab" onclick="showMainTab('assessments')">🧠 Assessments</button>
-            <button class="main-tab" onclick="showMainTab('analytics')">📊 Analytics</button>
+        <div class="main-tabs" role="tablist" aria-label="Main navigation tabs">
+            <button class="main-tab active" role="tab" aria-selected="true" aria-controls="documents" id="documents-tab" onclick="showMainTab('documents')">📄 Documents</button>
+            <button class="main-tab" role="tab" aria-selected="false" aria-controls="study-plans" id="study-plans-tab" onclick="showMainTab('study-plans')">📋 Study Plans</button>
+            <button class="main-tab" role="tab" aria-selected="false" aria-controls="assessments" id="assessments-tab" onclick="showMainTab('assessments')">🧠 Assessments</button>
+            <button class="main-tab" role="tab" aria-selected="false" aria-controls="analytics" id="analytics-tab" onclick="showMainTab('analytics')">📊 Analytics</button>
         </div>
 
         <!-- Documents Tab -->
-        <div id="documents" class="main-tab-content active">
+        <div id="documents" class="main-tab-content active" role="tabpanel" aria-labelledby="documents-tab">
             <h3>📄 Document Management</h3>
             
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="showSubTab('documents', 'upload')">Upload</button>
-                <button class="sub-tab" onclick="showSubTab('documents', 'manage')">Manage</button>
-                <button class="sub-tab" onclick="showSubTab('documents', 'health')">Health</button>
+            <div class="sub-tabs" role="tablist" aria-label="Document management options">
+                <button class="sub-tab active" role="tab" aria-selected="true" aria-controls="documents-upload" id="documents-upload-tab" onclick="showSubTab('documents', 'upload')">Upload</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="documents-manage" id="documents-manage-tab" onclick="showSubTab('documents', 'manage')">Manage</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="documents-health" id="documents-health-tab" onclick="showSubTab('documents', 'health')">Health</button>
             </div>
 
             <!-- Document Upload -->
-            <div id="documents-upload" class="sub-tab-content active">
+            <div id="documents-upload" class="sub-tab-content active" role="tabpanel" aria-labelledby="documents-upload-tab">
                 <div class="file-upload-area" id="fileUploadArea">
                     <div class="form-group">
                         <label for="documentFile">Choose File or Drag & Drop:</label>
@@ -577,7 +602,7 @@
             </div>
 
             <!-- Document Management -->
-            <div id="documents-manage" class="sub-tab-content">
+            <div id="documents-manage" class="sub-tab-content" role="tabpanel" aria-labelledby="documents-manage-tab">
                 <button onclick="loadDocuments()" class="btn-secondary">Refresh Documents</button>
                 <div id="documents-list" class="documents-grid">
                     <p>Select a course and click refresh to view documents.</p>
@@ -585,7 +610,7 @@
             </div>
 
             <!-- Health Check -->
-            <div id="documents-health" class="sub-tab-content">
+            <div id="documents-health" class="sub-tab-content" role="tabpanel" aria-labelledby="documents-health-tab">
                 <button onclick="checkHealth()" class="btn-warning">Check System Health</button>
                 <div id="health-status" class="health-status">
                     <div class="status-item status-unknown">Backend: Unknown</div>
@@ -597,13 +622,13 @@
         </div>
 
         <!-- Study Plans Tab -->
-        <div id="study-plans" class="main-tab-content">
+        <div id="study-plans" class="main-tab-content" role="tabpanel" aria-labelledby="study-plans-tab">
             <h3>📋 Adaptive Study Plans</h3>
             
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="showSubTab('study-plans', 'generate')">Generate</button>
-                <button class="sub-tab" onclick="showSubTab('study-plans', 'manage')">Manage</button>
-                <button class="sub-tab" onclick="showSubTab('study-plans', 'override')">Override</button>
+            <div class="sub-tabs" role="tablist" aria-label="Study plan options">
+                <button class="sub-tab active" role="tab" aria-selected="true" aria-controls="study-plans-generate" id="study-plans-generate-tab" onclick="showSubTab('study-plans', 'generate')">Generate</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="study-plans-manage" id="study-plans-manage-tab" onclick="showSubTab('study-plans', 'manage')">Manage</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="study-plans-override" id="study-plans-override-tab" onclick="showSubTab('study-plans', 'override')">Override</button>
             </div>
 
             <!-- Generate Plan -->
@@ -676,13 +701,13 @@
         </div>
 
         <!-- Assessments Tab -->
-        <div id="assessments" class="main-tab-content">
+        <div id="assessments" class="main-tab-content" role="tabpanel" aria-labelledby="assessments-tab">
             <h3>🧠 Assessments & Practice</h3>
             
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="showSubTab('assessments', 'flashcards')">Flashcards</button>
-                <button class="sub-tab" onclick="showSubTab('assessments', 'quizzes')">Quizzes</button>
-                <button class="sub-tab" onclick="showSubTab('assessments', 'generate')">Generate</button>
+            <div class="sub-tabs" role="tablist" aria-label="Assessment options">
+                <button class="sub-tab active" role="tab" aria-selected="true" aria-controls="assessments-flashcards" id="assessments-flashcards-tab" onclick="showSubTab('assessments', 'flashcards')">Flashcards</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="assessments-quizzes" id="assessments-quizzes-tab" onclick="showSubTab('assessments', 'quizzes')">Quizzes</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="assessments-generate" id="assessments-generate-tab" onclick="showSubTab('assessments', 'generate')">Generate</button>
             </div>
 
             <!-- Flashcards -->
@@ -738,13 +763,13 @@
         </div>
 
         <!-- Analytics Tab -->
-        <div id="analytics" class="main-tab-content">
+        <div id="analytics" class="main-tab-content" role="tabpanel" aria-labelledby="analytics-tab">
             <h3>📊 Learning Analytics</h3>
             
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="showSubTab('analytics', 'performance')">Performance</button>
-                <button class="sub-tab" onclick="showSubTab('analytics', 'predictions')">Predictions</button>
-                <button class="sub-tab" onclick="showSubTab('analytics', 'dashboard')">Dashboard</button>
+            <div class="sub-tabs" role="tablist" aria-label="Analytics options">
+                <button class="sub-tab active" role="tab" aria-selected="true" aria-controls="analytics-performance" id="analytics-performance-tab" onclick="showSubTab('analytics', 'performance')">Performance</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="analytics-predictions" id="analytics-predictions-tab" onclick="showSubTab('analytics', 'predictions')">Predictions</button>
+                <button class="sub-tab" role="tab" aria-selected="false" aria-controls="analytics-dashboard" id="analytics-dashboard-tab" onclick="showSubTab('analytics', 'dashboard')">Dashboard</button>
             </div>
 
             <!-- Performance Analysis -->
@@ -942,23 +967,26 @@
             }
         }
 
-        // Tab Management
+        // Tab Management with WCAG Support
         function showMainTab(tabName) {
             // Hide all main tab contents
             document.querySelectorAll('.main-tab-content').forEach(content => {
                 content.classList.remove('active');
             });
             
-            // Remove active class from all main tabs
+            // Update ARIA attributes for all main tabs
             document.querySelectorAll('.main-tab').forEach(tab => {
                 tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
             });
             
             // Show selected tab content
             document.getElementById(tabName).classList.add('active');
             
-            // Add active class to clicked tab
-            event.target.classList.add('active');
+            // Update clicked tab
+            const clickedTab = document.getElementById(`${tabName}-tab`);
+            clickedTab.classList.add('active');
+            clickedTab.setAttribute('aria-selected', 'true');
         }
 
         function showSubTab(mainTab, subTab) {
@@ -967,16 +995,19 @@
                 content.classList.remove('active');
             });
             
-            // Remove active class from all sub tabs for this main tab
+            // Update ARIA attributes for all sub tabs in this main tab
             document.querySelectorAll(`#${mainTab} .sub-tab`).forEach(tab => {
                 tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
             });
             
             // Show selected sub tab content
             document.getElementById(`${mainTab}-${subTab}`).classList.add('active');
             
-            // Add active class to clicked sub tab
-            event.target.classList.add('active');
+            // Update clicked sub tab
+            const clickedTab = document.getElementById(`${mainTab}-${subTab}-tab`);
+            clickedTab.classList.add('active');
+            clickedTab.setAttribute('aria-selected', 'true');
         }
 
         // Document Upload Functions

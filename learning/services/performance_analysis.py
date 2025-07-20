@@ -28,10 +28,10 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         self.trend_threshold = 10  # Percentage change to consider significant
         self.performance_categories = {
             "excellent": 90,
-            "good": 75,
-            "average": 60,
-            "needs_improvement": 40,
-            "struggling": 0,
+            "good": 80,
+            "average": 70,
+            "needs_improvement": 50,
+            "poor": 0,
         }
 
     def analyze_comprehensive_performance(
@@ -1058,7 +1058,7 @@ class PerformanceAnalysisService(AdaptiveLearningService):
                 if category == "needs_improvement":
                     return "Needs Improvement"
                 return category.capitalize()
-        return "Struggling"
+        return "Poor"
 
     def _get_quiz_score_trends(
         self, user, course, time_period_days: int
