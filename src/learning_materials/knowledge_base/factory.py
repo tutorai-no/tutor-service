@@ -1,7 +1,6 @@
 from learning_materials.knowledge_base.db_interface import (
     Database,
     MockDatabase,
-    MongoDB,
 )
 from learning_materials.knowledge_base.embeddings import (
     EmbeddingsModel,
@@ -9,10 +8,8 @@ from learning_materials.knowledge_base.embeddings import (
 )
 
 
-def create_database(database_system: str = "mongodb") -> Database:
+def create_database(database_system: str = "mock") -> Database:
     match database_system.lower():
-        case "mongodb":
-            return MongoDB()
         case "mock":
             return MockDatabase()
         case _:

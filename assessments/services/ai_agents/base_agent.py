@@ -98,7 +98,7 @@ class BaseAIAgent(ABC):
         self.role = role
         self.llm = ChatOpenAI(
             api_key=getattr(settings, 'OPENAI_API_KEY', None),
-            model_name=model_name or getattr(settings, 'OPENAI_MODEL', 'gpt-4'),
+            model_name=model_name or getattr(settings, 'LLM_MODEL', 'gpt-4o-mini'),
             temperature=temperature
         )
         self.retrieval_client = get_retrieval_client()

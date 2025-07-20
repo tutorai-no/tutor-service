@@ -103,7 +103,7 @@ class OpenAIService(AIServiceBase):
         
         try:
             response = self.client.chat.completions.create(
-                model=kwargs.get('model', 'gpt-3.5-turbo'),
+                model=kwargs.get('model', getattr(settings, 'LLM_MODEL', 'gpt-4o-mini')),
                 messages=[
                     {"role": "user", "content": prompt}
                 ],
@@ -131,7 +131,7 @@ class OpenAIService(AIServiceBase):
         
         try:
             response = self.client.embeddings.create(
-                model="text-embedding-ada-002",
+                model="text-embedding-3-small",
                 input=text
             )
             
@@ -370,7 +370,7 @@ class LangChainContentGenerator:
         self.llm = ChatOpenAI(
             api_key=api_key or getattr(settings, 'OPENAI_API_KEY', None),
             temperature=0.0,
-            model_name=getattr(settings, 'OPENAI_MODEL', 'gpt-3.5-turbo')
+            model_name=getattr(settings, 'LLM_MODEL', 'gpt-4o-mini')
         )
     
     def generate_flashcards(

@@ -9,7 +9,6 @@ django-extensions>=3.2.0,<3.3.0
 # Database
 psycopg2-binary>=2.9.0,<2.10.0
 django-redis>=5.4.0,<5.5.0
-pymongo>=4.6.0,<4.7.0
 neo4j>=5.15.0,<5.16.0
 
 # Authentication & Security
@@ -43,7 +42,7 @@ openai>=1.0.0,<2.0.0
 langchain>=0.1.0,<0.2.0
 langchain-openai>=0.0.5,<0.1.0
 langchain-core>=0.1.0,<0.2.0
-sentence-transformers>=2.2.0,<2.3.0
+sentence-transformers>=2.7.0,<2.8.0
 scikit-learn>=1.3.0,<1.4.0
 numpy>=1.24.0,<1.25.0
 pandas>=2.0.0,<2.1.0

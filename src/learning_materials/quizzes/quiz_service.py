@@ -18,7 +18,7 @@ from learning_materials.learning_resources import (
 
 logger = logging.getLogger(__name__)
 
-llm = ChatOpenAI(temperature=0.0)
+llm = ChatOpenAI(temperature=0.0, api_key=Config().API_KEY, model=Config().GPT_MODEL)
 
 
 # Add a new model for the LLM's grading output

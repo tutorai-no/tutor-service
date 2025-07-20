@@ -9,5 +9,5 @@ urlpatterns = [
     path('assessments/', include('assessments.urls')),
     path('chat/', include('chat.urls')),
     path('billing/', include('billing.urls')),
-    # path('documents/', include('document_processing.urls')),  # Temporarily disabled until dependencies are installed
+    path('documents/', include('document_processing.urls')),
 ]

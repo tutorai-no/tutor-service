@@ -275,7 +275,7 @@ GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 # LLM Settings
 LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "1000"))
 
@@ -306,8 +306,8 @@ RATE_LIMIT_ANONYMOUS = os.getenv("RATE_LIMIT_ANONYMOUS", "20/min")
 WEBSOCKET_ENABLED = os.getenv("WEBSOCKET_ENABLED", "False").lower() == "true"
 
 # Neo4j Database Settings (Knowledge Graph)
-NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_URI = os.getenv("NEO4J_URL", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USERNAME", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 
 # Embedding Model Settings

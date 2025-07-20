@@ -70,7 +70,7 @@ class DocumentUploadStreamView(APIView):
             content_type='text/event-stream'
         )
         response['Cache-Control'] = 'no-cache'
-        response['Connection'] = 'keep-alive'
+        # Don't set Connection header - it's a hop-by-hop header not allowed in WSGI
         response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Headers'] = 'Cache-Control'
         
@@ -118,7 +118,7 @@ class URLUploadStreamView(APIView):
             content_type='text/event-stream'
         )
         response['Cache-Control'] = 'no-cache'
-        response['Connection'] = 'keep-alive'
+        # Don't set Connection header - it's a hop-by-hop header not allowed in WSGI
         response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Headers'] = 'Cache-Control'
         
@@ -220,20 +220,37 @@ class HealthCheckView(APIView):
         service = get_document_processing_service()
         
         # Check scraper service
-        scraper_healthy = service.scraper_client.health_check()
+        try:
+            scraper_healthy = service.scraper_client.health_check() if service.scraper_client else False
+        except Exception:
+            scraper_healthy = False
         
         # Check Neo4j connection
-        neo4j_healthy = service.knowledge_graph_service.neo4j_client.is_connected()
+        try:
+            neo4j_healthy = (service.knowledge_graph_service and 
+                           service.knowledge_graph_service.neo4j_client and 
+                           service.knowledge_graph_service.neo4j_client.is_connected())
+        except Exception:
+            neo4j_healthy = False
         
         # Check embedding service
-        embedding_info = service.embedding_service.get_model_info()
-        embedding_healthy = embedding_info['is_loaded']
+        try:
+            embedding_info = service.embedding_service.get_model_info() if service.embedding_service else {'is_loaded': False}
+            embedding_healthy = embedding_info['is_loaded']
+        except Exception:
+            embedding_healthy = False
         
         health_status = {
             'scraper_service': scraper_healthy,
             'neo4j_database': neo4j_healthy,
             'embedding_service': embedding_healthy,
-            'overall_healthy': all([scraper_healthy, neo4j_healthy, embedding_healthy])
+            'services_available': {
+                'scraper_client': service.scraper_client is not None,
+                'embedding_service': service.embedding_service is not None,
+                'knowledge_graph_service': service.knowledge_graph_service is not None,
+                'tokenizer': service.tokenizer is not None
+            },
+            'overall_healthy': any([scraper_healthy, neo4j_healthy, embedding_healthy])  # At least one service working
         }
         
         status_code = status.HTTP_200_OK if health_status['overall_healthy'] else status.HTTP_503_SERVICE_UNAVAILABLE

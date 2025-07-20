@@ -23,7 +23,10 @@
       "Bash(gh workflow list:*)",
       "Bash(unzip:*)",
       "Bash(gh run list:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(mv:*)",
+      "Bash(pip install:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }

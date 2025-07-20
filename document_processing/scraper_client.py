@@ -42,16 +42,18 @@ class ScraperServiceClient:
             Dictionary with extracted text and chunks
         """
         try:
-            url = f"{self.base_url}/api/v1/extract"
+            # For now, use the streaming endpoint which doesn't require auth
+            url = f"{self.base_url}/stream/upload/"
             
-            files = {
-                'file': (filename, BytesIO(file_content), self._get_content_type(filename))
-            }
+            import uuid
+            file_uuid = str(uuid.uuid4())
+            
+            files = [
+                ('files', (filename, BytesIO(file_content), self._get_content_type(filename)))
+            ]
             
             data = {
-                'chunk_size': chunk_size,
-                'chunk_overlap': chunk_overlap,
-                'extract_metadata': True
+                'uuids': [file_uuid]
             }
             
             response = requests.post(
@@ -62,14 +64,33 @@ class ScraperServiceClient:
             )
             
             if response.status_code == 200:
-                result = response.json()
-                logger.info(f"Successfully extracted text from {filename}")
+                # Parse streaming response
+                chunks = []
+                full_text = []
+                
+                for line in response.iter_lines():
+                    if line:
+                        line_str = line.decode('utf-8')
+                        if line_str == '[DONE]':
+                            break
+                        try:
+                            chunk_data = json.loads(line_str)
+                            chunks.append({
+                                'text': chunk_data.get('text', ''),
+                                'page_num': chunk_data.get('page_num', 0),
+                                'chunk_index': chunk_data.get('chunk_index', 0)
+                            })
+                            full_text.append(chunk_data.get('text', ''))
+                        except json.JSONDecodeError:
+                            continue
+                
+                logger.info(f"Successfully extracted text from {filename}, got {len(chunks)} chunks")
                 return {
                     'success': True,
-                    'text': result.get('text', ''),
-                    'chunks': result.get('chunks', []),
-                    'metadata': result.get('metadata', {}),
-                    'page_count': result.get('page_count', 0)
+                    'text': '\n'.join(full_text),
+                    'chunks': chunks,
+                    'metadata': {'filename': filename},
+                    'page_count': len(set(c['page_num'] for c in chunks)) if chunks else 0
                 }
             else:
                 logger.error(f"Scraper service error: {response.status_code} - {response.text}")
@@ -118,7 +139,7 @@ class ScraperServiceClient:
             Dictionary with extracted text and chunks
         """
         try:
-            api_url = f"{self.base_url}/api/v1/scrape"
+            api_url = f"{self.base_url}/url/"
             
             data = {
                 'url': url,

@@ -1,13 +1,8 @@
 from abc import ABC, abstractmethod
 import uuid
-from config import Config
-from pymongo import MongoClient
 import logging
 
 from learning_materials.learning_resources import Citation, FullCitation
-from learning_materials.knowledge_base.embeddings import (
-    OpenAIEmbedding,
-)
 
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -130,200 +125,6 @@ class Database(ABC):
         pass
 
 
-class MongoDB(Database):
-    def __init__(self):
-        self.client = MongoClient(Config().MONGODB_URI)
-        self.db = self.client[Config().MONGODB_DATABASE]
-        self.collection = self.db[Config().MONGODB_COLLECTION]
-        self.similarity_threshold = 0.2
-        self.embeddings = OpenAIEmbedding()
-
-    def get_curriculum(
-        self, document_ids: list[uuid.UUID], embedding: list[float], top_k: int = 5
-    ) -> list[Citation]:
-        # Step 1: Filter by documentId first
-        if not document_ids:
-            raise ValueError("Document IDs cannot be empty")
-        cursor = self.collection.find(
-            {"documentId": {"$in": [str(doc_id) for doc_id in document_ids]}}
-        )
-        if not cursor:
-            raise ValueError("No documents found")
-
-        results = []
-
-        # Compute cosine similarities
-        similarities = []
-        for doc in cursor:
-            similarity = cosine_similarity([doc["embedding"]], [embedding])[0][0]
-            similarities.append((doc, similarity))
-
-        # Sort documents by similarity in descending order
-        similarities.sort(key=lambda x: x[1], reverse=True)
-
-        # Retrieve top 5 matches
-        top_5_matches = similarities[:top_k]
-
-        # Return those of the top 5 matches that are above the similarity threshold
-        for match in top_5_matches:
-            if match[1] > self.similarity_threshold:
-                results.append(
-                    Citation(
-                        text=match[0]["text"],
-                        page_num=match[0]["pageNum"],
-                        document_name=match[0]["documentName"],
-                        document_id=match[0]["documentId"],
-                    )
-                )
-
-        return results
-
-    def get_page_range(
-        self, document_id: uuid.UUID, page_num_start: int, page_num_end: int
-    ) -> list[Citation]:
-        # Get the curriculum from the database
-        cursor = self.collection.find(
-            {
-                "documentId": str(document_id),
-                "pageNum": {"$gte": page_num_start, "$lte": page_num_end},
-            }
-        )
-
-        if not cursor:
-            raise ValueError("No documents found")
-
-        results = []
-
-        for document in cursor:
-            results.append(
-                Citation(
-                    text=document["text"],
-                    page_num=document["pageNum"],
-                    document_name=document["documentName"],
-                    document_id=document["documentId"],
-                )
-            )
-
-        return results
-
-    def post_curriculum(
-        self,
-        curriculum: str,
-        page_num: int,
-        document_name: str,
-        embedding: list[float],
-        document_id: uuid.UUID,
-    ) -> bool:
-        if not curriculum:
-            raise ValueError("Curriculum cannot be None")
-
-        if page_num is None:
-            raise ValueError("Page number cannot be None")
-
-        if document_name is None:
-            raise ValueError("Paragraph number cannot be None")
-
-        if not embedding:
-            raise ValueError("Embedding cannot be None")
-
-        if not document_name:
-            raise ValueError("Document name cannot be None")
-
-        if not document_id:
-            raise ValueError("Document ID cannot be None")
-
-        try:
-            # Insert the curriculum into the database with metadata
-            self.collection.insert_one(
-                {
-                    "text": curriculum,
-                    "pageNum": page_num,
-                    "documentName": document_name,
-                    "embedding": embedding,
-                    "documentId": str(document_id),
-                }
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Error posting curriculum: {e}")
-            return False
-
-    def post_video(
-        self,
-        video_url: str,
-        timestamp: str,
-        video_name: str,
-        embedding: list[float],
-        document_id: uuid.UUID,
-    ) -> bool:
-
-        if not video_url:
-            raise ValueError("Video URL cannot be None")
-
-        if not timestamp:
-            raise ValueError("Timestamp cannot be None")
-
-        if not video_name:
-            raise ValueError("Video name cannot be None")
-
-        if not embedding:
-            raise ValueError("Embedding cannot be None")
-
-        if not document_id:
-            raise ValueError("Document ID cannot be None")
-
-        try:
-            # Insert the video into the database with metadata
-            self.collection.insert_one(
-                {
-                    "videoUrl": video_url,
-                    "timestamp": timestamp,
-                    "videoName": video_name,
-                    "embedding": embedding,
-                    "documentId": str(document_id),
-                }
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Error posting video: {e}")
-            return False
-
-    def is_reachable(self) -> bool:
-        try:
-            # Send a ping to confirm a successful connection
-            self.client.admin.command("ping")
-            logger.info("Successfully pinged MongoDB")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to ping MongoDB: {e}")
-            return False
-
-    def get_all_pages(self, document_id: uuid.UUID) -> list[FullCitation]:
-        # Get the curriculum from the database
-        cursor = self.collection.find(
-            {
-                "documentId": str(document_id),
-            }
-        )
-
-        if not cursor:
-            raise ValueError("No documents found")
-
-        results = []
-
-        for document in cursor:
-            results.append(
-                FullCitation(
-                    text=document["text"],
-                    page_num=document["pageNum"],
-                    document_name=document["documentName"],
-                    document_id=document["documentId"],
-                    embedding=document["embedding"],
-                )
-            )
-
-        return results
-
 
 class MockDatabase(Database):
     """
@@ -427,6 +228,29 @@ class MockDatabase(Database):
                 "text": curriculum,
                 "pageNum": page_num,
                 "documentName": document_name,
+                "embedding": embedding,
+                "documentId": str(document_id),
+            }
+        )
+        return True
+
+    def post_video(
+        self,
+        video_url: str,
+        timestamp: str,
+        video_name: str,
+        embedding: list[float],
+        document_id: uuid.UUID,
+    ) -> bool:
+        if not video_url or not timestamp or not video_name or not embedding or not document_id:
+            raise ValueError("All parameters are required and must be valid")
+
+        # Append a new video document to the in-memory storage
+        self.data.append(
+            {
+                "videoUrl": video_url,
+                "timestamp": timestamp,
+                "videoName": video_name,
                 "embedding": embedding,
                 "documentId": str(document_id),
             }

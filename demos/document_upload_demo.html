@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aksio Document Processing Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+        input, button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .events-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .event {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            background-color: white;
+        }
+        .event.error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .event.success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .event-type {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .event.error .event-type {
+            color: #dc3545;
+        }
+        .event.success .event-type {
+            color: #28a745;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #6c757d;
+            float: right;
+        }
+        .health-status {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .status-item {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-healthy {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-unhealthy {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-unknown {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .graph-viz {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            min-height: 200px;
+        }
+        .node {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .edge {
+            display: block;
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Aksio Document Processing Demo</h1>
+    
+    <div class="container">
+        <h2>Service Health Status</h2>
+        <div id="health-status" class="health-status">
+            <div class="status-item status-unknown">Loading...</div>
+        </div>
+        <button onclick="checkHealth()">Refresh Health Status</button>
+    </div>
+
+    <div class="container">
+        <h2>Authentication</h2>
+        <div class="upload-form">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" placeholder="Enter username" value="olav">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Enter password" value="testpass123">
+            </div>
+            <button onclick="authenticate()">Login</button>
+            <div id="auth-status"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📄 Document Upload (Real-time Streaming)</h2>
+        <div class="upload-form">
+            <div class="form-group">
+                <label for="file-input">Select Document:</label>
+                <input type="file" id="file-input" accept=".txt,.pdf,.docx,.md">
+            </div>
+            <div class="form-group">
+                <label for="course-id">Course ID (optional):</label>
+                <input type="text" id="course-id" placeholder="Enter course UUID">
+            </div>
+            <button id="upload-btn" onclick="uploadDocument()" disabled>Upload Document</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🌐 URL Upload (Real-time Streaming)</h2>
+        <div class="upload-form">
+            <div class="form-group">
+                <label for="url-input">URL:</label>
+                <input type="url" id="url-input" placeholder="https://example.com" value="https://example.com">
+            </div>
+            <button id="url-upload-btn" onclick="uploadUrl()" disabled>Process URL</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Real-time Events</h2>
+        <div id="events" class="events-container">
+            <div class="event">
+                <div class="timestamp">Ready</div>
+                <div class="event-type">System</div>
+                <div>Ready to receive events...</div>
+            </div>
+        </div>
+        <button onclick="clearEvents()">Clear Events</button>
+    </div>
+
+    <div class="container">
+        <h2>🕸️ Knowledge Graph Visualization</h2>
+        <div id="graph-viz" class="graph-viz">
+            <p>Knowledge graph nodes and edges will appear here as they are created...</p>
+        </div>
+        <button onclick="clearGraph()">Clear Graph</button>
+    </div>
+
+    <script>
+        let authToken = null;
+        const API_BASE = 'http://localhost:8000/api/v1';
+
+        // Add event to the events container
+        function addEvent(type, message, isError = false, isSuccess = false) {
+            const eventsContainer = document.getElementById('events');
+            const event = document.createElement('div');
+            event.className = `event ${isError ? 'error' : ''} ${isSuccess ? 'success' : ''}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            event.innerHTML = `
+                <div class="timestamp">${timestamp}</div>
+                <div class="event-type">${type}</div>
+                <div>${message}</div>
+            `;
+            
+            eventsContainer.appendChild(event);
+            eventsContainer.scrollTop = eventsContainer.scrollHeight;
+        }
+
+        // Check service health
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/documents/health/`);
+                const health = await response.json();
+                
+                const statusContainer = document.getElementById('health-status');
+                statusContainer.innerHTML = '';
+                
+                Object.entries(health).forEach(([service, status]) => {
+                    if (service === 'services_available') return;
+                    
+                    const item = document.createElement('div');
+                    item.className = `status-item ${
+                        status === true ? 'status-healthy' : 
+                        status === false ? 'status-unhealthy' : 
+                        'status-unknown'
+                    }`;
+                    item.textContent = `${service}: ${status}`;
+                    statusContainer.appendChild(item);
+                });
+                
+                addEvent('Health Check', `Services: ${JSON.stringify(health, null, 2)}`);
+            } catch (error) {
+                addEvent('Health Check', `Error: ${error.message}`, true);
+            }
+        }
+
+        // Authenticate user
+        async function authenticate() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/accounts/login/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access;
+                    document.getElementById('auth-status').innerHTML = '<div style="color: green;">✅ Authenticated</div>';
+                    document.getElementById('upload-btn').disabled = false;
+                    document.getElementById('url-upload-btn').disabled = false;
+                    addEvent('Authentication', 'Successfully authenticated', false, true);
+                } else {
+                    const error = await response.text();
+                    document.getElementById('auth-status').innerHTML = `<div style="color: red;">❌ Authentication failed: ${error}</div>`;
+                    addEvent('Authentication', `Failed: ${error}`, true);
+                }
+            } catch (error) {
+                addEvent('Authentication', `Error: ${error.message}`, true);
+            }
+        }
+
+        // Upload document with streaming
+        async function uploadDocument() {
+            const fileInput = document.getElementById('file-input');
+            const courseId = document.getElementById('course-id').value;
+            
+            if (!fileInput.files[0]) {
+                addEvent('Upload', 'Please select a file', true);
+                return;
+            }
+            
+            if (!authToken) {
+                addEvent('Upload', 'Please authenticate first', true);
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            if (courseId) {
+                formData.append('course_id', courseId);
+            }
+            
+            addEvent('Upload', `Starting upload of ${fileInput.files[0].name}...`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/documents/upload/document/stream/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+                
+                // Handle streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const eventData = JSON.parse(line.slice(6));
+                                handleStreamEvent(eventData);
+                            } catch (e) {
+                                console.log('Non-JSON data:', line);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                addEvent('Upload', `Error: ${error.message}`, true);
+            }
+        }
+
+        // Upload URL with streaming
+        async function uploadUrl() {
+            const url = document.getElementById('url-input').value;
+            const courseId = document.getElementById('course-id').value;
+            
+            if (!url) {
+                addEvent('URL Upload', 'Please enter a URL', true);
+                return;
+            }
+            
+            if (!authToken) {
+                addEvent('URL Upload', 'Please authenticate first', true);
+                return;
+            }
+            
+            const data = { url };
+            if (courseId) {
+                data.course_id = courseId;
+            }
+            
+            addEvent('URL Upload', `Starting processing of ${url}...`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/documents/upload/url/stream/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+                
+                // Handle streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const eventData = JSON.parse(line.slice(6));
+                                handleStreamEvent(eventData);
+                            } catch (e) {
+                                console.log('Non-JSON data:', line);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                addEvent('URL Upload', `Error: ${error.message}`, true);
+            }
+        }
+
+        // Handle streaming events
+        function handleStreamEvent(eventData) {
+            const { event, ...data } = eventData;
+            
+            switch (event) {
+                case 'document_created':
+                case 'url_created':
+                    addEvent(event, `Created: ${data.document_id || data.url_upload_id}`, false, true);
+                    break;
+                    
+                case 'node_created':
+                    addEvent('Node Created', `${data.node.type}: ${data.node.title}`);
+                    addNodeToGraph(data.node);
+                    break;
+                    
+                case 'edge_created':
+                    addEvent('Edge Created', `${data.edge.from} → ${data.edge.to} (${data.edge.type})`);
+                    addEdgeToGraph(data.edge);
+                    break;
+                    
+                case 'processing_complete':
+                    addEvent('Processing Complete', `Nodes: ${data.total_nodes}, Edges: ${data.total_edges}`, false, true);
+                    break;
+                    
+                case 'processing_failed':
+                case 'error':
+                    addEvent('Error', data.error || data.message, true);
+                    break;
+                    
+                default:
+                    addEvent(event, JSON.stringify(data, null, 2));
+            }
+        }
+
+        // Add node to graph visualization
+        function addNodeToGraph(node) {
+            const graphViz = document.getElementById('graph-viz');
+            if (graphViz.children.length === 1 && graphViz.children[0].tagName === 'P') {
+                graphViz.innerHTML = '';
+            }
+            
+            const nodeElement = document.createElement('div');
+            nodeElement.className = 'node';
+            nodeElement.textContent = `${node.type}: ${node.title}`;
+            graphViz.appendChild(nodeElement);
+        }
+
+        // Add edge to graph visualization
+        function addEdgeToGraph(edge) {
+            const graphViz = document.getElementById('graph-viz');
+            const edgeElement = document.createElement('div');
+            edgeElement.className = 'edge';
+            edgeElement.textContent = `${edge.from} → ${edge.to} (${edge.type})`;
+            graphViz.appendChild(edgeElement);
+        }
+
+        // Clear events
+        function clearEvents() {
+            document.getElementById('events').innerHTML = '';
+            addEvent('System', 'Events cleared');
+        }
+
+        // Clear graph
+        function clearGraph() {
+            document.getElementById('graph-viz').innerHTML = '<p>Knowledge graph nodes and edges will appear here as they are created...</p>';
+            addEvent('System', 'Graph visualization cleared');
+        }
+
+        // Initialize
+        window.onload = function() {
+            checkHealth();
+            addEvent('System', 'Demo page loaded. Please authenticate to test uploads.');
+        };
+    </script>
+</body>
+</html>

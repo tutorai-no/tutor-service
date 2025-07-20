@@ -10,7 +10,7 @@ class TestHealthCheck(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-    @patch("learning_materials.knowledge_base.db_interface.MongoDB.is_reachable")
+    @patch("learning_materials.knowledge_base.db_interface.MockDatabase.is_reachable")
     def test_health_check_database_down(self, mock_is_reachable):
         mock_is_reachable.return_value = False
         url = reverse("health-check")

@@ -95,8 +95,8 @@ class KnowledgeGraphService:
             
             # Initialize LLM
             self.llm = ChatOpenAI(
-                model="gpt-3.5-turbo",
-                temperature=0.1,
+                model=getattr(settings, 'LLM_MODEL', 'gpt-4o-mini'),
+                temperature=getattr(settings, 'LLM_TEMPERATURE', 0.1),
                 openai_api_key=openai_api_key
             )
             

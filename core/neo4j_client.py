@@ -77,11 +77,19 @@ class Neo4jClient:
             return False
         
         try:
+            import json
             with self.driver.session() as session:
-                query = """
-                MERGE (n:Node {id: $node_id, graph_id: $graph_id})
-                SET n.type = $node_type,
-                    n.title = $title,
+                # Use the actual node type as the Neo4j label
+                node_type = node_data.get('type', 'Node').upper()
+                # Sanitize label name to ensure it's valid for Neo4j
+                node_type = ''.join(c for c in node_type if c.isalnum() or c == '_')
+                if not node_type:
+                    node_type = 'Node'
+                
+                # Build dynamic query with the actual node type as label
+                query = f"""
+                MERGE (n:{node_type} {{id: $node_id, graph_id: $graph_id}})
+                SET n.title = $title,
                     n.chunk_ids = $chunk_ids,
                     n.properties = $properties,
                     n.created_at = datetime(),
@@ -89,13 +97,16 @@ class Neo4jClient:
                 RETURN n
                 """
                 
+                # Convert complex data types to JSON strings
+                chunk_ids = node_data.get('chunk_ids', [])
+                properties = node_data.get('properties', {})
+                
                 result = session.run(query, {
                     'node_id': node_data['id'],
                     'graph_id': graph_id,
-                    'node_type': node_data.get('type', ''),
                     'title': node_data.get('title', ''),
-                    'chunk_ids': node_data.get('chunk_ids', []),
-                    'properties': node_data.get('properties', {})
+                    'chunk_ids': json.dumps(chunk_ids) if chunk_ids else "[]",
+                    'properties': json.dumps(properties) if properties else "{}"
                 })
                 
                 return result.single() is not None
@@ -120,23 +131,35 @@ class Neo4jClient:
             return False
         
         try:
+            import json
             with self.driver.session() as session:
-                query = """
-                MATCH (from_node:Node {id: $from_id, graph_id: $graph_id})
-                MATCH (to_node:Node {id: $to_id, graph_id: $graph_id})
-                MERGE (from_node)-[r:RELATIONSHIP {type: $edge_type}]->(to_node)
+                # Use the actual edge type as the Neo4j relationship type
+                edge_type = edge_data.get('type', 'RELATED_TO').upper()
+                # Sanitize relationship type name to ensure it's valid for Neo4j
+                edge_type = ''.join(c for c in edge_type if c.isalnum() or c == '_')
+                if not edge_type:
+                    edge_type = 'RELATED_TO'
+                
+                # Build dynamic query with the actual edge type as relationship type
+                # Note: We need to match nodes by any label since they now have specific types
+                query = f"""
+                MATCH (from_node {{id: $from_id, graph_id: $graph_id}})
+                MATCH (to_node {{id: $to_id, graph_id: $graph_id}})
+                MERGE (from_node)-[r:{edge_type}]->(to_node)
                 SET r.chunk_ids = $chunk_ids,
                     r.created_at = datetime(),
                     r.updated_at = datetime()
                 RETURN r
                 """
                 
+                # Convert chunk_ids array to JSON string
+                chunk_ids = edge_data.get('chunk_ids', [])
+                
                 result = session.run(query, {
                     'from_id': edge_data['from'],
                     'to_id': edge_data['to'],
                     'graph_id': graph_id,
-                    'edge_type': edge_data.get('type', ''),
-                    'chunk_ids': edge_data.get('chunk_ids', [])
+                    'chunk_ids': json.dumps(chunk_ids) if chunk_ids else "[]"
                 })
                 
                 return result.single() is not None
@@ -160,26 +183,39 @@ class Neo4jClient:
             return []
         
         try:
+            import json
             with self.driver.session() as session:
                 query = """
-                MATCH (n:Node {graph_id: $graph_id})
-                RETURN n.id as id, n.type as type, n.title as title,
+                MATCH (n {graph_id: $graph_id})
+                RETURN n.id as id, labels(n)[0] as type, n.title as title,
                        n.chunk_ids as chunk_ids, n.properties as properties
                 ORDER BY n.title
                 """
                 
                 result = session.run(query, {'graph_id': graph_id})
                 
-                return [
-                    {
+                nodes = []
+                for record in result:
+                    # Parse JSON strings back to objects
+                    try:
+                        chunk_ids = json.loads(record['chunk_ids']) if record['chunk_ids'] else []
+                    except (json.JSONDecodeError, TypeError):
+                        chunk_ids = []
+                    
+                    try:
+                        properties = json.loads(record['properties']) if record['properties'] else {}
+                    except (json.JSONDecodeError, TypeError):
+                        properties = {}
+                    
+                    nodes.append({
                         'id': record['id'],
                         'type': record['type'],
                         'title': record['title'],
-                        'chunk_ids': record['chunk_ids'] or [],
-                        'properties': record['properties'] or {}
-                    }
-                    for record in result
-                ]
+                        'chunk_ids': chunk_ids,
+                        'properties': properties
+                    })
+                
+                return nodes
                 
         except Exception as e:
             logger.error(f"Error retrieving graph nodes: {str(e)}")
@@ -200,24 +236,32 @@ class Neo4jClient:
             return []
         
         try:
+            import json
             with self.driver.session() as session:
                 query = """
-                MATCH (from_node:Node {graph_id: $graph_id})-[r:RELATIONSHIP]->(to_node:Node {graph_id: $graph_id})
-                RETURN from_node.id as from, to_node.id as to, r.type as type, r.chunk_ids as chunk_ids
+                MATCH (from_node {graph_id: $graph_id})-[r]->(to_node {graph_id: $graph_id})
+                RETURN from_node.id as from, to_node.id as to, type(r) as type, r.chunk_ids as chunk_ids
                 ORDER BY from_node.title, to_node.title
                 """
                 
                 result = session.run(query, {'graph_id': graph_id})
                 
-                return [
-                    {
+                edges = []
+                for record in result:
+                    # Parse JSON string back to array
+                    try:
+                        chunk_ids = json.loads(record['chunk_ids']) if record['chunk_ids'] else []
+                    except (json.JSONDecodeError, TypeError):
+                        chunk_ids = []
+                    
+                    edges.append({
                         'from': record['from'],
                         'to': record['to'],
                         'type': record['type'],
-                        'chunk_ids': record['chunk_ids'] or []
-                    }
-                    for record in result
-                ]
+                        'chunk_ids': chunk_ids
+                    })
+                
+                return edges
                 
         except Exception as e:
             logger.error(f"Error retrieving graph edges: {str(e)}")

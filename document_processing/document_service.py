@@ -92,7 +92,7 @@ class DocumentProcessingService:
             yield {
                 'event': 'duplicate_detected',
                 'document_id': str(existing_doc.id),
-                'message': f'Document {filename} already exists'
+                'message': f'{filename} already exists'
             }
             return
         

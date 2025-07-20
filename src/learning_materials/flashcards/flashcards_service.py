@@ -12,7 +12,7 @@ class FlashcardWrapper(BaseModel):
     flashcards: list[Flashcard]
 
 
-model = ChatOpenAI(temperature=0, api_key=Config().API_KEY)
+model = ChatOpenAI(temperature=0, api_key=Config().API_KEY, model=Config().GPT_MODEL)
 flashcard_parser = PydanticOutputParser(pydantic_object=FlashcardWrapper)
 
 
