@@ -514,7 +514,7 @@ class TestAdaptiveLearningViewSet(TestCase):
         }
         
         # Mock service to raise exception
-        with patch('learning.services.study_plan_generator.StudyPlanGeneratorService.generate_adaptive_plan') as mock_service:
+        with patch('learning.services.study_plan_generator.StudyPlanGeneratorService.generate_adaptive_study_plan') as mock_service:
             mock_service.side_effect = Exception('Service error')
             
             response = self.client.post(url, data, format='json')

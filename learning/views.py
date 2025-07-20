@@ -380,9 +380,14 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         # Suggest break if studying too much
         recent_sessions = StudySession.objects.filter(
             user=user,
-            started_at__gte=timezone.now() - timedelta(days=7)
+            actual_start__gte=timezone.now() - timedelta(days=7),
+            status='completed'
         )
-        total_recent_hours = sum(s.duration_minutes or 0 for s in recent_sessions) / 60
+        total_recent_hours = sum(
+            (s.actual_end - s.actual_start).total_seconds() / 3600 
+            for s in recent_sessions 
+            if s.actual_end and s.actual_start
+        )
         if total_recent_hours > 40:  # More than 40 hours in a week
             recommendations.append({
                 'type': 'wellbeing',
@@ -414,7 +419,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         temp_streak = 0
         
         for session in sessions:
-            session_date = session.started_at.date()
+            session_date = (session.actual_start or session.scheduled_start).date()
             
             if last_date is None:
                 temp_streak = 1
@@ -830,7 +835,7 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         temp_streak = 0
         
         for session in sessions:
-            session_date = session.started_at.date()
+            session_date = (session.actual_start or session.scheduled_start).date()
             
             if last_date is None:
                 temp_streak = 1

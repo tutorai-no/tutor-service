@@ -46,12 +46,18 @@ class TestPerformanceAnalysisService(TestCase):
         )
         
         # Create test study session
+        from django.utils import timezone
+        now = timezone.now()
         self.study_session = StudySession.objects.create(
             user=self.user,
             course=self.course,
             title='Django Practice',
-            duration_minutes=60,
-            completed=True
+            session_type='practice',
+            scheduled_start=now,
+            scheduled_end=now + timezone.timedelta(hours=1),
+            actual_start=now,
+            actual_end=now + timezone.timedelta(hours=1),
+            status='completed'
         )
     
     def test_service_initialization(self):
