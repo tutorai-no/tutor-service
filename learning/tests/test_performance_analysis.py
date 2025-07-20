@@ -66,10 +66,10 @@ class TestPerformanceAnalysisService(TestCase):
     
     def test_analyze_adaptive_performance_success(self):
         """Test successful performance analysis."""
-        result = self.service.analyze_adaptive_performance(
+        result = self.service.analyze_comprehensive_performance(
             user=self.user,
             course=self.course,
-            days=30
+            time_period_days=30
         )
         
         self.assertTrue(result['success'])
@@ -101,16 +101,18 @@ class TestPerformanceAnalysisService(TestCase):
             user=self.user,
             quiz=quiz,
             score=85,
-            time_taken=300,
-            completed=True
+            total_questions=10,
+            time_taken=timedelta(minutes=5),
+            status='completed'
         )
         
         QuizAttempt.objects.create(
             user=self.user,
             quiz=quiz,
             score=92,
-            time_taken=280,
-            completed=True
+            total_questions=10,
+            time_taken=timedelta(minutes=4, seconds=40),
+            status='completed'
         )
         
         analysis = self.service._analyze_quiz_performance(self.user, self.course, days=30)
@@ -129,20 +131,27 @@ class TestPerformanceAnalysisService(TestCase):
     def test_analyze_study_sessions(self):
         """Test study session analysis."""
         # Create additional study sessions
+        now = timezone.now()
         StudySession.objects.create(
             user=self.user,
             course=self.course,
             title='Django Views',
-            duration_minutes=45,
-            completed=True
+            session_type='study',
+            scheduled_start=now - timedelta(hours=2),
+            scheduled_end=now - timedelta(minutes=75),
+            actual_start=now - timedelta(hours=2),
+            actual_end=now - timedelta(minutes=75),
+            status='completed'
         )
         
         StudySession.objects.create(
             user=self.user,
             course=self.course,
             title='Django Templates',
-            duration_minutes=90,
-            completed=False
+            session_type='study',
+            scheduled_start=now - timedelta(minutes=60),
+            scheduled_end=now + timedelta(minutes=30),
+            status='scheduled'
         )
         
         analysis = self.service._analyze_study_sessions(self.user, self.course, days=30)
@@ -179,7 +188,7 @@ class TestPerformanceAnalysisService(TestCase):
             completion_percentage=40.0
         )
         
-        analysis = self.service._analyze_learning_progress(self.user, self.course)
+        analysis = self.service._analyze_learning_progress(self.user, self.course, 30)
         
         self.assertIn('topics_mastered', analysis)
         self.assertIn('average_mastery_level', analysis)

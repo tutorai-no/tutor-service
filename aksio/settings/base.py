@@ -297,6 +297,7 @@ ENABLE_REAL_TIME_CHAT = os.getenv("ENABLE_REAL_TIME_CHAT", "False").lower() == "
 # External Service URLs
 SCRAPER_SERVICE_URL = os.getenv("SCRAPER_SERVICE_URL", "http://localhost:8080")
 RETRIEVER_SERVICE_URL = os.getenv("RETRIEVER_SERVICE_URL", "http://localhost:8002")
+USE_MOCK_RETRIEVAL_SERVICE = os.getenv("USE_MOCK_RETRIEVAL_SERVICE", "True").lower() == "true"
 
 # Rate Limiting
 RATE_LIMIT_AUTHENTICATED = os.getenv("RATE_LIMIT_AUTHENTICATED", "100/min")
