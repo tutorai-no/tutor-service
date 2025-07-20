@@ -227,6 +227,7 @@ class PerformanceAnalysisService(AdaptiveLearningService):
                 "consistency": 0,
                 "time_efficiency": 0,
                 "difficulty_performance": {},
+                "weak_topics": [],
             }
 
         # Basic metrics
@@ -249,6 +250,9 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         # Topic-wise performance
         topic_performance = self._analyze_topic_performance(attempts)
 
+        # Identify weak topics based on low scores
+        weak_topics = self._identify_weak_topics(topic_performance)
+        
         return {
             "average_score": round(avg_score, 1),
             "total_attempts": total_attempts,
@@ -260,6 +264,7 @@ class PerformanceAnalysisService(AdaptiveLearningService):
             "recent_scores": scores[-5:],  # Last 5 scores
             "best_score": max(scores),
             "worst_score": min(scores),
+            "weak_topics": weak_topics,
         }
 
     def _analyze_study_sessions(
@@ -778,6 +783,23 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         # This would require topic information in quiz model
         # For now, return empty dict
         return {}
+
+    def _identify_weak_topics(self, topic_performance: dict[str, float]) -> list[str]:
+        """Identify weak topics based on performance scores."""
+        if not topic_performance:
+            return []
+        
+        # Identify topics with scores below 70%
+        weak_topics = [
+            topic for topic, score in topic_performance.items() 
+            if score < 70.0
+        ]
+        
+        # Sort by worst performance first
+        weak_topics.sort(key=lambda t: topic_performance[t])
+        
+        # Return top 5 weakest topics
+        return weak_topics[:5]
 
     def _analyze_session_timing(self, sessions) -> dict[str, Any]:
         """Analyze optimal timing for study sessions."""
