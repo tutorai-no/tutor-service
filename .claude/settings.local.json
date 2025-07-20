@@ -47,7 +47,8 @@
       "Bash(gcloud artifacts repositories describe:*)",
       "Bash(gcloud artifacts docker images list:*)",
       "Bash(gcloud artifacts repositories delete:*)",
-      "Bash(gcloud run services:*)"
+      "Bash(gcloud run services:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }
