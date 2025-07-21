@@ -399,7 +399,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         # Suggest break if studying too much
         recent_sessions = StudySession.objects.filter(
             user=user,
-            actual_start__gte=timezone.now() - timedelta(days=7),
+            scheduled_start__gte=timezone.now() - timedelta(days=7),
             status="completed",
         )
         total_recent_hours = sum(
@@ -427,7 +427,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
     def _calculate_study_streak(self, user):
         """Calculate the user's study streak."""
         sessions = StudySession.objects.filter(user=user, status="completed").order_by(
-            "-started_at"
+            "-scheduled_start"
         )
 
         if not sessions:
@@ -472,7 +472,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
 
         sessions = StudySession.objects.filter(
-            user=user, started_at__gte=week_start, status="completed"
+            user=user, scheduled_start__gte=week_start, status="completed"
         )
 
         total_minutes = sum(s.duration_actual or 0 for s in sessions)
@@ -691,13 +691,13 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         serializer.save(
             user=self.request.user, actual_start=timezone.now(), status="in_progress"
         )
-    
+
     def create(self, request, *args, **kwargs):
         """Create a study session and return full details."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        
+
         # Return the full object with StudySessionSerializer
         instance = serializer.instance
         output_serializer = StudySessionSerializer(instance)
@@ -811,9 +811,9 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         end_date = request.query_params.get("end_date")
 
         if start_date:
-            sessions = sessions.filter(started_at__gte=start_date)
+            sessions = sessions.filter(scheduled_start__gte=start_date)
         if end_date:
-            sessions = sessions.filter(started_at__lte=end_date)
+            sessions = sessions.filter(scheduled_start__lte=end_date)
 
         # Calculate statistics
         total_sessions = sessions.count()
@@ -828,24 +828,24 @@ class StudySessionViewSet(viewsets.ModelViewSet):
 
         # Sessions by time of day
         sessions_by_hour = (
-            sessions.annotate(hour=F("started_at__hour"))
+            sessions.annotate(hour=F("scheduled_start__hour"))
             .values("hour")
-            .annotate(count=Count("id"), avg_duration=Avg("duration_minutes"))
+            .annotate(count=Count("id"), avg_duration=Avg("duration_actual"))
             .order_by("hour")
         )
 
         # Sessions by day of week
         sessions_by_weekday = (
-            sessions.annotate(weekday=F("started_at__week_day"))
+            sessions.annotate(weekday=F("scheduled_start__week_day"))
             .values("weekday")
-            .annotate(count=Count("id"), avg_duration=Avg("duration_minutes"))
+            .annotate(count=Count("id"), avg_duration=Avg("duration_actual"))
             .order_by("weekday")
         )
 
         # Most productive times
         productive_times = (
             sessions.filter(productivity_rating__gte=4)
-            .annotate(hour=F("started_at__hour"))
+            .annotate(hour=F("scheduled_start__hour"))
             .values("hour")
             .annotate(count=Count("id"))
             .order_by("-count")[:3]
@@ -867,7 +867,7 @@ class StudySessionViewSet(viewsets.ModelViewSet):
     def _calculate_study_streak(self, user):
         """Calculate study streak for stats."""
         sessions = StudySession.objects.filter(user=user, status="completed").order_by(
-            "-started_at"
+            "-scheduled_start"
         )
 
         if not sessions:
@@ -1025,10 +1025,10 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
 
         # Study time analytics
         study_sessions = StudySession.objects.filter(
-            user=user, status="completed", started_at__gte=start_date
+            user=user, status="completed", scheduled_start__gte=start_date
         )
 
-        total_study_minutes = sum(s.duration_minutes or 0 for s in study_sessions)
+        total_study_minutes = sum(s.duration_actual or 0 for s in study_sessions)
         total_study_hours = round(total_study_minutes / 60, 1)
 
         # Goal completion analytics
@@ -1098,13 +1098,13 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
         # Study consistency trends
         study_trends = (
             StudySession.objects.filter(
-                user=user, status="completed", started_at__gte=start_date
+                user=user, status="completed", scheduled_start__gte=start_date
             )
-            .annotate(week=TruncWeek("started_at"))
+            .annotate(week=TruncWeek("scheduled_start"))
             .values("week")
             .annotate(
                 sessions=Count("id"),
-                total_hours=Sum("duration_minutes") / 60.0,
+                total_hours=Sum("duration_actual") / 60.0,
                 avg_productivity=Avg("productivity_rating"),
             )
             .order_by("week")
@@ -1323,13 +1323,13 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
         sessions = StudySession.objects.filter(
             user=user,
             status="completed",
-            started_at__gte=start_date,
+            scheduled_start__gte=start_date,
             productivity_rating__isnull=False,
         )
 
         # By hour of day
         by_hour = (
-            sessions.annotate(hour=F("started_at__hour"))
+            sessions.annotate(hour=F("scheduled_start__hour"))
             .values("hour")
             .annotate(avg_productivity=Avg("productivity_rating"), count=Count("id"))
             .filter(count__gte=3)
@@ -1338,7 +1338,7 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
 
         # By day of week
         by_weekday = (
-            sessions.annotate(weekday=F("started_at__week_day"))
+            sessions.annotate(weekday=F("scheduled_start__week_day"))
             .values("weekday")
             .annotate(avg_productivity=Avg("productivity_rating"), count=Count("id"))
             .order_by("-avg_productivity")
@@ -1490,10 +1490,10 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
         recent_sessions = StudySession.objects.filter(
             user=study_plan.user,
             status="completed",
-            started_at__gte=timezone.now() - timedelta(days=28),
+            scheduled_start__gte=timezone.now() - timedelta(days=28),
         )
 
-        weekly_hours = sum(s.duration_minutes or 0 for s in recent_sessions) / 60 / 4
+        weekly_hours = sum(s.duration_actual or 0 for s in recent_sessions) / 60 / 4
 
         if weekly_hours > 0:
             weeks_to_complete = total_hours / weekly_hours
