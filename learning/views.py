@@ -475,7 +475,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
             user=user, started_at__gte=week_start, status="completed"
         )
 
-        total_minutes = sum(s.duration_minutes or 0 for s in sessions)
+        total_minutes = sum(s.duration_actual or 0 for s in sessions)
         return round(total_minutes / 60, 1)
 
     def _calculate_completion_rate(self, user):
@@ -689,15 +689,26 @@ class StudySessionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Create and start a new study session."""
         serializer.save(
-            user=self.request.user, started_at=timezone.now(), status="active"
+            user=self.request.user, actual_start=timezone.now(), status="in_progress"
         )
+    
+    def create(self, request, *args, **kwargs):
+        """Create a study session and return full details."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        # Return the full object with StudySessionSerializer
+        instance = serializer.instance
+        output_serializer = StudySessionSerializer(instance)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         """Complete a study session."""
         session = self.get_object()
 
-        if session.status != "active":
+        if session.status != "in_progress":
             return Response(
                 {"error": "Session is not active"}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -705,19 +716,12 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         serializer = StudySessionCompleteSerializer(data=request.data)
         if serializer.is_valid():
             # Update session
-            session.ended_at = timezone.now()
+            session.actual_end = timezone.now()
             session.status = "completed"
-            session.duration_minutes = int(
-                (session.ended_at - session.started_at).total_seconds() / 60
-            )
             session.productivity_rating = serializer.validated_data.get(
                 "productivity_rating"
             )
-            session.notes = serializer.validated_data.get("notes", "")
-            session.topics_covered = serializer.validated_data.get("topics_covered", [])
-            session.goals_worked_on = serializer.validated_data.get(
-                "goals_worked_on", []
-            )
+            session.completion_notes = serializer.validated_data.get("notes", "")
             session.save()
 
             # Update goal progress if provided
@@ -742,15 +746,14 @@ class StudySessionViewSet(viewsets.ModelViewSet):
             # Create progress entry
             LearningProgress.objects.create(
                 user=request.user,
-                study_plan=session.study_plan,
-                progress_type="study_session",
-                description=f"Completed {session.duration_minutes} minute study session",
-                notes=session.notes,
+                course=session.course,
+                progress_type="course",
+                identifier=f"study_session_{session.id}",
                 metadata={
                     "session_id": str(session.id),
-                    "duration_minutes": session.duration_minutes,
+                    "duration_minutes": session.duration_actual,
                     "productivity_rating": session.productivity_rating,
-                    "topics_covered": session.topics_covered,
+                    "completion_notes": session.completion_notes,
                 },
             )
 
@@ -763,7 +766,7 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         """Pause a study session."""
         session = self.get_object()
 
-        if session.status != "active":
+        if session.status != "in_progress":
             return Response(
                 {"error": "Session is not active"}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -783,15 +786,17 @@ class StudySessionViewSet(viewsets.ModelViewSet):
                 {"error": "Session is not paused"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        session.status = "active"
+        session.status = "in_progress"
         session.save()
 
-        return Response({"status": "active"})
+        return Response({"status": "in_progress"})
 
     @action(detail=False, methods=["get"])
     def active(self, request):
         """Get active study sessions."""
-        active_sessions = self.get_queryset().filter(status__in=["active", "paused"])
+        active_sessions = self.get_queryset().filter(
+            status__in=["in_progress", "paused"]
+        )
 
         serializer = StudySessionSerializer(active_sessions, many=True)
         return Response(serializer.data)
@@ -812,7 +817,7 @@ class StudySessionViewSet(viewsets.ModelViewSet):
 
         # Calculate statistics
         total_sessions = sessions.count()
-        total_minutes = sum(s.duration_minutes or 0 for s in sessions)
+        total_minutes = sum(s.duration_actual or 0 for s in sessions)
         avg_duration = total_minutes / total_sessions if total_sessions > 0 else 0
         avg_productivity = (
             sessions.aggregate(avg_productivity=Avg("productivity_rating"))[
@@ -909,11 +914,10 @@ class StudySessionViewSet(viewsets.ModelViewSet):
             )
 
         # Extract performance data from session
+        topics = session.topics if session.topics else []
         performance_data = {
             "correct": request.data.get("performance_rating", 3) >= 3,
-            "response_time": session.duration_minutes
-            * 60
-            / max(1, len(session.topics_covered)),
+            "response_time": session.duration_actual * 60 / max(1, len(topics)),
             "difficulty": "medium",  # Default
             "confidence": request.data.get("confidence_rating", 3),
         }
@@ -922,7 +926,7 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         review_service = get_review_scheduling_service()
         results = []
 
-        for topic in session.topics_covered:
+        for topic in topics:
             result = review_service.update_review_schedule_realtime(
                 user=request.user,
                 item_id=topic,

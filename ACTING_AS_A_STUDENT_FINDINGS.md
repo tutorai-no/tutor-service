@@ -127,3 +127,81 @@ These bugs completely block core features of the platform.
 - Study session tracking (if chat can be fixed)
 - Progress analytics
 - Fix critical bugs before continuing
+
+## Additional Findings (Round 2)
+
+### 13. Registration Endpoint
+- **Endpoint**: `/api/v1/accounts/register/`
+- **Issue**: Requires `password_confirm` field that wasn't documented
+- **Finding**: API expects password confirmation for security
+- **Suggestion**: Update API documentation to include all required fields
+
+### 14. Email Uniqueness
+- **Issue**: Registration fails if email already exists
+- **Good**: Proper validation for unique emails
+- **Suggestion**: Return more user-friendly error messages
+
+### 15. API Validation Issues
+- Study plans require rigid structure with specific fields
+- No graceful handling of optional fields
+- Error messages could be more descriptive
+
+### 16. Course Creation
+- **Field Type Issue**: `difficulty_level` expects integer (1-5), not string
+- **Documentation Gap**: API docs should specify field types clearly
+- **Good**: Proper validation with helpful error messages
+
+### 17. Spaced Repetition ✅
+- **Working Correctly**: Algorithm follows SM-2 properly
+- First review: stays at 1 day
+- Second review: jumps to 6 days
+- Ease factor adjusts based on quality response
+- **No Bug**: Initial testing misunderstood the algorithm behavior
+
+### 18. Chat Type Validation
+- **Issue**: Chat type "tutoring" is not valid
+- **Valid Types**: "general", "course_specific", "document_based", "assessment_help", "study_planning", "concept_explanation"
+- **Suggestion**: Consider adding "tutoring" as it's an intuitive type
+
+### 19. All Bug Fixes Working ✅
+- **Document Upload**: Mock service works when USE_MOCK_RETRIEVAL_SERVICE=True
+- **Quiz Questions**: `choices` field properly maps to `answer_options`
+- **Chat Messages**: Successfully saves with chat association
+- **Spaced Repetition**: Intervals update correctly after reviews
+
+### 20. Study Session Creation ✅ FIXED
+- **Error**: StudySessionCreateSerializer passed 'started_at' to model
+- **Model Issue**: StudySession model uses 'actual_start' not 'started_at'
+- **Fixed**: Changed perform_create to use correct field names
+- **Fixed**: Changed status from 'active' to 'in_progress' 
+- **Fixed**: Removed non-existent fields (duration_minutes, topics_covered, etc.)
+- **Fixed**: Added create() method to return full serialized object with ID
+
+## Summary of Platform Status
+
+### ✅ Working Features
+1. User registration and authentication
+2. Course and section creation
+3. Flashcard creation and review with spaced repetition
+4. Quiz creation with multiple choice questions
+5. Chat sessions with message sending
+6. Document upload with mock processing service
+
+### ✅ All Critical Issues Fixed
+1. Document upload (mock service works)
+2. Quiz questions (choices field works)  
+3. Chat messages (saves with chat association)
+4. Spaced repetition (intervals update correctly)
+5. Study session creation (field mappings fixed)
+
+### ⚠️ API Design Issues
+1. Required fields not well documented
+2. Field type mismatches (difficulty_level expects int not string)
+3. Rigid validation (study plans, chat types)
+4. Inconsistent field naming conventions
+
+### 💡 Recommendations
+1. Improve API documentation with complete field specifications
+2. Add field type validation in serializers with helpful error messages
+3. Consider more flexible validation for better user experience
+4. Standardize field naming across the platform
