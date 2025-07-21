@@ -18,6 +18,10 @@ class FlashcardSerializer(serializers.ModelSerializer):
     mastery_level = serializers.CharField(read_only=True)
     is_due = serializers.BooleanField(read_only=True)
 
+    # Support both standard flashcard naming conventions
+    front = serializers.CharField(write_only=True, required=False)
+    back = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = Flashcard
         fields = [
@@ -26,6 +30,8 @@ class FlashcardSerializer(serializers.ModelSerializer):
             "section",
             "question",
             "answer",
+            "front",  # Alternative to question
+            "back",  # Alternative to answer
             "explanation",
             "difficulty_level",
             "tags",
@@ -65,14 +71,50 @@ class FlashcardSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+    def validate(self, attrs):
+        """Support both question/answer and front/back field names."""
+        # If 'front' is provided, use it as 'question'
+        if "front" in attrs:
+            attrs["question"] = attrs.pop("front")
+
+        # If 'back' is provided, use it as 'answer'
+        if "back" in attrs:
+            attrs["answer"] = attrs.pop("back")
+
+        # Ensure required fields are present
+        if "question" not in attrs:
+            raise serializers.ValidationError(
+                {"question": "This field is required (you can also use 'front')."}
+            )
+        if "answer" not in attrs:
+            raise serializers.ValidationError(
+                {"answer": "This field is required (you can also use 'back')."}
+            )
+
+        return super().validate(attrs)
+
+    def to_representation(self, instance):
+        """Include both naming conventions in response for compatibility."""
+        data = super().to_representation(instance)
+        # Add alternative field names for client compatibility
+        data["front"] = data.get("question")
+        data["back"] = data.get("answer")
+        return data
+
 
 class FlashcardReviewSerializer(serializers.ModelSerializer):
+    # Support both naming conventions
+    rating = serializers.IntegerField(
+        write_only=True, required=False, min_value=0, max_value=5
+    )
+
     class Meta:
         model = FlashcardReview
         fields = [
             "id",
             "flashcard",
             "quality_response",
+            "rating",  # Alternative to quality_response
             "response_time_seconds",
             "study_session_id",
             "device_type",
@@ -91,6 +133,22 @@ class FlashcardReviewSerializer(serializers.ModelSerializer):
             "ease_factor_after",
             "created_at",
         ]
+
+    def validate(self, attrs):
+        """Support both quality_response and rating field names."""
+        # If 'rating' is provided, use it as 'quality_response'
+        if "rating" in attrs:
+            attrs["quality_response"] = attrs.pop("rating")
+
+        # Ensure required field is present
+        if "quality_response" not in attrs:
+            raise serializers.ValidationError(
+                {
+                    "quality_response": "This field is required (you can also use 'rating')."
+                }
+            )
+
+        return super().validate(attrs)
 
     def create(self, validated_data):
         """Create review and update flashcard using spaced repetition."""
