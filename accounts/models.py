@@ -287,9 +287,11 @@ class UserStreak(models.Model):
         """
         from datetime import datetime, timedelta
 
-        now = datetime.now()
-        last_activity_datetime = datetime.combine(
-            self.last_activity_date, datetime.min.time()
+        from django.utils import timezone
+
+        now = timezone.now()
+        last_activity_datetime = timezone.make_aware(
+            datetime.combine(self.last_activity_date, datetime.min.time())
         )
 
         # 36-hour grace period (more forgiving than 24 hours)
@@ -313,9 +315,9 @@ class UserStreak(models.Model):
         Advanced streak increment logic.
         Migrated and enhanced from src/accounts/models.py
         """
-        from datetime import datetime
+        from django.utils import timezone
 
-        today = datetime.now().date()
+        today = timezone.now().date()
         study_activity_today = False
 
         # Check if streak should be broken first

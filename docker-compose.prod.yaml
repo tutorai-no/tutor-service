@@ -11,7 +11,7 @@ services:
       - static_volume:/code/staticfiles
       - media_volume:/code/media
     ports:
-      - "8000:8000"
+      - "80:8000"
     depends_on:
       - db
       - redis
@@ -114,23 +114,6 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - REDIS_URL=${REDIS_URL}
-    networks:
-      - aksio_network
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: aksio-nginx-prod
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - static_volume:/var/www/staticfiles
-      - media_volume:/var/www/media
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - backend
     networks:
       - aksio_network
     restart: unless-stopped

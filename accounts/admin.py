@@ -350,7 +350,7 @@ class UserApplicationAdmin(admin.ModelAdmin):
                 recipient_list=[application.email],
                 fail_silently=False,
             )
-        except Exception as e:
+        except Exception:
             # Log error but don't fail the approval process
             pass
 
@@ -374,6 +374,6 @@ class UserApplicationAdmin(admin.ModelAdmin):
                 recipient_list=[application.email],
                 fail_silently=False,
             )
-        except Exception as e:
+        except Exception:
             # Log error but don't fail the rejection process
             pass

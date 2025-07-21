@@ -252,7 +252,9 @@ class ReviewSchedulingService(AdaptiveLearningService):
                                 if len(flashcard.question) > 50
                                 else flashcard.question
                             ),
-                            "difficulty": self._map_quality_to_difficulty(last_review.quality_response),
+                            "difficulty": self._map_quality_to_difficulty(
+                                last_review.quality_response
+                            ),
                             "last_reviewed": last_review.created_at.date().isoformat(),
                             "next_review_date": next_review.isoformat(),
                             "priority": self._calculate_review_priority(last_review),

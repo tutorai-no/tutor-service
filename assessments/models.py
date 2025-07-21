@@ -464,7 +464,7 @@ class QuizAttempt(models.Model):
         earned_points = 0
 
         # Fix N+1 query by prefetching the related question objects
-        for response in self.responses.select_related('question').all():
+        for response in self.responses.select_related("question").all():
             total_points += response.question.points
             if response.is_correct:
                 earned_points += response.question.points

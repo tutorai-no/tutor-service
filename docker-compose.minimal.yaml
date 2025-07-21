@@ -1,0 +1,148 @@
+# Minimal Docker Compose for lightweight development
+# This configuration runs all backend features with minimal infrastructure
+# Includes: Backend, PostgreSQL, Neo4j (for knowledge graph)
+# Removes: Redis (uses in-memory cache), Kafka, Zookeeper, monitoring tools
+# Use: docker-compose -f docker-compose.minimal.yaml up
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aksio-backend-minimal
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - neo4j
+    environment:
+      # Django Configuration
+      - DJANGO_DEBUG=True
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-dev-key}
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,backend
+      - DJANGO_SETTINGS_MODULE=aksio.settings.development
+      
+      # Database Configuration
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=aksio_db
+      - DATABASE_USER=aksio_user
+      - DATABASE_PASSWORD=aksio_password
+      
+      # Redis Configuration - Using in-memory cache instead
+      - REDIS_URL=  # Empty to use in-memory cache
+      
+      # Neo4j Configuration
+      - NEO4J_URL=bolt://neo4j:7687
+      - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=password
+      - USE_MOCK_NEO4J=False  # Use real Neo4j for knowledge graph
+      
+      # AI Configuration - All features enabled
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-1000}
+      
+      # Feature Flags - Enable all features
+      - ENABLE_AI_FEATURES=${ENABLE_AI_FEATURES:-True}
+      - ENABLE_DOCUMENT_PROCESSING=${ENABLE_DOCUMENT_PROCESSING:-True}
+      - ENABLE_REAL_TIME_CHAT=${ENABLE_REAL_TIME_CHAT:-True}
+      - ENABLE_KAFKA=False  # Kafka still disabled
+      - ENABLE_CELERY=${ENABLE_CELERY:-True}  # Run inline instead of background
+      - ENABLE_MONITORING=${ENABLE_MONITORING:-True}
+      
+      # External Services
+      - SCRAPER_SERVICE_URL=${SCRAPER_SERVICE_URL:-http://scraper-service:8080}
+      - RETRIEVER_SERVICE_URL=${RETRIEVER_SERVICE_URL:-http://scraper-service:8080}
+      - USE_MOCK_RETRIEVAL_SERVICE=${USE_MOCK_RETRIEVAL_SERVICE:-False}
+      
+      # Google Cloud Configuration (optional for local dev)
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-}
+      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      
+      # Email Configuration (optional for local dev)
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-noreply@aksio.app}
+      
+      # Payment Configuration (optional for local dev)
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      
+      # Celery Configuration - Run tasks synchronously in development
+      - CELERY_TASK_ALWAYS_EAGER=True
+      - CELERY_TASK_EAGER_PROPAGATES=True
+      
+      # Logging
+      - LOGGING_LEVEL=${LOGGING_LEVEL:-INFO}
+    networks:
+      - aksio_minimal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:16-alpine  # Use Alpine for smaller image
+    container_name: aksio-db-minimal
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=aksio_db
+      - POSTGRES_USER=aksio_user
+      - POSTGRES_PASSWORD=aksio_password
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5433:5432"
+    networks:
+      - aksio_minimal
+    # Optimize PostgreSQL for development (less memory usage)
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c effective_cache_size=256MB
+      -c maintenance_work_mem=32MB
+      -c work_mem=4MB
+
+  neo4j:
+    image: neo4j:5-community  # Use community edition for lighter footprint
+    container_name: aksio-neo4j-minimal
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_PLUGINS=["apoc"]  # Add APOC plugin for advanced features
+      # Memory settings for minimal usage
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
+      - NEO4J_server_memory_pagecache__size=512m
+    ports:
+      - "7474:7474"  # Browser
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - aksio_minimal
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'MATCH (n) RETURN count(n)' | cypher-shell -u neo4j -p password || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+  neo4j_data:
+    driver: local
+
+networks:
+  aksio_minimal:
+    driver: bridge

@@ -28,22 +28,61 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 # Swagger schema view configuration
 schema_view = get_schema_view(
     openapi.Info(
-        title="Aksio API",
+        title="Aksio Backend API",
         default_version="v1",
-        description="Your API description",
+        description="""
+        Aksio is an advanced educational platform that combines AI-powered learning tools 
+        with modern web architecture. This API provides comprehensive endpoints for:
+        
+        - **User Management**: Authentication, profiles, and activity tracking
+        - **Course Management**: Create, manage, and organize learning content
+        - **Assessment System**: Flashcards, quizzes with spaced repetition
+        - **AI-Powered Chat**: Intelligent learning assistance
+        - **Billing & Subscriptions**: Payment processing and plan management
+        - **Document Processing**: Upload and process educational materials
+        - **Learning Analytics**: Progress tracking and performance insights
+        - **Monitoring & Health**: System health and performance metrics
+        
+        ## Authentication
+        
+        The API uses JWT (JSON Web Token) authentication. Include the token in the 
+        Authorization header: `Authorization: Bearer <your-token>`
+        
+        ## Rate Limiting
+        
+        API endpoints are rate-limited to ensure fair usage:
+        - **Authenticated users**: 60 requests/minute, 1000 requests/hour
+        - **Anonymous users**: 20 requests/minute, 100 requests/hour
+        - **Premium users**: 5000 requests/hour
+        - **AI services**: 100 requests/hour (due to processing costs)
+        
+        ## Error Handling
+        
+        The API returns standard HTTP status codes with detailed error messages:
+        - `400 Bad Request`: Invalid request data
+        - `401 Unauthorized`: Authentication required
+        - `403 Forbidden`: Insufficient permissions
+        - `404 Not Found`: Resource not found
+        - `429 Too Many Requests`: Rate limit exceeded
+        - `500 Internal Server Error`: Server error
+        """,
+        terms_of_service="https://aksio.ai/terms/",
+        contact=openapi.Contact(email="api@aksio.ai"),
+        license=openapi.License(name="MIT License"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
     authentication_classes=(SessionAuthentication, JWTAuthentication),
-    # Define the security schemes
 )
 
 urlpatterns = [
     # Admin panel route
     path("admin/", admin.site.urls),
     # API routes
-    path("api/", include("api.urls"), name="api"),
-    # Swagger routes
+    path("api/", include("api.urls"), name="API"),
+    # Core monitoring and health check routes
+    path("api/core/", include("core.urls"), name="core"),
+    # API Documentation routes
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
         schema_view.without_ui(cache_timeout=0),
@@ -59,5 +98,6 @@ urlpatterns = [
         schema_view.with_ui("redoc", cache_timeout=0),
         name="schema-redoc",
     ),
+    # Prometheus metrics endpoint
     path("", include(prometheus_urls)),
 ]

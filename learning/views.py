@@ -9,6 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.swagger_utils import swagger_tag
+
 from .services.performance_analysis import get_performance_analysis_service
 from .services.progress_prediction import get_progress_prediction_service
 from .services.review_scheduling import get_review_scheduling_service
@@ -32,11 +34,13 @@ from .serializers import (
     StudyPlanCreateSerializer,
     StudyPlanDetailSerializer,
     StudyPlanSerializer,
+    StudySessionCompleteSerializer,
     StudySessionCreateSerializer,
     StudySessionSerializer,
 )
 
 
+@swagger_tag("Learning")
 class StudyPlanViewSet(viewsets.ModelViewSet):
     """ViewSet for managing study plans."""
 
@@ -174,7 +178,9 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         dashboard_data = {
             "active_plans": StudyPlanSerializer(active_plans, many=True).data,
             "upcoming_goals": StudyGoalSerializer(upcoming_goals, many=True).data,
-            "recent_progress": LearningProgressSerializer(recent_progress, many=True).data,
+            "recent_progress": LearningProgressSerializer(
+                recent_progress, many=True
+            ).data,
             "study_streak": study_streak,
             "weekly_hours": self._calculate_weekly_hours(user),
             "completion_rate": self._calculate_completion_rate(user),
@@ -483,6 +489,7 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
         return round((completed_goals / total_goals) * 100, 1)
 
 
+@swagger_tag("Learning")
 class StudyGoalViewSet(viewsets.ModelViewSet):
     """ViewSet for managing learning goals."""
 
@@ -652,6 +659,7 @@ class StudyGoalViewSet(viewsets.ModelViewSet):
         return resources
 
 
+@swagger_tag("Learning")
 class StudySessionViewSet(viewsets.ModelViewSet):
     """ViewSet for managing study sessions."""
 
@@ -917,6 +925,7 @@ class StudySessionViewSet(viewsets.ModelViewSet):
         return Response({"review_updates": results})
 
 
+@swagger_tag("Learning")
 class LearningProgressViewSet(viewsets.ModelViewSet):
     """ViewSet for tracking learning progress."""
 
@@ -983,6 +992,7 @@ class LearningProgressViewSet(viewsets.ModelViewSet):
         return Response(summary)
 
 
+@swagger_tag("Learning")
 class LearningAnalyticsViewSet(viewsets.ViewSet):
     """ViewSet for learning analytics and insights."""
 
@@ -1269,7 +1279,9 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
         target_goals_per_week = sum(
             plan.goals.count() / ((plan.end_date - plan.start_date).days / 7)
             for plan in active_plans
-            if plan.end_date and plan.start_date
+            if plan.end_date
+            and plan.start_date
+            and (plan.end_date - plan.start_date).days > 0
         )
 
         return {
@@ -1521,6 +1533,7 @@ class LearningAnalyticsViewSet(viewsets.ViewSet):
         }
 
 
+@swagger_tag("Learning")
 class AdaptiveLearningViewSet(viewsets.ViewSet):
     """ViewSet for adaptive learning features and AI-powered recommendations."""
 

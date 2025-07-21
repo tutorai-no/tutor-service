@@ -28,12 +28,6 @@ scrape_configs:
       - targets: ['redis:6379']
     scrape_interval: 30s
 
-  # Nginx metrics
-  - job_name: 'nginx'
-    static_configs:
-      - targets: ['nginx:80']
-    scrape_interval: 30s
-
   # Celery metrics
   - job_name: 'celery'
     static_configs:

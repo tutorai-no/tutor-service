@@ -15,9 +15,9 @@ services:
     depends_on:
       - db
       - redis
-      - neo4j
-      - broker
-      - zookeeper
+      # - neo4j  # Commented out for lighter development
+      # - broker  # Kafka disabled
+      # - zookeeper  # Kafka disabled
     environment:
       # Django Configuration
       - DJANGO_DEBUG=True
@@ -120,71 +120,75 @@ services:
       timeout: 10s
       retries: 3
 
-  neo4j:
-    image: neo4j:latest
-    container_name: aksio-neo4j
-    environment:
-      NEO4J_AUTH: "neo4j/password"
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "echo 'RETURN 1;' | cypher-shell -u neo4j -p password >/dev/null 2>&1 || exit 1",
-        ]
-      interval: 30s
-      retries: 5
-    networks:
-      - aksio_network
-    volumes:
-      - neo4j_data:/data
+  # Neo4j - Commented out for lighter development
+  # Uncomment if you need knowledge graph features
+  # neo4j:
+  #   image: neo4j:latest
+  #   container_name: aksio-neo4j
+  #   environment:
+  #     NEO4J_AUTH: "neo4j/password"
+  #   ports:
+  #     - "7474:7474"
+  #     - "7687:7687"
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "echo 'RETURN 1;' | cypher-shell -u neo4j -p password >/dev/null 2>&1 || exit 1",
+  #       ]
+  #     interval: 30s
+  #     retries: 5
+  #   networks:
+  #     - aksio_network
+  #   volumes:
+  #     - neo4j_data:/data
 
-  broker:
-    image: confluentinc/cp-kafka:7.4.0
-    container_name: aksio-kafka
-    hostname: broker
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-      KAFKA_DELETE_TOPIC_ENABLE: 'true'
-    ports:
-      - "9092:9092"
-    depends_on:
-      - zookeeper
-    networks:
-      - aksio_network
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # Kafka services - disabled but configurations kept for future use
+  # Uncomment the following services to enable Kafka:
+  # broker:
+  #   image: confluentinc/cp-kafka:7.4.0
+  #   container_name: aksio-kafka
+  #   hostname: broker
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  #     KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+  #     KAFKA_DELETE_TOPIC_ENABLE: 'true'
+  #   ports:
+  #     - "9092:9092"
+  #   depends_on:
+  #     - zookeeper
+  #   networks:
+  #     - aksio_network
+  #   healthcheck:
+  #     test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    container_name: aksio-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
-    ports:
-      - "2181:2181"
-    networks:
-      - aksio_network
-    healthcheck:
-      test: ["CMD", "sh", "-c", "echo 'health' | nc localhost 2181 || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+  # zookeeper:
+  #   image: confluentinc/cp-zookeeper:latest
+  #   container_name: aksio-zookeeper
+  #   environment:
+  #     ZOOKEEPER_CLIENT_PORT: 2181
+  #     ZOOKEEPER_TICK_TIME: 2000
+  #     ZOOKEEPER_INIT_LIMIT: 5
+  #     ZOOKEEPER_SYNC_LIMIT: 2
+  #   ports:
+  #     - "2181:2181"
+  #   networks:
+  #     - aksio_network
+  #   healthcheck:
+  #     test: ["CMD", "sh", "-c", "echo 'health' | nc localhost 2181 || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s
 
   # Optional: PGAdmin for database management
   pgadmin:
@@ -202,22 +206,22 @@ services:
     profiles:
       - tools
 
-  # Optional: Kafka UI for Kafka management
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: aksio-kafka-ui
-    environment:
-      - KAFKA_CLUSTERS_0_NAME=aksio-cluster
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=broker:9092
-      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
-    ports:
-      - "8080:8080"
-    depends_on:
-      - broker
-    networks:
-      - aksio_network
-    profiles:
-      - tools
+  # Optional: Kafka UI for Kafka management (disabled)
+  # kafka-ui:
+  #   image: provectuslabs/kafka-ui:latest
+  #   container_name: aksio-kafka-ui
+  #   environment:
+  #     - KAFKA_CLUSTERS_0_NAME=aksio-cluster
+  #     - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=broker:9092
+  #     - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - broker
+  #   networks:
+  #     - aksio_network
+  #   profiles:
+  #     - tools
 
   # Optional: Redis Commander for Redis management
   redis-commander:

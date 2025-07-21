@@ -8,6 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.swagger_utils import swagger_tag
+
 logger = logging.getLogger(__name__)
 
 from .models import (
@@ -35,6 +37,7 @@ from .serializers import (
 )
 
 
+@swagger_tag("Assessments")
 class FlashcardViewSet(viewsets.ModelViewSet):
     serializer_class = FlashcardSerializer
     permission_classes = [IsAuthenticated]
@@ -126,12 +129,22 @@ class FlashcardViewSet(viewsets.ModelViewSet):
 
     def update_study_streak(self, user, course, streak_type):
         """Update user's study streak."""
-        streak, created = StudyStreak.objects.get_or_create(
-            user=user, course=course, streak_type=streak_type
-        )
-        streak.update_streak()
+        from django.db import transaction
+
+        # Fix race condition with atomic transaction and locking
+        with transaction.atomic():
+            try:
+                streak = StudyStreak.objects.select_for_update().get(
+                    user=user, course=course, streak_type=streak_type
+                )
+            except StudyStreak.DoesNotExist:
+                streak, created = StudyStreak.objects.get_or_create(
+                    user=user, course=course, streak_type=streak_type
+                )
+            streak.update_streak()
 
 
+@swagger_tag("Assessments")
 class FlashcardReviewViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = FlashcardReviewSerializer
     permission_classes = [IsAuthenticated]
@@ -166,6 +179,7 @@ class FlashcardReviewViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(stats)
 
 
+@swagger_tag("Assessments")
 class QuizViewSet(viewsets.ModelViewSet):
     serializer_class = QuizSerializer
     permission_classes = [IsAuthenticated]
@@ -215,7 +229,9 @@ class QuizViewSet(viewsets.ModelViewSet):
             quiz=quiz,
             user=request.user,
             attempt_number=attempt_number,
-            questions_order=list(quiz.questions.values_list("id", flat=True)),
+            questions_order=[
+                str(qid) for qid in quiz.questions.values_list("id", flat=True)
+            ],
         )
 
         serializer = QuizAttemptSerializer(attempt)
@@ -252,6 +268,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         return Response(stats)
 
 
+@swagger_tag("Assessments")
 class QuizQuestionViewSet(viewsets.ModelViewSet):
     serializer_class = QuizQuestionSerializer
     permission_classes = [IsAuthenticated]
@@ -268,6 +285,7 @@ class QuizQuestionViewSet(viewsets.ModelViewSet):
         serializer.save(quiz=quiz)
 
 
+@swagger_tag("Assessments")
 class QuizAttemptViewSet(viewsets.ModelViewSet):
     serializer_class = QuizAttemptSerializer
     permission_classes = [IsAuthenticated]
@@ -341,12 +359,22 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
 
     def update_study_streak(self, user, course, streak_type):
         """Update user's study streak."""
-        streak, created = StudyStreak.objects.get_or_create(
-            user=user, course=course, streak_type=streak_type
-        )
-        streak.update_streak()
+        from django.db import transaction
+
+        # Fix race condition with atomic transaction and locking
+        with transaction.atomic():
+            try:
+                streak = StudyStreak.objects.select_for_update().get(
+                    user=user, course=course, streak_type=streak_type
+                )
+            except StudyStreak.DoesNotExist:
+                streak, created = StudyStreak.objects.get_or_create(
+                    user=user, course=course, streak_type=streak_type
+                )
+            streak.update_streak()
 
 
+@swagger_tag("Assessments")
 class AssessmentViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated]
@@ -356,6 +384,14 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         return Assessment.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
+        # Ensure course belongs to the user
+        course = serializer.validated_data.get("course")
+        if course and course.user != self.request.user:
+            from rest_framework import serializers as rest_serializers
+
+            raise rest_serializers.ValidationError(
+                "Course must belong to the authenticated user"
+            )
         serializer.save(user=self.request.user)
 
     @action(detail=True, methods=["post"])
@@ -417,7 +453,10 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
                 except Exception as e:
                     logger.error(f"Error generating flashcards: {str(e)}")
-                    results["generated_content"]["flashcards"] = {"error": str(e)}
+                    # Security fix: Don't expose internal error details to API response
+                    results["generated_content"]["flashcards"] = {
+                        "error": "Failed to generate flashcards. Please try again later."
+                    }
 
             # Generate quiz questions if requested
             if assessment.include_quizzes:
@@ -482,18 +521,22 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
                 except Exception as e:
                     logger.error(f"Error generating quiz questions: {str(e)}")
-                    results["generated_content"]["quiz"] = {"error": str(e)}
+                    # Security fix: Don't expose internal error details to API response
+                    results["generated_content"]["quiz"] = {
+                        "error": "Failed to generate quiz questions. Please try again later."
+                    }
 
             return Response(results)
 
         except Exception as e:
             logger.error(f"Error in content generation: {str(e)}")
+            # Security fix: Don't expose internal error details to API response
             return Response(
                 {
                     "message": "Content generation failed",
                     "assessment_id": assessment.id,
                     "status": "failed",
-                    "error": str(e),
+                    "error": "An internal error occurred. Please try again later.",
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
@@ -581,6 +624,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         return Response(stats)
 
 
+@swagger_tag("Assessments")
 class StudyStreakViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = StudyStreakSerializer
     permission_classes = [IsAuthenticated]
@@ -638,6 +682,7 @@ class StudyStreakViewSet(viewsets.ReadOnlyModelViewSet):
 # Additional utility views
 
 
+@swagger_tag("Assessments")
 class AssessmentAnalyticsView(viewsets.ReadOnlyModelViewSet):
     """Advanced analytics for assessments."""
 

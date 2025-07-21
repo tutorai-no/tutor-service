@@ -253,7 +253,9 @@ class TestProgressPredictionService(TestCase):
                 title=f"Session {i}",
                 session_type="practice",
                 scheduled_start=timezone.now() - timedelta(days=i),
-                scheduled_end=timezone.now() - timedelta(days=i) + timedelta(minutes=45 + i * 15),
+                scheduled_end=timezone.now()
+                - timedelta(days=i)
+                + timedelta(minutes=45 + i * 15),
                 status="completed",
                 created_at=timezone.now() - timedelta(days=i),
             )

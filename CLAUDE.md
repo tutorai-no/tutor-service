@@ -54,8 +54,10 @@ All Django apps are implemented and functional:
 - **Authentication**: JWT tokens with Django REST Framework
 - **AI Integration**: OpenAI API (GPT models)
 - **Caching**: Redis (configured but optional)
+- **Message Queue**: Celery with Redis broker
 - **Monitoring**: Django Prometheus integration
 - **Documentation**: drf-yasg (Swagger/OpenAPI)
+- **Disabled Services**: Kafka (configurations kept but disabled), Nginx (Cloud Run handles routing)
 
 ### **Service Boundaries and Responsibilities**
 
@@ -203,15 +205,16 @@ Enhance existing monitoring:
 ./scripts/format-code.sh        # Unix/Linux/MacOS
 scripts\format-code.bat         # Windows
 
-# Option 2: Use Make commands
-make check                      # Run all formatting and checks
-make format                     # Format code only
-make lint                       # Run linting only
-make test                       # Run tests only
-
-# Option 3: Use pre-commit hooks
+# Option 2: Use pre-commit hooks
 pre-commit install              # One-time setup
 pre-commit run --all-files      # Run all hooks manually
+
+# Option 3: Run tools individually
+python -m autoflake --remove-all-unused-imports --recursive --in-place .
+python -m isort .
+python -m black .
+python -m flake8
+python -m mypy .
 ```
 
 **Quality Tools Configured:**
@@ -427,6 +430,11 @@ static_bucket_name = "aksio-prod-static-84df66d5"
 - **[Infrastructure Quick Reference](./infrastructure/QUICK_REFERENCE.md)** - Essential commands
 - **[Development Index](./docs/README.md)** - Complete documentation index
 
+### **Configuration Files**
+- **setup.cfg**: Configures flake8, mypy, pytest, and pydocstyle for code quality
+- **pyproject.toml**: Python project metadata and tool configurations
+- **.pre-commit-config.yaml**: Pre-commit hooks for code quality checks
+
 ## Current Priority Tasks
 
 ### **Immediate (High Priority)**
@@ -461,7 +469,7 @@ static_bucket_name = "aksio-prod-static-84df66d5"
 **For every code change, Claude agents must:**
 
 1. **Write/modify code** following the coding guidelines
-2. **Run quality checks**: `./scripts/format-code.sh` or `make check`
+2. **Run quality checks**: `./scripts/format-code.sh`
 3. **Fix any reported issues**
 4. **Verify all checks pass**
 5. **Only then commit the code**

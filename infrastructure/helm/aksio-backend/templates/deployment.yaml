@@ -101,21 +101,11 @@ spec:
             - name: data
               mountPath: /app/media
             {{- end }}
-            {{- if .Values.configMap.enabled }}
-            - name: config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-            {{- end }}
       volumes:
         {{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "aksio-backend.fullname" . }}-data
-        {{- end }}
-        {{- if .Values.configMap.enabled }}
-        - name: config
-          configMap:
-            name: {{ include "aksio-backend.fullname" . }}-config
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

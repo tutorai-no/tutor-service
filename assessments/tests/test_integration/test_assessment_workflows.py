@@ -167,7 +167,9 @@ class TestEndToEndQuizWorkflow(TransactionTestCase):
     @patch("assessments.services.ai_agents.quiz_agent.PydanticOutputParser")
     def test_complete_quiz_generation_workflow(self, mock_parser_class):
         """Test complete quiz generation from request to database"""
-        from assessments.services.ai_agents.quiz_agent import QuizBatch
+        from assessments.services.ai_agents.quiz_agent import (
+            QuizBatch,
+        )
         from assessments.services.ai_agents.quiz_agent import (
             QuizQuestion as QuizQuestionItem,
         )

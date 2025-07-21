@@ -11,6 +11,8 @@ from rest_framework.response import Response
 
 import requests
 
+from core.swagger_utils import swagger_tag
+
 logger = logging.getLogger(__name__)
 
 from .models import Course, CourseSection, Document, DocumentTag, DocumentTagAssignment
@@ -23,6 +25,7 @@ from .serializers import (
 )
 
 
+@swagger_tag("Courses")
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
@@ -34,6 +37,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
+@swagger_tag("Courses")
 class CourseSectionViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSectionSerializer
     permission_classes = [IsAuthenticated]
@@ -50,6 +54,7 @@ class CourseSectionViewSet(viewsets.ModelViewSet):
         serializer.save(course=course)
 
 
+@swagger_tag("Courses")
 class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticated]
@@ -751,7 +756,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         except requests.RequestException as e:
             logger.error(f"Error checking processing status: {str(e)}")
-            return {"success": False, "error": str(e)}
+            # Security fix: Don't expose internal error details
+            return {"success": False, "error": "Failed to check document status"}
 
     def _request_reprocessing(self, document):
         """Request reprocessing from retrieval service."""
@@ -780,7 +786,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         except requests.RequestException as e:
             logger.error(f"Error requesting reprocessing: {str(e)}")
-            return {"success": False, "error": str(e)}
+            # Security fix: Don't expose internal error details
+            return {
+                "success": False,
+                "error": "Failed to request document reprocessing",
+            }
 
     def _get_document_content(self, document):
         """Get detailed document content from retrieval service."""
@@ -892,9 +902,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         except requests.RequestException as e:
             logger.error(f"Error retrieving document content: {str(e)}")
-            return {"success": False, "error": str(e)}
+            # Security fix: Don't expose internal error details
+            return {"success": False, "error": "Failed to retrieve document content"}
 
 
+@swagger_tag("Courses")
 class DocumentTagViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentTagSerializer
     permission_classes = [IsAuthenticated]
@@ -906,6 +918,7 @@ class DocumentTagViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
+@swagger_tag("Courses")
 class DocumentTagAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentTagAssignmentSerializer
     permission_classes = [IsAuthenticated]

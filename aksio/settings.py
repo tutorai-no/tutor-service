@@ -59,6 +59,22 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "core.throttling.BurstRateThrottle",
+        "core.throttling.SustainedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "burst": "60/min",
+        "sustained": "1000/hour",
+        "anon_burst": "20/min",
+        "anon_sustained": "100/hour",
+        "login": "5/min",
+        "ai_service": "100/hour",
+        "document_processing": "50/hour",
+        "premium": "5000/hour",
+    },
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
 }
 
 SWAGGER_SETTINGS = {
@@ -132,9 +148,26 @@ TEMPLATES = [
 WSGI_APPLICATION = "aksio.wsgi.application"
 
 
-# CORS settings
-# TODO REMEMBER TO CHANGE THIS BEFORE DEPLOYMENT AS IT IS A SECURITY RISK
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS settings - Configure based on environment
+# SECURITY FIX: Never use CORS_ALLOW_ALL_ORIGINS = True in production
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all origins in development
+
+# Production CORS settings
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "https://your-frontend-domain.com",
+        "https://www.your-frontend-domain.com",
+        # Add your production frontend URLs here
+    ]
+    CORS_ALLOW_CREDENTIALS = True
+else:
+    # Development: Allow localhost origins
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ]
 #
 
 # Database
@@ -149,8 +182,66 @@ DATABASES = {
         "HOST": os.getenv("DATABASE_HOST", "db"),
         "PORT": os.getenv("DATABASE_PORT", "5432"),
         "OPTIONS": {"sslmode": "prefer"},
+        "CONN_MAX_AGE": 60,  # Database connection pooling
     }
 }
+
+# Redis Configuration for Caching and Sessions
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PARSER_CLASS": "redis.connection.HiredisParser",
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 50,
+                "retry_on_timeout": True,
+            },
+            "SERIALIZER": "django_redis.serializers.json.JSONSerializer",
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+        },
+        "KEY_PREFIX": "aksio",
+        "VERSION": 1,
+        "TIMEOUT": 300,  # Default cache timeout (5 minutes)
+    },
+    "sessions": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"{REDIS_URL.split('/')[0]}/1",  # Use DB 1 for sessions
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "aksio_session",
+        "TIMEOUT": 86400,  # 24 hours
+    },
+    "throttling": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"{REDIS_URL.split('/')[0]}/2",  # Use DB 2 for throttling
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "aksio_throttle",
+    },
+}
+
+# Use Redis for sessions
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "sessions"
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Cache template fragments
+TEMPLATES[0]["OPTIONS"]["loaders"] = [
+    (
+        "django.template.loaders.cached.Loader",
+        [
+            "django.template.loaders.filesystem.Loader",
+            "django.template.loaders.app_directories.Loader",
+        ],
+    ),
+]
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -286,8 +377,42 @@ LOGGING = {
     },
 }
 
-# Kafka settings
-KAFKA_CONFIGURATION = {
-    "bootstrap.servers": "broker",
-    "auto.offset.reset": "smallest",
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Task routing configuration
+CELERY_TASK_ROUTES = {
+    "core.tasks.send_email": {"queue": "email"},
+    "assessments.tasks.*": {"queue": "ai_processing"},
+    "document_processing.tasks.*": {"queue": "document_processing"},
+    "learning.tasks.*": {"queue": "analytics"},
+    "chat.tasks.*": {"queue": "ai_processing"},
 }
+
+# Task time limits
+CELERY_TASK_TIME_LIMIT = 300  # 5 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 240  # 4 minutes
+
+# Worker configuration
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+# Results configuration
+CELERY_RESULT_EXPIRES = 3600  # 1 hour
+
+# Task acknowledgment
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_DISABLE_RATE_LIMITS = False
+
+# Kafka settings - disabled but configuration kept for future use
+# KAFKA_CONFIGURATION = {
+#     "bootstrap.servers": "broker",
+#     "auto.offset.reset": "smallest",
+# }

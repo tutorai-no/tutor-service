@@ -316,12 +316,12 @@ class ChatCreateSerializer(serializers.ModelSerializer):
             "use_assessment_context",
         ]
         read_only_fields = ["id"]
-        
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Make course field optional since it's nullable in the model
-        self.fields['course'].required = False
-        self.fields['section'].required = False
+        self.fields["course"].required = False
+        self.fields["section"].required = False
 
     def create(self, validated_data):
         """Create a new chat with user context."""

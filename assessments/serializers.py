@@ -84,6 +84,7 @@ class FlashcardReviewSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "flashcard",
             "previous_interval_days",
             "new_interval_days",
             "ease_factor_before",
@@ -457,9 +458,7 @@ class AssessmentStatsSerializer(serializers.ModelSerializer):
         # Fix N+1 query by using database filters instead of property access
         # Mastery level "mastered" criteria: repetitions >= 8, success_rate >= 0.9, ease_factor >= 2.5
         mastered_flashcards = flashcards.filter(
-            repetitions__gte=8,
-            success_rate__gte=0.9,
-            ease_factor__gte=2.5
+            repetitions__gte=8, success_rate__gte=0.9, ease_factor__gte=2.5
         ).count()
 
         return {

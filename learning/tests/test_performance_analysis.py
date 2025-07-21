@@ -210,11 +210,17 @@ class TestPerformanceAnalysisService(TestCase):
 
         # Create flashcard reviews
         FlashcardReview.objects.create(
-            user=self.user, flashcard=flashcard, quality_response=4, response_time_seconds=3
+            user=self.user,
+            flashcard=flashcard,
+            quality_response=4,
+            response_time_seconds=3,
         )
 
         FlashcardReview.objects.create(
-            user=self.user, flashcard=flashcard, quality_response=3, response_time_seconds=5
+            user=self.user,
+            flashcard=flashcard,
+            quality_response=3,
+            response_time_seconds=5,
         )
 
         analysis = self.service._analyze_flashcard_retention(

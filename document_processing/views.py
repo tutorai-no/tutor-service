@@ -12,6 +12,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from drf_yasg.utils import swagger_auto_schema
+
 from .document_service import get_document_processing_service
 from .models import DocumentUpload, URLUpload
 
@@ -26,6 +28,7 @@ class DocumentUploadStreamView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def post(self, request):
         """Upload and process document with real-time streaming."""
         if "file" not in request.FILES:
@@ -39,6 +42,16 @@ class DocumentUploadStreamView(APIView):
         # Validate file
         if uploaded_file.size == 0:
             return Response({"error": "Empty file"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check file size limit to prevent memory exhaustion (50MB limit)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        if uploaded_file.size > MAX_FILE_SIZE:
+            return Response(
+                {
+                    "error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+                },
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
 
         # Read file content
         file_content = uploaded_file.read()
@@ -61,7 +74,8 @@ class DocumentUploadStreamView(APIView):
 
             except Exception as e:
                 logger.error(f"Error in document upload stream: {str(e)}")
-                error_data = {"event": "error", "error": str(e)}
+                # Security fix: Don't expose internal error details
+                error_data = {"event": "error", "error": "Document processing failed"}
                 yield f"data: {json.dumps(error_data)}\n\n"
 
         response = StreamingHttpResponse(
@@ -83,6 +97,7 @@ class URLUploadStreamView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def post(self, request):
         """Upload and process URL with real-time streaming."""
         url = request.data.get("url")
@@ -107,7 +122,8 @@ class URLUploadStreamView(APIView):
 
             except Exception as e:
                 logger.error(f"Error in URL upload stream: {str(e)}")
-                error_data = {"event": "error", "error": str(e)}
+                # Security fix: Don't expose internal error details
+                error_data = {"event": "error", "error": "URL processing failed"}
                 yield f"data: {json.dumps(error_data)}\n\n"
 
         response = StreamingHttpResponse(
@@ -129,6 +145,7 @@ class DocumentStatusView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request, document_id):
         """Get status of document processing."""
         service = get_document_processing_service()
@@ -147,6 +164,7 @@ class URLStatusView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request, url_upload_id):
         """Get status of URL processing."""
         service = get_document_processing_service()
@@ -165,6 +183,7 @@ class KnowledgeGraphView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request, graph_id):
         """Get complete graph data."""
         service = get_document_processing_service()
@@ -180,6 +199,7 @@ class DocumentListView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request):
         """Get list of user's document uploads."""
         documents = DocumentUpload.objects.filter(user=request.user).values(
@@ -203,6 +223,7 @@ class URLListView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request):
         """Get list of user's URL uploads."""
         urls = URLUpload.objects.filter(user=request.user).values(
@@ -227,6 +248,7 @@ class HealthCheckView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request):
         """Check health of all document processing services."""
         service = get_document_processing_service()
@@ -293,6 +315,7 @@ class CourseHierarchyView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request, course_id):
         """Get hierarchical structure for a course."""
         service = get_document_processing_service()
@@ -356,6 +379,7 @@ class CourseTopicsView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request, course_id):
         """Get all topics for a course."""
         service = get_document_processing_service()
@@ -420,6 +444,7 @@ class TopicDetailsView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request, course_id, topic_id):
         """Get details for a specific topic."""
         service = get_document_processing_service()
@@ -499,6 +524,7 @@ class CourseGraphVisualizationView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request, course_id):
         """Get graph data in format suitable for D3.js, vis.js, or similar."""
         service = get_document_processing_service()
@@ -611,6 +637,7 @@ class DocumentTOCExtractionView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def post(self, request):
         """Extract TOC from uploaded document."""
         if "file" not in request.FILES:
@@ -623,6 +650,16 @@ class DocumentTOCExtractionView(APIView):
         # Validate file
         if uploaded_file.size == 0:
             return Response({"error": "Empty file"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check file size limit to prevent memory exhaustion (50MB limit)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        if uploaded_file.size > MAX_FILE_SIZE:
+            return Response(
+                {
+                    "error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+                },
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
 
         # Check file type
         if not uploaded_file.name.lower().endswith((".pdf", ".docx", ".doc")):
@@ -685,6 +722,7 @@ class DocumentStructureExtractionView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    @swagger_auto_schema(tags=["Document Processing"])
     def post(self, request):
         """Extract complete document structure."""
         if "file" not in request.FILES:
@@ -697,6 +735,16 @@ class DocumentStructureExtractionView(APIView):
         # Validate file
         if uploaded_file.size == 0:
             return Response({"error": "Empty file"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check file size limit to prevent memory exhaustion (50MB limit)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        if uploaded_file.size > MAX_FILE_SIZE:
+            return Response(
+                {
+                    "error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"
+                },
+                status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
 
         try:
             # Read file content

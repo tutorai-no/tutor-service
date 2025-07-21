@@ -227,6 +227,21 @@ class StudySessionCreateSerializer(serializers.ModelSerializer):
         ]
 
 
+class StudySessionCompleteSerializer(serializers.Serializer):
+    """Serializer for completing a study session."""
+
+    productivity_rating = serializers.IntegerField(min_value=1, max_value=5, required=False)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    topics_covered = serializers.ListField(child=serializers.CharField(), required=False)
+    goals_worked_on = serializers.ListField(child=serializers.CharField(), required=False)
+    progress_updates = serializers.ListField(
+        child=serializers.DictField(
+            child=serializers.IntegerField()
+        ),
+        required=False
+    )
+
+
 class StudyRecommendationSerializer(serializers.ModelSerializer):
     """Serializer for StudyRecommendation model."""
 

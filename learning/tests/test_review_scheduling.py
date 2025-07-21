@@ -127,7 +127,10 @@ class TestReviewSchedulingService(TestCase):
         )
 
         QuizAttempt.objects.create(
-            user=self.user, quiz=quiz, score=65, status="completed"  # Below 75% threshold
+            user=self.user,
+            quiz=quiz,
+            score=65,
+            status="completed",  # Below 75% threshold
         )
 
         items = self.service._get_concepts_for_review(self.user, self.course)
@@ -268,7 +271,10 @@ class TestReviewSchedulingService(TestCase):
         """Test retention pattern analysis."""
         # Create some flashcard reviews
         FlashcardReview.objects.create(
-            user=self.user, flashcard=self.flashcard, quality_response=4, response_time_seconds=3
+            user=self.user,
+            flashcard=self.flashcard,
+            quality_response=4,
+            response_time_seconds=3,
         )
 
         FlashcardReview.objects.create(

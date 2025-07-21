@@ -3,11 +3,21 @@ Neo4j client for knowledge graph management.
 """
 
 import logging
+import os
 from typing import Any
 
 from django.conf import settings
 
-from neo4j import Driver, GraphDatabase
+try:
+    from neo4j import Driver, GraphDatabase
+except ImportError:
+    logger = logging.getLogger(__name__)
+    logger.warning("neo4j package not installed, will use mock if enabled")
+    Driver = None
+    GraphDatabase = None
+
+# Import mock driver if needed
+from .mock_neo4j import get_neo4j_driver
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +35,18 @@ class Neo4jClient:
     def _connect(self):
         """Establish connection to Neo4j database."""
         try:
+            # Use mock driver if configured
+            if os.getenv('USE_MOCK_NEO4J', 'False').lower() == 'true':
+                self.driver = get_neo4j_driver()
+                logger.info("Using Mock Neo4j driver (in-memory graph)")
+                return
+            
+            # Otherwise, use real Neo4j
+            if GraphDatabase is None:
+                logger.warning("Neo4j package not available, using mock driver")
+                self.driver = get_neo4j_driver()
+                return
+                
             neo4j_uri = getattr(settings, "NEO4J_URI", "bolt://localhost:7687")
             neo4j_user = getattr(settings, "NEO4J_USER", "neo4j")
             neo4j_password = getattr(settings, "NEO4J_PASSWORD", "password")
@@ -41,7 +63,8 @@ class Neo4jClient:
 
         except Exception as e:
             logger.error(f"Failed to connect to Neo4j: {str(e)}")
-            self.driver = None
+            logger.info("Falling back to mock Neo4j driver")
+            self.driver = get_neo4j_driver()
 
     def close(self):
         """Close Neo4j connection."""

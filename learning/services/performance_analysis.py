@@ -252,7 +252,7 @@ class PerformanceAnalysisService(AdaptiveLearningService):
 
         # Identify weak topics based on low scores
         weak_topics = self._identify_weak_topics(topic_performance)
-        
+
         return {
             "average_score": round(avg_score, 1),
             "total_attempts": total_attempts,
@@ -427,14 +427,18 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         # Quality distribution (mapped from quality_response)
         difficulty_dist = {
             "easy": reviews.filter(quality_response__gte=4).count(),  # 4-5: Easy
-            "medium": reviews.filter(quality_response=3).count(),     # 3: Medium
+            "medium": reviews.filter(quality_response=3).count(),  # 3: Medium
             "hard": reviews.filter(quality_response__in=[1, 2]).count(),  # 1-2: Hard
-            "again": reviews.filter(quality_response=0).count(),     # 0: Again
+            "again": reviews.filter(quality_response=0).count(),  # 0: Again
         }
 
         # Calculate average response time
-        response_times = reviews.filter(response_time_seconds__isnull=False).values_list('response_time_seconds', flat=True)
-        avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+        response_times = reviews.filter(
+            response_time_seconds__isnull=False
+        ).values_list("response_time_seconds", flat=True)
+        avg_response_time = (
+            sum(response_times) / len(response_times) if response_times else 0
+        )
 
         return {
             "retention_rate": round(retention_rate, 1),
@@ -442,7 +446,9 @@ class PerformanceAnalysisService(AdaptiveLearningService):
             "cards_mastered": cards_mastered,
             "review_efficiency": review_efficiency,
             "difficulty_distribution": difficulty_dist,
-            "average_response_time": round(avg_response_time, 1) if avg_response_time else 0,
+            "average_response_time": (
+                round(avg_response_time, 1) if avg_response_time else 0
+            ),
             "reviews_per_day": round(total_reviews / time_period_days, 1),
         }
 
@@ -462,7 +468,7 @@ class PerformanceAnalysisService(AdaptiveLearningService):
 
         # Daily activity pattern using Django ORM functions (safer than raw SQL)
         from django.db.models.functions import TruncDate
-        
+
         daily_activity = (
             sessions.annotate(day=TruncDate("created_at"))
             .values("day")
@@ -795,16 +801,15 @@ class PerformanceAnalysisService(AdaptiveLearningService):
         """Identify weak topics based on performance scores."""
         if not topic_performance:
             return []
-        
+
         # Identify topics with scores below 70%
         weak_topics = [
-            topic for topic, score in topic_performance.items() 
-            if score < 70.0
+            topic for topic, score in topic_performance.items() if score < 70.0
         ]
-        
+
         # Sort by worst performance first
         weak_topics.sort(key=lambda t: topic_performance[t])
-        
+
         # Return top 5 weakest topics
         return weak_topics[:5]
 

@@ -7,6 +7,8 @@ learning, which is used for scheduling flashcard reviews.
 
 from datetime import datetime, timedelta
 
+from django.utils import timezone
+
 
 class SpacedRepetitionService:
     """Legacy SM-2 implementation for backward compatibility."""
@@ -69,8 +71,8 @@ class SpacedRepetitionService:
         # Ensure ease factor stays within bounds
         ease_factor = max(1.3, min(5.0, ease_factor))
 
-        # Calculate next review date
-        next_review_date = datetime.now() + timedelta(days=interval)
+        # Calculate next review date - Fix: Use timezone-aware datetime
+        next_review_date = timezone.now() + timedelta(days=interval)
 
         return ease_factor, interval, reps, next_review_date
 
@@ -106,7 +108,8 @@ class SpacedRepetitionService:
             return 0.0
 
         # Filter reviews within time window
-        cutoff_date = datetime.now() - timedelta(days=time_window_days)
+        # Fix: Use timezone-aware datetime
+        cutoff_date = timezone.now() - timedelta(days=time_window_days)
         recent_reviews = [r for r in reviews if r.created_at >= cutoff_date]
 
         if not recent_reviews:
@@ -156,9 +159,10 @@ class SpacedRepetitionService:
         def priority_score(card):
             score = 0
 
-            # Overdue cards get higher priority
-            if card.next_review_date < datetime.now():
-                overdue_days = (datetime.now() - card.next_review_date).days
+            # Overdue cards get higher priority - Fix: Use timezone-aware datetime
+            now = timezone.now()
+            if card.next_review_date < now:
+                overdue_days = (now - card.next_review_date).days
                 score += overdue_days * 10
 
             # Cards with low success rate get higher priority
@@ -194,7 +198,8 @@ class SpacedRepetitionService:
         Returns:
             Dictionary with study load metrics
         """
-        now = datetime.now()
+        # Fix: Use timezone-aware datetime
+        now = timezone.now()
 
         # Count cards by status
         due_today = len(

@@ -10,6 +10,8 @@ from .views import (
     PasswordResetView,
     RegisterView,
     RequestAccessView,
+    StudySessionTokenView,
+    TokenValidationView,
     UserActivityCreateView,
     UserActivityListView,
     UserFeedbackView,
@@ -28,6 +30,12 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("token-refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("token-validate/", TokenValidationView.as_view(), name="token-validate"),
+    path(
+        "study-session-token/",
+        StudySessionTokenView.as_view(),
+        name="study-session-token",
+    ),
     path("password-reset/", PasswordResetView.as_view(), name="password-reset"),
     path(
         "password-reset-confirm/",

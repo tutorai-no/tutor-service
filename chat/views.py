@@ -6,6 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.swagger_utils import swagger_tag
+
 from .models import (
     Chat,
     ChatAnalytics,
@@ -28,6 +30,7 @@ from .serializers import (
 )
 
 
+@swagger_tag("Chat")
 class ChatViewSet(viewsets.ModelViewSet):
     """ViewSet for managing AI chat conversations."""
 
@@ -43,6 +46,8 @@ class ChatViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get chats for the authenticated user."""
+        if getattr(self, 'swagger_fake_view', False):
+            return Chat.objects.none()
         return Chat.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -289,6 +294,7 @@ class ChatViewSet(viewsets.ModelViewSet):
         return ai_response
 
 
+@swagger_tag("Chat")
 class ChatMessageViewSet(viewsets.ModelViewSet):
     """ViewSet for managing chat messages."""
 
@@ -350,6 +356,7 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@swagger_tag("Chat")
 class TutoringSessionViewSet(viewsets.ModelViewSet):
     """ViewSet for managing tutoring sessions."""
 
@@ -358,6 +365,8 @@ class TutoringSessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get tutoring sessions for the authenticated user."""
+        if not hasattr(self.request, 'user') or not self.request.user.is_authenticated:
+            return TutoringSession.objects.none()
         return TutoringSession.objects.filter(user=self.request.user)
 
     def get_serializer_class(self):
@@ -510,6 +519,7 @@ class TutoringSessionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@swagger_tag("Chat")
 class ChatAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for chat analytics."""
 
@@ -518,6 +528,8 @@ class ChatAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Get analytics for the authenticated user."""
+        if not hasattr(self.request, 'user') or not self.request.user.is_authenticated:
+            return ChatAnalytics.objects.none()
         return ChatAnalytics.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=["get"])

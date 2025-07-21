@@ -132,7 +132,8 @@ class OpenAIService(AIServiceBase):
             }
         except Exception as e:
             logger.error(f"OpenAI API error: {str(e)}")
-            return {"error": str(e), "content": None}
+            # Security fix: Don't expose internal error details to callers
+            return {"error": "AI service temporarily unavailable", "content": None}
 
     def generate_embedding(self, text: str) -> list[float]:
         """Generate embeddings using OpenAI API."""
