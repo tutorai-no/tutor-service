@@ -12,7 +12,10 @@ from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView as BaseTokenRefreshView,
+)
 
 from accounts.models import (
     UserActivity,
@@ -119,6 +122,12 @@ class LogoutView(APIView):
             return Response(
                 {"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class TokenRefreshView(BaseTokenRefreshView):
+    @swagger_auto_schema(tags=["Accounts"])
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 class PasswordResetView(generics.GenericAPIView):
@@ -253,6 +262,10 @@ class UserActivityCreateView(generics.CreateAPIView):
     serializer_class = UserActivitySerializer
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(tags=["Accounts"])
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -260,6 +273,10 @@ class UserActivityCreateView(generics.CreateAPIView):
 class UserActivityListView(generics.ListAPIView):
     serializer_class = UserActivitySerializer
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(tags=["Accounts"])
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         return UserActivity.objects.filter(user=self.request.user).order_by(
@@ -277,6 +294,7 @@ class TokenValidationView(APIView):
 
     permission_classes = [AllowAny]
 
+    @swagger_auto_schema(tags=["Accounts"])
     def post(self, request):
         """
         Validate access token and optionally refresh if needed.
@@ -431,6 +449,7 @@ class StudySessionTokenView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+    @swagger_auto_schema(tags=["Accounts"])
     def post(self, request):
         """
         Proactively refresh token for study session continuity.

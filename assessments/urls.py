@@ -11,7 +11,6 @@ from .views import (
     QuizAttemptViewSet,
     QuizQuestionViewSet,
     QuizViewSet,
-    StudyStreakViewSet,
 )
 
 app_name = "assessments"
@@ -25,7 +24,6 @@ router.register(
 router.register(r"quizzes", QuizViewSet, basename="quiz")
 router.register(r"quiz-attempts", QuizAttemptViewSet, basename="quiz-attempt")
 router.register(r"", AssessmentViewSet, basename="assessment")
-router.register(r"study-streaks", StudyStreakViewSet, basename="study-streak")
 router.register(r"analytics", AssessmentAnalyticsView, basename="analytics")
 
 # Create nested routers for quiz questions

@@ -66,9 +66,8 @@ schema_view = get_schema_view(
         - `429 Too Many Requests`: Rate limit exceeded
         - `500 Internal Server Error`: Server error
         """,
-        terms_of_service="https://aksio.ai/terms/",
-        contact=openapi.Contact(email="api@aksio.ai"),
-        license=openapi.License(name="MIT License"),
+        terms_of_service="https://aksio.app/",
+        contact=openapi.Contact(email="contact@aksio.app"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
@@ -80,8 +79,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # API routes
     path("api/", include("api.urls"), name="API"),
-    # Core monitoring and health check routes
-    path("api/core/", include("core.urls"), name="core"),
     # API Documentation routes
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",

@@ -41,7 +41,8 @@ The `api` app provides centralized API routing, versioning, documentation, and c
 │   ├── learning/              # Study planning and progress
 │   ├── assessments/           # Flashcards and quizzes
 │   ├── chat/                  # AI tutoring conversations
-│   └── billing/               # Subscription and billing
+│   ├── billing/               # Subscription and billing
+│   └── documents/             # Document processing
 └── docs/                      # API documentation
     ├── swagger/               # Swagger UI
     └── redoc/                # ReDoc documentation
@@ -54,22 +55,16 @@ The `api` app provides centralized API routing, versioning, documentation, and c
 - **Features**:
   - Version-based routing
   - Health check endpoints
-  - Documentation routes
   - Admin panel integration
 
-### `v1/urls.py` - Version 1 Routing
-- **Purpose**: Route all v1 endpoints to appropriate apps
+### `v1/v1.py` - Version 1 Routing and Configuration
+- **Purpose**: Combined URL routing and DRF router setup for API v1
 - **Features**:
   - App-based URL inclusion
+  - Django REST Framework router integration
   - Consistent URL patterns
   - RESTful resource routing
-
-### `v1/routers.py` - DRF Router Configuration
-- **Purpose**: Django REST Framework router setup
-- **Features**:
-  - ViewSet registration
-  - Automatic URL generation
-  - Consistent endpoint patterns
+  - ViewSet registration support
 
 ### `docs/swagger.py` - API Documentation
 - **Purpose**: Swagger/OpenAPI documentation configuration

@@ -33,7 +33,6 @@ from .serializers import (
     QuizResultSerializer,
     QuizSerializer,
     QuizTakingSerializer,
-    StudyStreakSerializer,
 )
 
 
@@ -43,6 +42,8 @@ class FlashcardViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Flashcard.objects.none()
         return Flashcard.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -185,6 +186,8 @@ class QuizViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Quiz.objects.none()
         return Quiz.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -622,64 +625,6 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         }
 
         return Response(stats)
-
-
-@swagger_tag("Assessments")
-class StudyStreakViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = StudyStreakSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return StudyStreak.objects.filter(user=self.request.user)
-
-    @action(detail=False, methods=["get"])
-    def summary(self, request):
-        """Get study streak summary."""
-        queryset = self.get_queryset()
-
-        # Filter by course if specified
-        course_id = request.query_params.get("course")
-        if course_id:
-            queryset = queryset.filter(course_id=course_id)
-
-        summary = {
-            "total_streaks": queryset.count(),
-            "active_streaks": queryset.filter(current_streak__gt=0).count(),
-            "longest_overall_streak": queryset.aggregate(
-                max_streak=Max("longest_streak")
-            )["max_streak"]
-            or 0,
-            "by_type": queryset.values("streak_type").annotate(
-                count=Count("id"),
-                avg_current=Avg("current_streak"),
-                max_longest=Max("longest_streak"),
-            ),
-            "recent_milestones": self.get_recent_milestones(queryset),
-        }
-
-        return Response(summary)
-
-    def get_recent_milestones(self, queryset):
-        """Get recently achieved milestones."""
-        milestones = []
-        for streak in queryset:
-            if streak.milestones_achieved:
-                for milestone in streak.milestones_achieved[-3:]:  # Last 3 milestones
-                    milestones.append(
-                        {
-                            "streak_type": streak.streak_type,
-                            "course": (
-                                streak.course.name if streak.course else "All Courses"
-                            ),
-                            "milestone": milestone,
-                            "achieved_at": streak.updated_at,
-                        }
-                    )
-
-        return sorted(milestones, key=lambda x: x["achieved_at"], reverse=True)[:10]
-
-
-# Additional utility views
 
 
 @swagger_tag("Assessments")

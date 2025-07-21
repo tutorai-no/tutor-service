@@ -365,7 +365,7 @@ class TutoringSessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get tutoring sessions for the authenticated user."""
-        if not hasattr(self.request, 'user') or not self.request.user.is_authenticated:
+        if getattr(self, 'swagger_fake_view', False):
             return TutoringSession.objects.none()
         return TutoringSession.objects.filter(user=self.request.user)
 
@@ -528,7 +528,7 @@ class ChatAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Get analytics for the authenticated user."""
-        if not hasattr(self.request, 'user') or not self.request.user.is_authenticated:
+        if getattr(self, 'swagger_fake_view', False):
             return ChatAnalytics.objects.none()
         return ChatAnalytics.objects.filter(user=self.request.user)
 
