@@ -14,8 +14,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
-    TokenRefreshView as BaseTokenRefreshView,
 )
+from rest_framework_simplejwt.views import TokenRefreshView as BaseTokenRefreshView
 
 from accounts.models import (
     UserActivity,

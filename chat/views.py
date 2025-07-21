@@ -46,7 +46,7 @@ class ChatViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get chats for the authenticated user."""
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Chat.objects.none()
         return Chat.objects.filter(user=self.request.user)
 
@@ -304,7 +304,7 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Get messages for chats owned by the authenticated user."""
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return ChatMessage.objects.none()
         return ChatMessage.objects.filter(chat__user=self.request.user)
 
@@ -368,7 +368,7 @@ class TutoringSessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get tutoring sessions for the authenticated user."""
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return TutoringSession.objects.none()
         return TutoringSession.objects.filter(user=self.request.user)
 
@@ -531,7 +531,7 @@ class ChatAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Get analytics for the authenticated user."""
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return ChatAnalytics.objects.none()
         return ChatAnalytics.objects.filter(user=self.request.user)
 

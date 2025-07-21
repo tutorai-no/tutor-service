@@ -42,7 +42,7 @@ class FlashcardViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Flashcard.objects.none()
         return Flashcard.objects.filter(user=self.request.user)
 
@@ -152,7 +152,7 @@ class FlashcardReviewViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return FlashcardReview.objects.none()
         return FlashcardReview.objects.filter(user=self.request.user)
 
@@ -189,7 +189,7 @@ class QuizViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Quiz.objects.none()
         return Quiz.objects.filter(user=self.request.user)
 
@@ -281,7 +281,7 @@ class QuizQuestionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return QuizQuestion.objects.none()
         quiz_id = self.kwargs.get("quiz_pk")
         return QuizQuestion.objects.filter(
@@ -301,7 +301,7 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return QuizAttempt.objects.none()
         return QuizAttempt.objects.filter(user=self.request.user)
 
@@ -394,7 +394,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Assessment.objects.none()
         return Assessment.objects.filter(user=self.request.user)
 
@@ -649,7 +649,7 @@ class AssessmentAnalyticsView(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Assessment.objects.none()
         return Assessment.objects.filter(user=self.request.user)
 

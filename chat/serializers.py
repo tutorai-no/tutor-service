@@ -17,6 +17,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         model = ChatMessage
         fields = [
             "id",
+            "chat",  # Add chat field for proper association
             "role",
             "message_type",
             "content",

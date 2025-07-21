@@ -14,6 +14,102 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+class MockScraperServiceClient:
+    """Mock scraper service client for testing without external dependencies."""
+
+    def __init__(self):
+        """Initialize mock scraper service client."""
+        self.base_url = "mock://scraper"
+        self.timeout = 1
+
+    def extract_text_from_file(
+        self,
+        file_content: bytes,
+        filename: str,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+        extract_toc: bool = False,
+    ) -> dict[str, Any]:
+        """Mock text extraction from file."""
+        # Simulate successful extraction
+        mock_text = f"""This is mock extracted content from {filename}.
+        
+Machine Learning Fundamentals:
+1. Introduction to ML
+2. Supervised Learning
+3. Unsupervised Learning
+4. Deep Learning Basics
+
+This mock content is suitable for testing the document processing pipeline."""
+
+        chunks = []
+        # Create some mock chunks
+        words = mock_text.split()
+        chunk_words = 50  # Approximately chunk_size characters
+
+        for i in range(0, len(words), chunk_words - 10):  # With overlap
+            chunk_text = " ".join(words[i : i + chunk_words])
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "page_number": (i // chunk_words) + 1,
+                    "chunk_index": len(chunks),
+                    "metadata": {"source": filename},
+                }
+            )
+
+        result = {
+            "success": True,
+            "text": mock_text,
+            "chunks": chunks,
+            "page_count": 5,  # Mock page count
+            "metadata": {
+                "filename": filename,
+                "file_size": len(file_content),
+                "extracted_at": "2025-07-21T13:00:00Z",
+            },
+        }
+
+        if extract_toc:
+            result["toc"] = [
+                {"title": "Introduction to ML", "page": 1, "level": 1},
+                {"title": "Supervised Learning", "page": 2, "level": 1},
+                {"title": "Unsupervised Learning", "page": 3, "level": 1},
+                {"title": "Deep Learning Basics", "page": 4, "level": 1},
+            ]
+
+        return result
+
+    def extract_text_from_url(
+        self,
+        url: str,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+    ) -> dict[str, Any]:
+        """Mock text extraction from URL."""
+        return {
+            "success": True,
+            "text": f"Mock content extracted from {url}",
+            "chunks": [{"text": f"Mock chunk from {url}", "metadata": {"url": url}}],
+            "metadata": {"url": url, "title": "Mock Web Page"},
+        }
+
+    def health_check(self) -> dict[str, Any]:
+        """Mock health check."""
+        return {"status": "healthy", "service": "mock-scraper"}
+
+    def _get_content_type(self, filename: str) -> str:
+        """Get content type from filename."""
+        ext = filename.lower().split(".")[-1]
+        content_types = {
+            "pdf": "application/pdf",
+            "txt": "text/plain",
+            "doc": "application/msword",
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        return content_types.get(ext, "application/octet-stream")
+
+
 class ScraperServiceClient:
     """
     Client for communicating with the scraper service for document processing.
@@ -473,4 +569,10 @@ scraper_client = ScraperServiceClient()
 
 def get_scraper_client() -> ScraperServiceClient:
     """Get the global scraper service client instance."""
+    from django.conf import settings
+
+    # Use mock client when in testing mode
+    if getattr(settings, "USE_MOCK_RETRIEVAL_SERVICE", False):
+        return MockScraperServiceClient()
+
     return scraper_client

@@ -32,7 +32,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Course.objects.none()
         return Course.objects.filter(user=self.request.user)
 
@@ -47,7 +47,7 @@ class CourseSectionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return CourseSection.objects.none()
         course_id = self.kwargs.get("course_pk")
         return CourseSection.objects.filter(
@@ -68,7 +68,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Document.objects.none()
         course_id = self.kwargs.get("course_pk")
         return Document.objects.filter(
@@ -922,7 +922,7 @@ class DocumentTagViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return DocumentTag.objects.none()
         return DocumentTag.objects.filter(user=self.request.user)
 
@@ -937,7 +937,7 @@ class DocumentTagAssignmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Handle schema generation
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return DocumentTagAssignment.objects.none()
         document_id = self.kwargs.get("document_pk")
         return DocumentTagAssignment.objects.filter(

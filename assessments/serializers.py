@@ -113,6 +113,9 @@ class FlashcardReviewSerializer(serializers.ModelSerializer):
         # Calculate next review using spaced repetition
         flashcard.calculate_next_review(quality_response)
 
+        # Save the flashcard to persist the updated spaced repetition values
+        flashcard.save()
+
         # Store new values
         review.new_interval_days = flashcard.interval_days
         review.ease_factor_after = flashcard.ease_factor
@@ -123,6 +126,8 @@ class FlashcardReviewSerializer(serializers.ModelSerializer):
 
 class QuizQuestionSerializer(serializers.ModelSerializer):
     success_rate = serializers.FloatField(read_only=True)
+    # Allow both 'choices' and 'answer_options' for backwards compatibility
+    choices = serializers.ListField(write_only=True, required=False)
 
     class Meta:
         model = QuizQuestion
@@ -144,6 +149,7 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
             "success_rate",
             "created_at",
             "updated_at",
+            "choices",  # Add choices for backwards compatibility
         ]
         read_only_fields = [
             "id",
@@ -153,6 +159,12 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate(self, attrs):
+        # If 'choices' is provided, use it as 'answer_options'
+        if "choices" in attrs:
+            attrs["answer_options"] = attrs.pop("choices")
+        return super().validate(attrs)
 
 
 class QuizSerializer(serializers.ModelSerializer):
