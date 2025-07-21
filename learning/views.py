@@ -58,6 +58,9 @@ class StudyPlanViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get study plans for the authenticated user."""
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return StudyPlan.objects.none()
         return StudyPlan.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -505,6 +508,9 @@ class StudyGoalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get learning goals for the authenticated user."""
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return StudyGoal.objects.none()
         return StudyGoal.objects.filter(study_plan__user=self.request.user)
 
     def perform_create(self, serializer):
@@ -675,6 +681,9 @@ class StudySessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get study sessions for the authenticated user."""
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return StudySession.objects.none()
         return StudySession.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -937,6 +946,9 @@ class LearningProgressViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get progress entries for the authenticated user."""
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return LearningProgress.objects.none()
         return LearningProgress.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):

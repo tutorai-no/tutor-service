@@ -303,6 +303,9 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get messages for chats owned by the authenticated user."""
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return ChatMessage.objects.none()
         return ChatMessage.objects.filter(chat__user=self.request.user)
 
     def get_serializer_class(self):

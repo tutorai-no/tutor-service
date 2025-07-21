@@ -27,6 +27,9 @@ class SubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Subscription.objects.none()
         return Subscription.objects.filter(user=self.request.user)
 
 
@@ -36,6 +39,9 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Payment.objects.none()
         return Payment.objects.filter(user=self.request.user)
 
 
@@ -45,4 +51,7 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Invoice.objects.none()
         return Invoice.objects.filter(user=self.request.user)

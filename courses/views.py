@@ -31,6 +31,9 @@ class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Course.objects.none()
         return Course.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -43,6 +46,9 @@ class CourseSectionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return CourseSection.objects.none()
         course_id = self.kwargs.get("course_pk")
         return CourseSection.objects.filter(
             course_id=course_id, course__user=self.request.user
@@ -61,6 +67,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Document.objects.none()
         course_id = self.kwargs.get("course_pk")
         return Document.objects.filter(
             course_id=course_id, course__user=self.request.user
@@ -912,6 +921,9 @@ class DocumentTagViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return DocumentTag.objects.none()
         return DocumentTag.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -924,6 +936,9 @@ class DocumentTagAssignmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return DocumentTagAssignment.objects.none()
         document_id = self.kwargs.get("document_pk")
         return DocumentTagAssignment.objects.filter(
             document_id=document_id, document__user=self.request.user

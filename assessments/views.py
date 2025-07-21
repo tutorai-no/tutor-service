@@ -151,6 +151,9 @@ class FlashcardReviewViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return FlashcardReview.objects.none()
         return FlashcardReview.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=["get"])
@@ -277,6 +280,9 @@ class QuizQuestionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return QuizQuestion.objects.none()
         quiz_id = self.kwargs.get("quiz_pk")
         return QuizQuestion.objects.filter(
             quiz_id=quiz_id, quiz__user=self.request.user
@@ -294,6 +300,9 @@ class QuizAttemptViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return QuizAttempt.objects.none()
         return QuizAttempt.objects.filter(user=self.request.user)
 
     @action(detail=True, methods=["post"])
@@ -384,6 +393,9 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     lookup_field = "pk"
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Assessment.objects.none()
         return Assessment.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -636,6 +648,9 @@ class AssessmentAnalyticsView(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Handle schema generation
+        if getattr(self, 'swagger_fake_view', False):
+            return Assessment.objects.none()
         return Assessment.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=["get"])
