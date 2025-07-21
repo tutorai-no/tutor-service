@@ -35,9 +35,9 @@ Content-Type: application/json
 POST /api/v1/accounts/register/        # User registration
 POST /api/v1/accounts/login/           # User login
 POST /api/v1/accounts/logout/          # User logout
-POST /api/v1/accounts/token/refresh/   # Refresh JWT token
-POST /api/v1/accounts/password/reset/  # Password reset request
-POST /api/v1/accounts/password/reset/confirm/  # Password reset confirm
+POST /api/v1/accounts/token-refresh/   # Refresh JWT token
+POST /api/v1/accounts/password-reset/  # Password reset request
+POST /api/v1/accounts/password-reset-confirm/  # Password reset confirm
 ```
 
 **Example Login:**

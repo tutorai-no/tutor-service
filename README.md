@@ -91,17 +91,22 @@ The API follows RESTful principles with comprehensive endpoint coverage:
 
 ### **🔐 Authentication**
 ```
-POST /api/v1/auth/register/              # User registration
-POST /api/v1/auth/login/                 # JWT login
-POST /api/v1/auth/refresh/               # Token refresh
-POST /api/v1/auth/logout/                # Logout
+POST /api/v1/accounts/register/          # User registration
+POST /api/v1/accounts/login/             # JWT login
+POST /api/v1/accounts/token-refresh/     # Token refresh
+POST /api/v1/accounts/logout/            # Logout
+POST /api/v1/accounts/password-reset/    # Request password reset
+POST /api/v1/accounts/password-reset-confirm/  # Confirm password reset
 ```
 
 ### **👤 User Management**
 ```
 GET    /api/v1/accounts/profile/         # Get user profile
 PUT    /api/v1/accounts/profile/         # Update profile
-GET    /api/v1/accounts/activity/        # User activity tracking
+POST   /api/v1/accounts/activity/        # Create activity
+GET    /api/v1/accounts/activity/list/   # List user activities
+GET    /api/v1/accounts/streak/          # Get user streak
+POST   /api/v1/accounts/feedback/        # Submit feedback
 ```
 
 ### **📚 Course Management**
@@ -135,9 +140,12 @@ POST   /api/v1/assessments/quizzes/{id}/attempt/    # Take quiz
 
 ### **💬 AI Chat**
 ```
-GET    /api/v1/chat/conversations/       # List conversations
-POST   /api/v1/chat/conversations/       # Start conversation
-POST   /api/v1/chat/conversations/{id}/messages/   # Send message
+GET    /api/v1/chat/chats/               # List chats
+POST   /api/v1/chat/chats/               # Create chat
+GET    /api/v1/chat/messages/            # List messages
+POST   /api/v1/chat/messages/            # Send message
+GET    /api/v1/chat/sessions/            # List tutoring sessions
+POST   /api/v1/chat/sessions/            # Create tutoring session
 ```
 
 ### **💳 Billing**
@@ -169,6 +177,12 @@ cd aksio-backend
 
 # Start local services
 docker-compose up -d
+
+# Run migrations (first time setup)
+docker-compose exec backend python manage.py migrate
+
+# Create superuser (optional)
+docker-compose exec backend python manage.py createsuperuser
 
 # Access local development
 # API: http://localhost:8000

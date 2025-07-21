@@ -18,8 +18,10 @@ aksio-backend/
 │   ├── wsgi.py               # WSGI application
 │   └── asgi.py               # ASGI application
 ├── api/                       # API versioning
-│   └── v1/                   # Version 1 API endpoints
-│       └── urls.py           # API routing
+│   ├── v1/                   # Version 1 API endpoints
+│   │   ├── urls.py           # API routing
+│   │   └── routers.py        # ViewSet routers
+│   └── urls.py               # Main API routing
 ├── accounts/                  # User management app
 │   ├── models.py             # User, UserProfile, Activity models
 │   ├── views.py              # User management views
@@ -52,6 +54,18 @@ aksio-backend/
 │   ├── serializers.py        # Billing serializers
 │   ├── admin.py              # Admin configuration
 │   └── urls.py               # Billing URLs
+├── learning/                  # Learning management app
+│   ├── models.py             # StudyPlan, StudyGoal, Progress models
+│   ├── views.py              # Learning views
+│   ├── serializers.py        # Learning serializers
+│   ├── admin.py              # Admin configuration
+│   └── urls.py               # Learning URLs
+├── document_processing/       # Document processing app
+│   ├── models.py             # Processing models
+│   ├── views.py              # Document processing views
+│   ├── serializers.py        # Processing serializers
+│   ├── services/             # Processing services
+│   └── urls.py               # Processing URLs
 ├── core/                      # Common utilities app
 │   ├── models.py             # Abstract base models
 │   ├── utils.py              # Utility functions
@@ -64,14 +78,16 @@ aksio-backend/
 ├── docs/                      # Documentation
 │   ├── MODELS.md             # Database models documentation
 │   ├── REPOSITORY_STRUCTURE.md # This file
-│   └── architecture/         # Architecture documentation
+│   ├── gcloud-commands.md    # Google Cloud CLI commands
+│   └── README.md             # Documentation index
 ├── scripts/                   # Utility scripts
-│   └── pre-commit.sh         # Pre-commit hooks
+│   ├── format-code.sh        # Code formatting script
+│   └── format-code.bat       # Code formatting (Windows)
 ├── .github/                   # CI/CD workflows
 │   └── workflows/
 │       ├── ci.yml            # Continuous Integration
 │       └── cd.yml            # Continuous Deployment
-├── docker-compose.yaml        # Development environment
+├── docker-compose.yml         # Development environment
 ├── manage.py                 # Django management script
 ├── template.env              # Environment template
 └── README.md                 # Project documentation
@@ -147,26 +163,43 @@ The API follows RESTful conventions with versioning support:
 ```
 /api/v1/
 ├── accounts/                  # User management endpoints
-│   ├── users/                # User CRUD operations
-│   ├── profiles/             # User profile management
-│   ├── auth/                 # Authentication endpoints
-│   └── activity/             # User activity tracking
+│   ├── register/             # User registration
+│   ├── login/               # User login
+│   ├── logout/              # User logout
+│   ├── token-refresh/       # JWT token refresh
+│   ├── profile/             # User profile management
+│   ├── activity/            # Activity creation
+│   ├── activity/list/       # Activity listing
+│   ├── streak/              # User streak info
+│   └── feedback/            # User feedback
 ├── courses/                   # Course management endpoints
-│   ├── courses/              # Course CRUD operations
-│   ├── sections/             # Course section management
-│   ├── documents/            # Document upload and management
-│   └── tags/                 # Document tagging
+│   ├── /                    # Course CRUD operations
+│   ├── {id}/sections/       # Course section management
+│   ├── {id}/documents/      # Document upload and management
+│   └── {id}/documents/{id}/tags/  # Document tagging
 ├── assessments/               # Assessment endpoints
-│   ├── flashcards/           # Flashcard management
-│   ├── reviews/              # Review sessions
-│   ├── quizzes/              # Quiz management
-│   ├── attempts/             # Quiz attempts
-│   └── analytics/            # Assessment analytics
+│   ├── /                    # Assessment CRUD
+│   ├── flashcards/          # Flashcard management
+│   ├── flashcard-reviews/   # Review sessions
+│   ├── quizzes/             # Quiz management
+│   ├── quiz-attempts/       # Quiz attempts
+│   └── analytics/           # Assessment analytics
 ├── chat/                      # AI chat endpoints
-│   ├── chats/                # Chat conversation management
-│   ├── messages/             # Message management
-│   ├── sessions/             # Tutoring session management
-│   └── analytics/            # Chat analytics
+│   ├── chats/               # Chat conversation management
+│   ├── messages/            # Message management
+│   ├── sessions/            # Tutoring session management
+│   └── analytics/           # Chat analytics
+├── learning/                  # Learning management endpoints
+│   ├── study-plans/         # Study plan management
+│   ├── goals/               # Learning goals
+│   ├── study-sessions/      # Study session tracking
+│   ├── progress/            # Progress tracking
+│   └── analytics/           # Learning analytics
+├── documents/                 # Document processing endpoints
+│   ├── upload/document/stream/  # Stream document upload
+│   ├── upload/url/stream/       # URL content upload
+│   ├── documents/{id}/status/   # Document status
+│   └── courses/{id}/topics/     # Course topics
 └── billing/                   # Payment endpoints
     ├── plans/                # Subscription plans
     ├── subscriptions/        # User subscriptions
@@ -214,7 +247,7 @@ The API follows RESTful conventions with versioning support:
 DATABASE_NAME=aksio_db
 DATABASE_USER=aksio_user
 DATABASE_PASSWORD=aksio_password
-DATABASE_HOST=localhost
+DATABASE_HOST=db  # 'db' for Docker, 'localhost' for local
 DATABASE_PORT=5432
 
 # Django Configuration
@@ -327,9 +360,9 @@ The project uses GitHub Actions for continuous integration and deployment:
 ## API Documentation
 
 ### Interactive Documentation
-- **Swagger UI**: `/api/docs/` - Interactive API documentation
-- **ReDoc**: `/api/redoc/` - Alternative API documentation
-- **OpenAPI Schema**: `/api/schema/` - OpenAPI 3.0 schema
+- **Swagger UI**: `/swagger/` - Interactive API documentation
+- **ReDoc**: `/redoc/` - Alternative API documentation
+- **OpenAPI Schema**: `/swagger.json` - OpenAPI 3.0 schema
 
 ### Authentication
 - **JWT Authentication**: Bearer token authentication
