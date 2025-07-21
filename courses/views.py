@@ -80,6 +80,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         course = get_object_or_404(Course, id=course_id, user=self.request.user)
         serializer.save(user=self.request.user, course=course)
 
+
     @action(detail=False, methods=["post"])
     def upload(self, request, course_pk=None):
         """Upload a file and coordinate with retrieval service for processing."""

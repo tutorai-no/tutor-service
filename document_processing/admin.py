@@ -4,72 +4,7 @@ Admin configuration for document processing models.
 
 from django.contrib import admin
 
-from .models import DocumentChunk, DocumentUpload, ProcessingJob, URLChunk, URLUpload
-
-
-@admin.register(DocumentUpload)
-class DocumentUploadAdmin(admin.ModelAdmin):
-    """Admin interface for DocumentUpload model."""
-
-    list_display = [
-        "original_filename",
-        "user",
-        "status",
-        "processing_progress",
-        "total_nodes",
-        "total_edges",
-        "created_at",
-    ]
-    list_filter = ["status", "content_type", "created_at", "course"]
-    search_fields = ["original_filename", "user__email", "file_hash"]
-    readonly_fields = [
-        "id",
-        "file_hash",
-        "graph_id",
-        "processing_started_at",
-        "processing_completed_at",
-        "created_at",
-        "updated_at",
-    ]
-    raw_id_fields = ["user", "course"]
-
-    fieldsets = (
-        (
-            "Basic Information",
-            {
-                "fields": (
-                    "user",
-                    "course",
-                    "original_filename",
-                    "file_size",
-                    "content_type",
-                )
-            },
-        ),
-        (
-            "Processing Status",
-            {
-                "fields": (
-                    "status",
-                    "processing_started_at",
-                    "processing_completed_at",
-                    "error_message",
-                )
-            },
-        ),
-        (
-            "Content Metadata",
-            {"fields": ("total_chunks", "processed_chunks", "page_count")},
-        ),
-        ("Knowledge Graph", {"fields": ("graph_id", "total_nodes", "total_edges")}),
-        (
-            "System Fields",
-            {
-                "fields": ("id", "file_hash", "created_at", "updated_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
+from .models import DocumentChunk, ProcessingJob, URLChunk, URLUpload
 
 
 @admin.register(DocumentChunk)
@@ -86,7 +21,7 @@ class DocumentChunkAdmin(admin.ModelAdmin):
         "edges_count",
     ]
     list_filter = ["has_embedding", "graph_extracted", "embedding_model"]
-    search_fields = ["document__original_filename", "text_content"]
+    search_fields = ["document__name", "text_content"]
     readonly_fields = ["id", "created_at", "updated_at"]
     raw_id_fields = ["document"]
 

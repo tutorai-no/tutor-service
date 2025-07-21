@@ -10,7 +10,8 @@ from typing import Any
 
 from django.utils import timezone
 
-from .models import DocumentChunk, DocumentUpload, ProcessingStatus, URLChunk, URLUpload
+from .models import DocumentChunk, URLChunk, URLUpload
+from courses.models import Document
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ class DocumentProcessingService:
         file_hash = hashlib.sha256(file_content).hexdigest()
 
         # Check for duplicate
-        existing_doc = DocumentUpload.objects.filter(
+        existing_doc = Document.objects.filter(
             user=user, file_hash=file_hash
         ).first()
 
@@ -118,15 +119,26 @@ class DocumentProcessingService:
                 "message": f"{filename} already exists - processing anyway",
             }
 
-        # Create document upload record
-        document = DocumentUpload.objects.create(
+        # Create document record
+        from courses.models import Course
+        course = None
+        if course_id:
+            try:
+                course = Course.objects.get(id=course_id, user=user)
+            except Course.DoesNotExist:
+                logger.warning(f"Course {course_id} not found for user {user}")
+
+        document = Document.objects.create(
             user=user,
-            course_id=course_id,
+            course=course,
+            name=filename,
+            description=f"Uploaded file: {filename}",
+            document_type="file",
             original_filename=filename,
-            file_size=len(file_content),
+            file_size_bytes=len(file_content),
             content_type=content_type,
             file_hash=file_hash,
-            status=ProcessingStatus.PROCESSING,
+            processing_status="processing",
             processing_started_at=timezone.now(),
             graph_id=f"doc_{uuid.uuid4().hex[:8]}",
         )
@@ -152,8 +164,8 @@ class DocumentProcessingService:
             )
 
             if not extraction_result["success"]:
-                document.status = ProcessingStatus.FAILED
-                document.error_message = extraction_result["error"]
+                document.processing_status = "failed"
+                document.processing_error = extraction_result["error"]
                 document.processing_completed_at = timezone.now()
                 document.save()
 
@@ -252,7 +264,7 @@ class DocumentProcessingService:
                 )
 
             # Mark as completed
-            document.status = ProcessingStatus.COMPLETED
+            document.processing_status = "completed"
             document.processing_completed_at = timezone.now()
             document.save()
 
@@ -272,8 +284,8 @@ class DocumentProcessingService:
 
         except Exception as e:
             logger.error(f"Error processing document {filename}: {str(e)}")
-            document.status = ProcessingStatus.FAILED
-            document.error_message = str(e)
+            document.processing_status = "failed"
+            document.processing_error = str(e)
             document.processing_completed_at = timezone.now()
             document.save()
 
@@ -444,7 +456,7 @@ class DocumentProcessingService:
             yield {"event": "processing_failed", "error": str(e)}
 
     def _process_document_chunk(
-        self, document: DocumentUpload, chunk_index: int, chunk_data: dict[str, Any]
+        self, document: Document, chunk_index: int, chunk_data: dict[str, Any]
     ) -> Generator[dict[str, Any], None, None]:
         """Process a single document chunk."""
         text_content = chunk_data.get("text", "")
@@ -625,11 +637,11 @@ class DocumentProcessingService:
     def get_document_status(self, document_id: str) -> dict[str, Any]:
         """Get status of document processing."""
         try:
-            document = DocumentUpload.objects.get(id=document_id)
+            document = Document.objects.get(id=document_id)
             return {
                 "id": str(document.id),
                 "filename": document.original_filename,
-                "status": document.status,
+                "status": document.processing_status,
                 "progress": document.processing_progress,
                 "total_chunks": document.total_chunks,
                 "processed_chunks": document.processed_chunks,
@@ -637,9 +649,9 @@ class DocumentProcessingService:
                 "total_edges": document.total_edges,
                 "graph_id": document.graph_id,
                 "created_at": document.created_at.isoformat(),
-                "error_message": document.error_message,
+                "error_message": document.processing_error,
             }
-        except DocumentUpload.DoesNotExist:
+        except Document.DoesNotExist:
             return {"error": "Document not found"}
 
     def get_url_status(self, url_upload_id: str) -> dict[str, Any]:

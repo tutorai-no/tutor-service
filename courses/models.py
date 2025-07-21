@@ -252,7 +252,9 @@ class Document(models.Model):
         max_length=20, choices=PROCESSING_STATUS, default="pending"
     )
     processing_error = models.TextField(blank=True)
-    processed_at = models.DateTimeField(null=True, blank=True)
+    processing_started_at = models.DateTimeField(null=True, blank=True)
+    processing_completed_at = models.DateTimeField(null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)  # Keep for compatibility
 
     # External storage
     storage_path = models.CharField(
@@ -263,6 +265,16 @@ class Document(models.Model):
     extracted_text = models.TextField(blank=True)
     summary = models.TextField(blank=True)
     topics = models.JSONField(default=list, help_text="Automatically extracted topics")
+    
+    # Processing pipeline fields (from DocumentUpload)
+    file_hash = models.CharField(max_length=64, blank=True, db_index=True, help_text="SHA-256 hash for deduplication")
+    total_chunks = models.PositiveIntegerField(default=0, help_text="Total number of text chunks")
+    processed_chunks = models.PositiveIntegerField(default=0, help_text="Number of processed chunks")
+    
+    # Knowledge graph information
+    graph_id = models.CharField(max_length=100, blank=True, db_index=True, help_text="Knowledge graph identifier")
+    total_nodes = models.PositiveIntegerField(default=0, help_text="Number of knowledge graph nodes")
+    total_edges = models.PositiveIntegerField(default=0, help_text="Number of knowledge graph edges")
 
     # Usage statistics
     view_count = models.PositiveIntegerField(default=0)
@@ -284,10 +296,30 @@ class Document(models.Model):
             models.Index(fields=["document_type"]),
             models.Index(fields=["created_at"]),
             models.Index(fields=["is_favorite", "is_archived"]),
+            models.Index(fields=["file_hash"]),
+            models.Index(fields=["graph_id"]),
+            models.Index(fields=["course", "processing_status"]),
         ]
 
     def __str__(self):
         return f"{self.name} ({self.get_document_type_display()})"
+    
+    @property
+    def processing_progress(self) -> float:
+        """Calculate processing progress percentage."""
+        if self.total_chunks == 0:
+            return 0.0
+        return (self.processed_chunks / self.total_chunks) * 100
+    
+    @property
+    def is_processing_complete(self) -> bool:
+        """Check if processing is complete."""
+        return self.processing_status in ["completed", "failed"]
+    
+    @property
+    def file_size(self) -> int:
+        """Get file size for compatibility with DocumentUpload."""
+        return self.file_size_bytes or 0
 
     @property
     def file_size_mb(self):

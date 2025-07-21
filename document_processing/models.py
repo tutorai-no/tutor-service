@@ -19,78 +19,6 @@ class ProcessingStatus(models.TextChoices):
     FAILED = "failed", "Failed"
 
 
-class DocumentUpload(models.Model):
-    """
-    Model for tracking document uploads and processing status.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="document_uploads"
-    )
-    course = models.ForeignKey(
-        "courses.Course",
-        on_delete=models.CASCADE,
-        related_name="document_uploads",
-        null=True,
-        blank=True,
-    )
-
-    # File information
-    original_filename = models.CharField(max_length=255)
-    file_size = models.PositiveIntegerField()
-    content_type = models.CharField(max_length=100)
-    file_hash = models.CharField(max_length=64, db_index=True)  # SHA-256 hash
-
-    # Processing information
-    status = models.CharField(
-        max_length=20,
-        choices=ProcessingStatus.choices,
-        default=ProcessingStatus.PENDING,
-    )
-    processing_started_at = models.DateTimeField(null=True, blank=True)
-    processing_completed_at = models.DateTimeField(null=True, blank=True)
-    error_message = models.TextField(blank=True)
-
-    # Extracted content metadata
-    total_chunks = models.PositiveIntegerField(default=0)
-    processed_chunks = models.PositiveIntegerField(default=0)
-    page_count = models.PositiveIntegerField(default=0)
-
-    # Knowledge graph information
-    graph_id = models.CharField(max_length=100, db_index=True, blank=True)
-    total_nodes = models.PositiveIntegerField(default=0)
-    total_edges = models.PositiveIntegerField(default=0)
-
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "document_uploads"
-        ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["user", "status"]),
-            models.Index(fields=["course", "status"]),
-            models.Index(fields=["graph_id"]),
-            models.Index(fields=["created_at"]),
-        ]
-
-    def __str__(self):
-        return f"{self.original_filename} - {self.status}"
-
-    @property
-    def processing_progress(self) -> float:
-        """Calculate processing progress percentage."""
-        if self.total_chunks == 0:
-            return 0.0
-        return (self.processed_chunks / self.total_chunks) * 100
-
-    @property
-    def is_processing_complete(self) -> bool:
-        """Check if processing is complete."""
-        return self.status in [ProcessingStatus.COMPLETED, ProcessingStatus.FAILED]
-
 
 class DocumentChunk(models.Model):
     """
@@ -99,7 +27,7 @@ class DocumentChunk(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     document = models.ForeignKey(
-        DocumentUpload, on_delete=models.CASCADE, related_name="chunks"
+        "courses.Document", on_delete=models.CASCADE, related_name="chunks"
     )
 
     # Chunk information

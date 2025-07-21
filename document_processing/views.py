@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 
 from .document_service import get_document_processing_service
-from .models import DocumentUpload, URLUpload
+from .models import URLUpload
 
 logger = logging.getLogger(__name__)
 
@@ -202,18 +202,29 @@ class DocumentListView(APIView):
     @swagger_auto_schema(tags=["Document Processing"])
     def get(self, request):
         """Get list of user's document uploads."""
-        documents = DocumentUpload.objects.filter(user=request.user).values(
+        from courses.models import Document
+        
+        documents = Document.objects.filter(
+            user=request.user, document_type="file"
+        ).values(
             "id",
             "original_filename",
-            "status",
+            "processing_status",
             "created_at",
-            "processing_progress",
             "total_nodes",
             "total_edges",
             "graph_id",
         )
 
-        return Response({"documents": list(documents)})
+        # Add processing_progress as computed field
+        document_list = []
+        for doc_data in documents:
+            doc = Document.objects.get(id=doc_data['id'])
+            doc_data['processing_progress'] = doc.processing_progress
+            doc_data['status'] = doc_data.pop('processing_status')  # Rename for compatibility
+            document_list.append(doc_data)
+
+        return Response({"documents": document_list})
 
 
 class URLListView(APIView):

@@ -67,7 +67,7 @@ All Django apps are implemented and functional:
 ✅ **Assessment System**: Quiz logic, flashcard scheduling, performance analytics
 ✅ **Chat Interface**: Chat session management, message storage, AI orchestration
 ✅ **Billing**: Subscription management, payment processing
-✅ **Document Processing**: File upload, processing, and storage coordination
+✅ **Document Processing**: Unified document system with file upload, processing, and storage coordination
 ✅ **API Gateway**: RESTful APIs for frontend and mobile apps
 ✅ **Business Logic**: All educational workflow and user experience logic
 
@@ -104,6 +104,50 @@ GCS_BUCKET_NAME=aksio-prod-static-84df66d5
 REDIS_URL=<optional-redis-connection>
 ```
 
+## Architecture Highlights
+
+### **Unified Document System** ✅ IMPLEMENTED
+
+The Aksio backend uses a unified document architecture that consolidates all document processing into a single model and pipeline:
+
+#### **Single Document Model**
+- **One Model**: The `courses.Document` model handles all document types (files, URLs, videos)
+- **Complete Lifecycle**: Tracks documents from upload through processing to knowledge graph extraction
+- **Course Integration**: Direct relationship with courses, eliminating data duplication
+
+#### **Processing Pipeline Fields**
+```python
+# Processing status tracking
+processing_status = models.CharField(choices=PROCESSING_STATUS)
+processing_started_at = models.DateTimeField(null=True)
+processing_completed_at = models.DateTimeField(null=True)
+processing_error = models.TextField(blank=True)
+
+# Content analysis
+file_hash = models.CharField(max_length=64)  # SHA-256 for deduplication
+total_chunks = models.PositiveIntegerField(default=0)
+processed_chunks = models.PositiveIntegerField(default=0)
+
+# Knowledge graph integration
+graph_id = models.CharField(max_length=100)
+total_nodes = models.PositiveIntegerField(default=0)
+total_edges = models.PositiveIntegerField(default=0)
+```
+
+#### **Key Benefits**
+- **Single Source of Truth**: One record tracks complete document lifecycle
+- **Eliminates Duplication**: No separate DocumentUpload and Document models
+- **Simplified API**: Course documents endpoint shows all document types
+- **Better Performance**: No joins needed for complete document data
+- **Atomic Updates**: Processing updates happen on same record
+
+#### **Processing Flow**
+1. **Upload** → Document record created with `processing_status="processing"`
+2. **Text Extraction** → Content extracted and stored in `extracted_text`
+3. **Topic Analysis** → Topics extracted and stored in `topics` JSON field
+4. **Knowledge Graph** → Nodes/edges created, counts stored in `total_nodes/total_edges`
+5. **Completion** → Status updated to `"completed"` with timestamps
+
 ## Development Tasks
 
 ### **1. API Enhancement** (HIGH PRIORITY)
@@ -117,7 +161,7 @@ Continue developing comprehensive REST API endpoints:
 
 #### **Course Management** ✅ IMPLEMENTED
 - Course CRUD operations
-- Document upload and metadata management
+- Unified document system with processing pipeline integration
 - Course section management
 - Tag assignment and management
 
