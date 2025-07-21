@@ -140,7 +140,7 @@ class DocumentProcessingService:
             file_hash=file_hash,
             processing_status="processing",
             processing_started_at=timezone.now(),
-            graph_id=f"doc_{uuid.uuid4().hex[:8]}",
+            graph_id=str(uuid.uuid4()),
         )
 
         yield {
@@ -257,28 +257,45 @@ class DocumentProcessingService:
                         "warning": f"Could not extract topics: {str(e)}",
                     }
 
-            # Process each chunk
+            # Process each chunk and track stats
+            total_nodes_created = 0
+            total_edges_created = 0
+            
             for chunk_index, chunk_data in enumerate(chunks):
-                yield from self._process_document_chunk(
-                    document, chunk_index, chunk_data
-                )
+                chunk_stats = {"nodes": 0, "edges": 0}
+                for event in self._process_document_chunk(document, chunk_index, chunk_data):
+                    if event.get("event") == "node_created":
+                        chunk_stats["nodes"] += 1
+                    elif event.get("event") == "edge_created":
+                        chunk_stats["edges"] += 1
+                    yield event
+                
+                total_nodes_created += chunk_stats["nodes"]
+                total_edges_created += chunk_stats["edges"]
 
             # Mark as completed
             document.processing_status = "completed"
             document.processing_completed_at = timezone.now()
-            document.save()
-
-            # Get final stats
-            stats = self.knowledge_graph_service.get_graph_stats(document.graph_id)
-            document.total_nodes = stats["node_count"]
-            document.total_edges = stats["edge_count"]
+            
+            # Update final stats (try graph stats first, fallback to manual count)
+            try:
+                stats = self.knowledge_graph_service.get_graph_stats(document.graph_id)
+                node_count = stats["node_count"] if stats["node_count"] > 0 else total_nodes_created
+                edge_count = stats["edge_count"] if stats["edge_count"] > 0 else total_edges_created
+            except Exception as e:
+                logger.warning(f"Could not get graph stats, using manual count: {e}")
+                node_count = total_nodes_created
+                edge_count = total_edges_created
+            
+            document.total_nodes = node_count
+            document.total_edges = edge_count
             document.save()
 
             yield {
                 "event": "processing_complete",
                 "document_id": str(document.id),
-                "total_nodes": stats["node_count"],
-                "total_edges": stats["edge_count"],
+                "total_nodes": node_count,
+                "total_edges": edge_count,
                 "graph_id": document.graph_id,
             }
 

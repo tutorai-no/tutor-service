@@ -84,6 +84,10 @@ class MockSession:
     def _handle_match(self, query: str, parameters: Dict) -> "MockResult":
         """Handle MATCH queries."""
         results = []
+        
+        # Handle count queries specifically
+        if "count(" in query.lower() and "return count(" in query.lower():
+            return self._handle_count_query(query, parameters)
 
         # Simple pattern matching
         for node_id, node_data in self.driver.nodes.items():
@@ -96,7 +100,7 @@ class MockSession:
                 if required_label not in node_data["labels"]:
                     match = False
 
-            # Check properties
+            # Check properties/parameters
             for key, value in parameters.items():
                 if node_data["properties"].get(key) != value:
                     match = False
@@ -112,6 +116,25 @@ class MockSession:
                 )
 
         return MockResult(results)
+    
+    def _handle_count_query(self, query: str, parameters: Dict) -> "MockResult":
+        """Handle count queries for graph stats."""
+        count = 0
+        graph_id = parameters.get("graph_id")
+        
+        if "MATCH (n:Node" in query:
+            # Count nodes with specific graph_id
+            for node_id, node_data in self.driver.nodes.items():
+                if "Node" in node_data["labels"] and node_data["properties"].get("graph_id") == graph_id:
+                    count += 1
+        elif "MATCH (n:Node" in query and ")-[r:RELATIONSHIP]->" in query:
+            # Count relationships between nodes with specific graph_id
+            for rel in self.driver.relationships:
+                rel_props = rel.get("properties", {})
+                if rel_props.get("graph_id") == graph_id:
+                    count += 1
+        
+        return MockResult([{"count": count}])
 
     def _handle_merge(self, query: str, parameters: Dict) -> "MockResult":
         """Handle MERGE queries (find or create)."""
@@ -135,7 +158,7 @@ class MockResult:
 
     def single(self) -> Optional[Dict]:
         """Get single result."""
-        return self.data[0] if self.data else None
+        return self.data[0] if self.data else {"count": 0}
 
     def data(self) -> List[Dict]:
         """Get all results."""
