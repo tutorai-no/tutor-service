@@ -27,6 +27,8 @@ ALLOWED_HOSTS.extend([
     "api.aksio.app",
     "aksio.app",
     "www.aksio.app",
+    "127.0.0.1",  # Cloud Run health checks
+    "localhost",  # Alternative health check host
 ])
 
 # CORS settings for production
