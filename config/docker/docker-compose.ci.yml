@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile
+    environment:
+      - DJANGO_ENV=test
+      - DATABASE_HOST=db
+      - DATABASE_NAME=aksio_db
+      - DATABASE_USER=aksio_user
+      - DATABASE_PASSWORD=test_password
+      - DJANGO_SECRET_KEY=test-secret-key-for-ci
+      - DEBUG=false
+    depends_on:
+      - db
+    command: python manage.py test
+
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=aksio_db
+      - POSTGRES_USER=aksio_user
+      - POSTGRES_PASSWORD=test_password
+    ports:
+      - "5432"

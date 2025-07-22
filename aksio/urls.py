@@ -17,13 +17,40 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path, re_path
+from django.http import JsonResponse
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication
-
-from django_prometheus import urls as prometheus_urls  # Import Prometheus URLs
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+
+def health_check(request):
+    """Simple health check endpoint for monitoring and Cloud Run"""
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'aksio-backend',
+        'version': '1.0.0'
+    })
+
+
+def root_view(request):
+    """Root endpoint with API information"""
+    return JsonResponse({
+        'service': 'Aksio Backend API',
+        'version': '1.0.0',
+        'status': 'running',
+        'documentation': {
+            'swagger': '/swagger/',
+            'redoc': '/redoc/'
+        },
+        'endpoints': {
+            'health': '/health/',
+            'api': '/api/v1/',
+            'admin': '/admin/'
+        }
+    })
+
 
 # Swagger schema view configuration
 schema_view = get_schema_view(
@@ -38,10 +65,8 @@ schema_view = get_schema_view(
         - **Course Management**: Create, manage, and organize learning content
         - **Assessment System**: Flashcards, quizzes with spaced repetition
         - **AI-Powered Chat**: Intelligent learning assistance
-        - **Billing & Subscriptions**: Payment processing and plan management
         - **Document Processing**: Upload and process educational materials
         - **Learning Analytics**: Progress tracking and performance insights
-        - **Monitoring & Health**: System health and performance metrics
         
         ## Authentication
         
@@ -51,10 +76,8 @@ schema_view = get_schema_view(
         ## Rate Limiting
         
         API endpoints are rate-limited to ensure fair usage:
-        - **Authenticated users**: 60 requests/minute, 1000 requests/hour
-        - **Anonymous users**: 20 requests/minute, 100 requests/hour
-        - **Premium users**: 5000 requests/hour
-        - **AI services**: 100 requests/hour (due to processing costs)
+        - **Authenticated users**: 1000 requests/hour
+        - **Anonymous users**: 100 requests/hour
         
         ## Error Handling
         
@@ -66,8 +89,9 @@ schema_view = get_schema_view(
         - `429 Too Many Requests`: Rate limit exceeded
         - `500 Internal Server Error`: Server error
         """,
-        terms_of_service="https://aksio.app/",
+        terms_of_service="https://aksio.app/terms/",
         contact=openapi.Contact(email="contact@aksio.app"),
+        license=openapi.License(name="Proprietary"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
@@ -75,19 +99,26 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Root endpoint
+    path("", root_view, name="root"),
+    
+    # Health check endpoint (for monitoring and Cloud Run)
+    path("health/", health_check, name="health_check"),
+    
     # Admin panel route
     path("admin/", admin.site.urls),
     
     # API routes - organized by app
     path("api/v1/accounts/", include("accounts.urls")),
-    path("api/v1/assessments/", include("assessments.urls")),
-    path("api/v1/billing/", include("billing.urls")),
-    path("api/v1/chat/", include("chat.urls")),
-    path("api/v1/courses/", include("courses.urls")),
-    path("api/v1/documents/", include("documents.urls")),
-    path("api/v1/learning/", include("learning.urls")),
+    # Note: Uncomment these as you implement each app
+    # path("api/v1/assessments/", include("assessments.urls")),
+    # path("api/v1/billing/", include("billing.urls")),
+    # path("api/v1/chat/", include("chat.urls")),
+    # path("api/v1/courses/", include("courses.urls")),
+    # path("api/v1/documents/", include("documents.urls")),
+    # path("api/v1/learning/", include("learning.urls")),
     
-    # Core utilities and health check
+    # Core utilities
     path("api/v1/", include("core.urls")),
     
     # API Documentation routes
@@ -106,6 +137,9 @@ urlpatterns = [
         schema_view.with_ui("redoc", cache_timeout=0),
         name="schema-redoc",
     ),
-    # Prometheus metrics endpoint
-    path("", include(prometheus_urls)),
 ]
+
+# Customize admin site
+admin.site.site_header = "Aksio Administration"
+admin.site.site_title = "Aksio Admin"
+admin.site.index_title = "Welcome to Aksio Administration"

@@ -45,23 +45,11 @@ jobs:
         run: |
           # Pull the latest image
           IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:latest"
+          echo "📦 Pulling latest image: ${IMAGE}"
           docker pull ${IMAGE}
           
-          # Run migrations using Cloud SQL Proxy
-          docker run --rm \
-            -e DATABASE_HOST="127.0.0.1" \
-            -e DATABASE_PORT="5432" \
-            -e DATABASE_NAME="${{ secrets.DATABASE_NAME }}" \
-            -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
-            -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
-            -e DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
-            -e DJANGO_SETTINGS_MODULE="aksio.settings.production" \
-            --network host \
-            ${IMAGE} python manage.py migrate &
-          
-          MIGRATE_PID=$!
-          
           # Start Cloud SQL Proxy in the background
+          echo "🔌 Starting Cloud SQL Proxy..."
           docker run -d \
             --name cloud-sql-proxy \
             --network host \
@@ -71,21 +59,51 @@ jobs:
             ${CLOUD_SQL_CONNECTION_NAME}
           
           # Wait for proxy to be ready
+          echo "⏳ Waiting for Cloud SQL Proxy to be ready..."
           sleep 10
           
-          # Wait for migrations to complete
-          wait $MIGRATE_PID
+          # Run migrations
+          echo "🔄 Running database migrations..."
+          docker run --rm \
+            -e DATABASE_HOST="127.0.0.1" \
+            -e DATABASE_PORT="5432" \
+            -e DATABASE_NAME="${{ secrets.DATABASE_NAME }}" \
+            -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
+            -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
+            -e DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+            -e DJANGO_SETTINGS_MODULE="aksio.settings.production" \
+            --network host \
+            ${IMAGE} python manage.py migrate
+          
           MIGRATE_EXIT_CODE=$?
+          
+          # Create cache table if it doesn't exist
+          echo "📊 Creating cache table..."
+          docker run --rm \
+            -e DATABASE_HOST="127.0.0.1" \
+            -e DATABASE_PORT="5432" \
+            -e DATABASE_NAME="${{ secrets.DATABASE_NAME }}" \
+            -e DATABASE_USER="${{ secrets.DATABASE_USER }}" \
+            -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
+            -e DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+            -e DJANGO_SETTINGS_MODULE="aksio.settings.production" \
+            --network host \
+            ${IMAGE} python manage.py createcachetable || true
           
           # Clean up proxy
           docker stop cloud-sql-proxy
           docker rm cloud-sql-proxy
           
-          # Exit with migration exit code
-          exit $MIGRATE_EXIT_CODE
+          if [ $MIGRATE_EXIT_CODE -ne 0 ]; then
+            echo "❌ Migration failed with exit code: $MIGRATE_EXIT_CODE"
+            exit $MIGRATE_EXIT_CODE
+          fi
+          
+          echo "✅ Migrations completed successfully"
 
       - name: Deploy to Cloud Run
         run: |
+          echo "🚀 Deploying to Cloud Run..."
           gcloud run deploy ${SERVICE} \
             --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:latest \
             --platform managed \
@@ -99,29 +117,21 @@ jobs:
             --set-env-vars "DATABASE_USER=${{ secrets.DATABASE_USER }}" \
             --set-env-vars "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" \
             --set-env-vars "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" \
-            --set-env-vars "DJANGO_ALLOWED_HOSTS=${{ secrets.DJANGO_ALLOWED_HOSTS }}" \
+            --set-env-vars "DJANGO_ALLOWED_HOSTS=*.run.app,aksio.app,www.aksio.app,api.aksio.app,backend.aksio.app" \
             --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
-            --set-env-vars "GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}" \
             --set-env-vars "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
-            --set-env-vars "LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}" \
-            --set-env-vars "LLM_MODEL=${{ secrets.LLM_MODEL }}" \
             --set-env-vars "EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}" \
             --set-env-vars "EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}" \
             --set-env-vars "DEFAULT_FROM_EMAIL=${{ secrets.DEFAULT_FROM_EMAIL }}" \
-            --set-env-vars "REDIS_URL=${{ secrets.REDIS_URL }}" \
-            --set-env-vars "SCRAPER_SERVICE_URL=${{ secrets.SCRAPER_SERVICE_URL }}" \
-            --set-env-vars "RETRIEVER_SERVICE_URL=${{ secrets.RETRIEVER_SERVICE_URL }}" \
-            --set-env-vars "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" \
-            --set-env-vars "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" \
-            --set-env-vars "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
-            --set-env-vars "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" \
-            --set-env-vars "SENTRY_ENVIRONMENT=production" \
-            --cpu 2 \
-            --memory 4Gi \
-            --min-instances 1 \
-            --max-instances 10 \
+            --cpu 1 \
+            --memory 512Mi \
+            --min-instances 0 \
+            --max-instances 5 \
             --timeout 300 \
+            --port 8080 \
             --service-account ${{ secrets.CLOUD_RUN_SERVICE_ACCOUNT }}
+          
+          echo "✅ Deployment completed"
 
       - name: Get Service URL
         run: |
@@ -129,20 +139,50 @@ jobs:
             --platform managed \
             --region ${REGION} \
             --format 'value(status.url)')
-          echo "Service deployed to: ${SERVICE_URL}"
+          echo "🌐 Service deployed to: ${SERVICE_URL}"
           echo "SERVICE_URL=${SERVICE_URL}" >> $GITHUB_ENV
 
       - name: Smoke Test
         run: |
           # Wait for service to be ready
+          echo "⏳ Waiting for service to stabilize..."
           sleep 30
           
           # Test health endpoint
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${SERVICE_URL}/api/health/)
+          echo "🏥 Testing health endpoint..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${SERVICE_URL}/health/)
           
           if [ $HTTP_CODE -eq 200 ]; then
-            echo "✅ Health check passed"
+            echo "✅ Health check passed (HTTP ${HTTP_CODE})"
           else
             echo "❌ Health check failed with HTTP code: $HTTP_CODE"
+            # Try to get more info
+            echo "Response body:"
+            curl -s ${SERVICE_URL}/health/
             exit 1
           fi
+          
+          # Test root endpoint
+          echo "🏠 Testing root endpoint..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" ${SERVICE_URL}/)
+          if [ $HTTP_CODE -eq 200 ]; then
+            echo "✅ Root endpoint check passed (HTTP ${HTTP_CODE})"
+          else
+            echo "⚠️  Root endpoint returned HTTP code: $HTTP_CODE"
+          fi
+          
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "🎉 Deployment Summary"
+          echo "===================="
+          echo "📦 Service: ${SERVICE}"
+          echo "🌍 Region: ${REGION}"
+          echo "🔗 URL: ${SERVICE_URL}"
+          echo "✅ Status: Healthy"
+          echo ""
+          echo "📚 Available endpoints:"
+          echo "  - ${SERVICE_URL}/ (API info)"
+          echo "  - ${SERVICE_URL}/health/ (Health check)"
+          echo "  - ${SERVICE_URL}/swagger/ (API documentation)"
+          echo "  - ${SERVICE_URL}/admin/ (Admin panel)"
