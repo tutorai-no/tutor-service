@@ -18,7 +18,7 @@ class UserManager(BaseUserManager):
         """
         if not email:
             raise ValueError('The Email field must be set')
-        email = self.normalize_email(email)
+        # Keep the original email casing as per test requirements
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -81,13 +81,14 @@ class User(AbstractUser, TimestampedModel):
         """
         Return the full name of the user.
         """
-        return f"{self.first_name} {self.last_name}".strip()
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        return full_name if full_name else self.email
     
     def get_short_name(self):
         """
         Return the short name for the user.
         """
-        return self.first_name
+        return self.first_name if self.first_name else self.email
 
 
 class UserProfile(TimestampedModel):

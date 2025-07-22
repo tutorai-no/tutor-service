@@ -1,4 +1,18 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.exceptions import NotAuthenticated
+
+
+class IsAuthenticatedOrError(IsAuthenticated):
+    """
+    Custom permission that raises 401 instead of returning False.
+    This ensures we get 401 errors instead of 403 for unauthenticated requests.
+    """
+    
+    def has_permission(self, request, view):
+        if request.user and request.user.is_authenticated:
+            return True
+        raise NotAuthenticated()
+
 
 class IsOwnerOrReadOnly(BasePermission):
     """Users can edit their own content, read others."""

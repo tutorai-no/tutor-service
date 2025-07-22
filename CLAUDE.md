@@ -1,542 +1,223 @@
 # Aksio Backend - Claude Agent Instructions
 
+## 🚨 IMPORTANT: Start Here
+**Before beginning any work, ALWAYS:**
+1. **Read `README.md`** for project overview and setup instructions
+2. **Check app-specific documentation** in `apps/{app_name}/README.md`
+3. **Review recent test results** to understand current state
+4. **Update documentation** when making any changes
+
 ## Project Overview
-This is the Aksio backend, an advanced educational platform that combines AI-powered learning tools with modern web architecture. The project is fully operational with a production-ready Django app structure deployed on Google Cloud Platform.
+The Aksio backend is an educational platform combining AI-powered learning tools with Django REST Framework. While the infrastructure is deployed on Google Cloud Platform, many features are still in development.
 
-## Current Status
+## Current Status (As of July 2025)
 
-### ✅ **COMPLETED INFRASTRUCTURE**
-- **Google Cloud Platform**: Production deployment on Cloud Run
-- **Database**: PostgreSQL 15 on Cloud SQL (`aksio-prod-db`)
-- **Container Registry**: Artifact Registry (`aksio-prod-registry`)
-- **Storage**: Cloud Storage buckets for static/media files
-- **Secrets**: Secret Manager for secure API keys and credentials
-- **CI/CD**: GitHub Actions with automated testing and deployment
+### ✅ **COMPLETED FEATURES**
+- **Infrastructure**: GCP deployment on Cloud Run with PostgreSQL
+- **CI/CD Pipeline**: GitHub Actions with automated testing
+- **User Authentication**: Custom User model with JWT authentication
+- **Basic App Structure**: All Django apps created with health endpoints
 
-### ✅ **IMPLEMENTED DJANGO APPS**
-All Django apps are implemented and functional:
-- **accounts/**: Complete user management with authentication
-- **courses/**: Course and document management system
-- **learning/**: Study planning and progress tracking
-- **assessments/**: Flashcards and quizzes with spaced repetition
-- **chat/**: AI-powered chat system
-- **billing/**: Subscription and payment processing
-- **core/**: Shared utilities and base classes
-- **api/**: REST API with versioning and documentation
-- **document_processing/**: Document upload and processing services
+### ⚠️ **PARTIALLY IMPLEMENTED**
+- **Accounts App**: Authentication works but has test failures:
+  - Email normalization issues (not converting to lowercase consistently)
+  - Model methods returning empty strings instead of email fallbacks
+  - Authentication returning 403 instead of 401 for unauthenticated requests
+  
+### ❌ **NOT IMPLEMENTED** (Template Only)
+- **Courses App**: Only health check endpoint exists
+- **Documents App**: Only health check endpoint exists
+- **Assessments App**: Only health check endpoint exists
+- **Chat App**: Only health check endpoint exists
+- **Billing App**: Only health check endpoint exists
+- **Learning App**: Only health check endpoint exists
 
-## Current Architecture
-
-### **Deployment Architecture**
+## Test Status Summary
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │────│   Cloud Run      │────│   Cloud SQL     │
-│   (External)    │    │   (Django)       │    │   (PostgreSQL)  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                    ┌─────────┼─────────┐
-                    │                   │
-            ┌───────────────┐   ┌──────────────┐
-            │ Cloud Storage │   │Secret Manager│
-            │ (Static/Media)│   │ (API Keys)   │
-            └───────────────┘   └──────────────┘
+FAILED Tests: 16 failures
+- accounts.tests.test_models: 4 failures
+- accounts.tests.test_serializers: 2 failures
+- accounts.tests.test_views: 2 failures
+- accounts.tests.test_integration: 2 failures
+- All other apps: Missing URL pattern errors (6 failures)
 ```
 
-### **Technology Stack**
-- **Backend**: Django 5.1+ with Django REST Framework
-- **Database**: PostgreSQL 15 (Cloud SQL)
-- **Deployment**: Google Cloud Run (serverless containers)
-- **Storage**: Google Cloud Storage (static files, media)
-- **Registry**: Google Artifact Registry (Docker images)
-- **Secrets**: Google Secret Manager
-- **CI/CD**: GitHub Actions with Workload Identity Federation
-- **Infrastructure**: Terraform (fully deployed)
-- **Authentication**: JWT tokens with Django REST Framework
-- **AI Integration**: OpenAI API (GPT models)
-- **Caching**: Redis (configured but optional)
-- **Message Queue**: Celery with Redis broker
-- **Monitoring**: Django Prometheus integration
-- **Documentation**: drf-yasg (Swagger/OpenAPI)
-- **Disabled Services**: Kafka (configurations kept but disabled), Nginx (Cloud Run handles routing)
+## Architecture Reality Check
 
-### **Service Boundaries and Responsibilities**
-
-#### **Aksio-Backend Responsibilities** (This Repository)
-✅ **User Management**: Complete authentication, profiles, activity tracking
-✅ **Learning Logic**: Study plans, progress tracking, spaced repetition algorithms
-✅ **Assessment System**: Quiz logic, flashcard scheduling, performance analytics
-✅ **Chat Interface**: Chat session management, message storage, AI orchestration
-✅ **Billing**: Subscription management, payment processing
-✅ **Document Processing**: Unified document system with file upload, processing, and storage coordination
-✅ **API Gateway**: RESTful APIs for frontend and mobile apps
-✅ **Business Logic**: All educational workflow and user experience logic
-
-#### **External Service Integration**
-🔗 **Retrieval-Service**: RAG system and semantic search (external service)
-🔗 **AI Services**: OpenAI API for content generation
-🔗 **Payment Processing**: Stripe integration
-🔗 **Cloud Services**: Google Cloud Platform services
-
-## Infrastructure Details
-
-### **Google Cloud Platform Setup**
-```bash
-# Current deployment information
-Project ID: production-466308
-Region: europe-west1
-Environment: prod
-
-# Key Resources
-Database: production-466308:europe-west1:aksio-prod-db
-Registry: europe-west1-docker.pkg.dev/production-466308/aksio-prod-registry
-Static Bucket: aksio-prod-static-84df66d5
-Media Bucket: aksio-prod-media-84df66d5
+### **What Actually Exists**
+```
+apps/
+├── accounts/          # ✅ Implemented (with bugs)
+│   ├── models.py     # Custom User model (email normalization issues)
+│   ├── views.py      # Auth endpoints (403/401 status code issues)
+│   ├── serializers.py # Login validation message issues
+│   └── tests/        # Comprehensive tests (16 failures)
+├── courses/          # ❌ Template only
+├── documents/        # ❌ Template only
+├── assessments/      # ❌ Template only
+├── chat/            # ❌ Template only
+├── billing/         # ❌ Template only
+├── learning/        # ❌ Template only
+└── core/            # ✅ Basic utilities implemented
 ```
 
-### **Environment Configuration**
-```bash
-# Required environment variables (configured in Secret Manager)
-DJANGO_SECRET_KEY=<auto-generated>
-DATABASE_URL=<cloud-sql-connection>
-OPENAI_API_KEY=<your-openai-key>
-GOOGLE_CLOUD_PROJECT=production-466308
-GCS_BUCKET_NAME=aksio-prod-static-84df66d5
-REDIS_URL=<optional-redis-connection>
-```
+### **Deployment Status**
+- **Production**: Infrastructure deployed but app not fully functional
+- **Database**: Cloud SQL configured but minimal data models
+- **Storage**: GCS buckets created but not integrated
+- **Secrets**: Configured in Secret Manager
 
-## Architecture Highlights
+## Immediate Fixes Needed
 
-### **Unified Document System** ✅ IMPLEMENTED
-
-The Aksio backend uses a unified document architecture that consolidates all document processing into a single model and pipeline:
-
-#### **Single Document Model**
-- **One Model**: The `courses.Document` model handles all document types (files, URLs, videos)
-- **Complete Lifecycle**: Tracks documents from upload through processing to knowledge graph extraction
-- **Course Integration**: Direct relationship with courses, eliminating data duplication
-
-#### **Processing Pipeline Fields**
+### 1. **Fix Accounts App** (CRITICAL)
 ```python
-# Processing status tracking
-processing_status = models.CharField(choices=PROCESSING_STATUS)
-processing_started_at = models.DateTimeField(null=True)
-processing_completed_at = models.DateTimeField(null=True)
-processing_error = models.TextField(blank=True)
+# Issues to fix in models.py:
+- Email should be normalized to lowercase in save() and UserManager
+- full_name property should return email when names are empty
+- get_short_name() should return email when first_name is empty
 
-# Content analysis
-file_hash = models.CharField(max_length=64)  # SHA-256 for deduplication
-total_chunks = models.PositiveIntegerField(default=0)
-processed_chunks = models.PositiveIntegerField(default=0)
+# Issues to fix in serializers.py:
+- Login serializer should return specific error messages
+- Email should be normalized before authentication
 
-# Knowledge graph integration
-graph_id = models.CharField(max_length=100)
-total_nodes = models.PositiveIntegerField(default=0)
-total_edges = models.PositiveIntegerField(default=0)
+# Issues to fix in settings:
+- Add missing URL patterns for all apps
+- Configure REST_FRAMEWORK properly for 401 responses
 ```
 
-#### **Key Benefits**
-- **Single Source of Truth**: One record tracks complete document lifecycle
-- **Eliminates Duplication**: No separate DocumentUpload and Document models
-- **Simplified API**: Course documents endpoint shows all document types
-- **Better Performance**: No joins needed for complete document data
-- **Atomic Updates**: Processing updates happen on same record
+### 2. **Add Missing URL Patterns**
+```python
+# In aksio/urls.py, add:
+path("api/v1/assessments/", include("assessments.urls")),
+path("api/v1/billing/", include("billing.urls")),
+path("api/v1/chat/", include("chat.urls")),
+path("api/v1/courses/", include("courses.urls")),
+path("api/v1/documents/", include("documents.urls")),
+path("api/v1/learning/", include("learning.urls")),
+```
 
-#### **Processing Flow**
-1. **Upload** → Document record created with `processing_status="processing"`
-2. **Text Extraction** → Content extracted and stored in `extracted_text`
-3. **Topic Analysis** → Topics extracted and stored in `topics` JSON field
-4. **Knowledge Graph** → Nodes/edges created, counts stored in `total_nodes/total_edges`
-5. **Completion** → Status updated to `"completed"` with timestamps
+## Development Workflow for Claude
 
-## Development Tasks
+### **Before Making Any Changes**
+1. **Check Current State**
+   ```bash
+   # Run tests to see what's broken
+   make test
+   
+   # Check specific app status
+   make test-accounts
+   ```
 
-### **1. API Enhancement** (HIGH PRIORITY)
-Continue developing comprehensive REST API endpoints:
+2. **Read Existing Documentation**
+   - Main README.md
+   - App-specific README in `apps/{app_name}/README.md`
+   - Check for any docs/ folder content
 
-#### **Authentication & User Management** ✅ IMPLEMENTED
-- User registration/login with JWT
-- Profile management endpoints
-- Activity tracking endpoints
-- Streak management
+3. **Understand the ACTUAL Implementation**
+   - Don't assume features exist based on documentation
+   - Check actual code files, not just README claims
+   - Verify model implementations exist before using them
 
-#### **Course Management** ✅ IMPLEMENTED
-- Course CRUD operations
-- Unified document system with processing pipeline integration
-- Course section management
-- Tag assignment and management
+### **When Making Changes**
+1. **Fix Existing Issues First**
+   - Run tests to identify failures
+   - Fix failing tests before adding features
+   - Ensure accounts app works before building on it
 
-#### **Assessment System** ✅ PARTIALLY IMPLEMENTED
-- Flashcard creation and review endpoints
-- Quiz generation and taking
-- Progress tracking and analytics
-- Spaced repetition scheduling (needs enhancement)
+2. **Update Documentation**
+   - Update app README.md files
+   - Keep this CLAUDE.md file current
+   - Document actual implementation status
 
-#### **Chat System** ✅ IMPLEMENTED
-- Chat session management
-- Message sending/receiving
-- AI response generation with OpenAI integration
+3. **Follow Test-Driven Development**
+   ```bash
+   # 1. Run existing tests
+   make test-{app_name}
+   
+   # 2. Fix failures
+   # 3. Add new tests for new features
+   # 4. Implement features
+   # 5. Update documentation
+   ```
 
-#### **Billing Integration** ✅ IMPLEMENTED
-- Subscription management
-- Payment processing (Stripe integration)
-- Plan management
-
-### **2. AI Integration Enhancement** (HIGH PRIORITY)
-Enhance existing AI capabilities:
-
-#### **OpenAI Integration** ✅ CONFIGURED
-- OpenAI API key configured in Secret Manager
-- Content generation with error handling
-- Rate limiting and cost optimization needed
-- Prompt engineering for educational content
-
-#### **Service Integrations**
-- Document context retrieval for AI responses
-- Embeddings and similarity search integration
-- Error handling and fallback mechanisms
-
-#### **Advanced Features**
-- Multilingual support for content generation
-- Language detection and translation
-- Locale-specific educational content
-
-### **3. Performance Optimization** (MEDIUM PRIORITY)
-Optimize the existing system:
-
-#### **Database Optimization**
-- Add proper database indexes
-- Implement query optimization
-- Add database connection pooling
-
-#### **Caching Implementation**
-- Redis integration (infrastructure ready)
-- API response caching
-- Database query caching
-
-#### **Background Task Processing**
-- Celery integration for async tasks
-- AI content generation tasks
-- Email notifications
-- Learning analytics processing
-
-### **4. Monitoring & Observability** (MEDIUM PRIORITY)
-Enhance existing monitoring:
-
-#### **Logging Enhancement**
-- Structured logging with context
-- Error tracking and alerting
-- Performance monitoring
-
-#### **Metrics & Analytics**
-- User engagement metrics
-- Learning progress analytics
-- System performance metrics
-
-## Development Guidelines
-
-### **Code Quality Standards**
-- Follow Django best practices
-- Use type hints for all functions (enforced)
-- Implement proper error handling with custom exceptions
-- Write comprehensive docstrings
-- Use Django's built-in authentication and permissions
-
-### **Mandatory Code Quality Checks**
-**ALL code changes MUST pass these checks before committing:**
-
+### **Code Quality Requirements**
 ```bash
-# Option 1: Use the automated script (Recommended)
-./scripts/format-code.sh        # Unix/Linux/MacOS
-scripts\format-code.bat         # Windows
-
-# Option 2: Use pre-commit hooks
-pre-commit install              # One-time setup
-pre-commit run --all-files      # Run all hooks manually
-
-# Option 3: Run tools individually
-python -m autoflake --remove-all-unused-imports --recursive --in-place .
-python -m isort .
-python -m black .
-python -m flake8
-python -m mypy .
-```
-
-**Quality Tools Configured:**
-- **autoflake**: Remove unused imports and variables
-- **pyupgrade**: Upgrade Python syntax to 3.11+ standards
-- **isort**: Sort and organize imports
-- **black**: Format code with consistent style
-- **flake8**: Lint code for style and errors
-- **mypy**: Type checking and validation
-- **bandit**: Security vulnerability scanning
-- **detect-secrets**: Prevent accidental secret commits
-
-### **Security Guidelines**
-
-**1. Input Validation**
-```python
-# Always validate and sanitize inputs
-from django.core.exceptions import ValidationError
-import bleach
-
-def process_user_input(self, user_input: str) -> str:
-    # Sanitize input
-    cleaned_input = bleach.clean(user_input, tags=[], strip=True)
-    
-    # Validate length
-    if len(cleaned_input) > 1000:
-        raise ValidationError("Input too long")
-    
-    return cleaned_input
-```
-
-**2. Authentication and Permissions**
-```python
-# Use Django's built-in permissions
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
-
-class StudyPlanViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        # Always filter by user
-        return StudyPlan.objects.filter(user=self.request.user)
-```
-
-**3. Sensitive Data Handling**
-```python
-import os
-from django.core.exceptions import ImproperlyConfigured
-
-# Use environment variables for secrets
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-if not OPENAI_API_KEY:
-    raise ImproperlyConfigured("OPENAI_API_KEY environment variable required")
-
-# Never log sensitive data
-logger.info(f"User {user.id} accessed course {course.id}")  # Good
-logger.info(f"User {user.email} with password {password}")  # NEVER DO THIS
-```
-
-### **Performance Guidelines**
-
-**1. Database Optimization**
-```python
-from django.db import models
-
-# Use select_related and prefetch_related
-def get_study_sessions_with_course(self, user: models.Model):
-    return StudySession.objects.filter(user=user)\
-        .select_related('course')\
-        .prefetch_related('flashcard_reviews')
-
-# Use bulk operations for multiple records
-def create_flashcards_bulk(self, flashcard_data: List[Dict]):
-    flashcards = [Flashcard(**data) for data in flashcard_data]
-    Flashcard.objects.bulk_create(flashcards)
-```
-
-**2. Caching Strategies**
-```python
-from django.core.cache import cache
-from typing import Dict, Any
-
-def get_user_study_analytics(self, user_id: str) -> Dict[str, Any]:
-    cache_key = f"study_analytics:{user_id}"
-    cached_data = cache.get(cache_key)
-    
-    if cached_data is None:
-        analytics_data = self._calculate_study_analytics(user_id)
-        cache.set(cache_key, analytics_data, timeout=3600)  # 1 hour
-        return analytics_data
-    
-    return cached_data
-```
-
-### **AI Integration Best Practices**
-
-**1. Prompt Engineering**
-```python
-def build_flashcard_prompt(self, context: str, topic: str) -> str:
-    """Build a well-structured prompt for flashcard generation."""
-    return f"""
-    Based on the following educational content about {topic}, generate 5 flashcards.
-    
-    Content:
-    {context}
-    
-    Requirements:
-    - Questions should test understanding, not just memorization
-    - Include a mix of factual and conceptual questions
-    - Keep questions concise and clear
-    - Answers should be comprehensive but not too long
-    
-    Return as JSON with format:
-    {{"flashcards": [{{"front": "question", "back": "answer", "difficulty": "easy|medium|hard"}}]}}
-    """
-```
-
-**2. Error Handling for AI Services**
-```python
-import time
-from typing import Dict, Any
-
-def call_ai_service_with_retry(
-    self, 
-    prompt: str, 
-    max_retries: int = 3
-) -> Dict[str, Any]:
-    """Call AI service with retry logic."""
-    for attempt in range(max_retries):
-        try:
-            response = self.ai_service.generate_content(prompt)
-            if response.get('success'):
-                return response
-            
-            logger.warning(f"AI service attempt {attempt + 1} failed")
-            
-        except Exception as e:
-            logger.error(f"AI service error on attempt {attempt + 1}: {str(e)}")
-            
-        if attempt < max_retries - 1:
-            time.sleep(2 ** attempt)  # Exponential backoff
-    
-    raise ServiceException("AI service failed after all retries")
-```
-
-## Development Workflow
-
-### **Local Development**
-```bash
-# Start all services
-docker-compose up -d
-
-# Create superuser
-docker-compose exec backend python manage.py createsuperuser
-
-# Run migrations
-docker-compose exec backend python manage.py migrate
-
-# Access admin panel: http://localhost:8000/admin/
-# Access API docs: http://localhost:8000/swagger/
-```
-
-### **Testing**
-```bash
-# Run tests
-docker-compose exec backend python manage.py test
-
-# Run with coverage
-docker-compose exec backend coverage run --source='.' manage.py test
-docker-compose exec backend coverage report
-```
-
-### **Deployment**
-The deployment is automated via GitHub Actions:
-1. **Push to branch** → Triggers CI (tests, build, push to Artifact Registry)
-2. **CI success** → Triggers CD (deploy to Cloud Run)
-3. **Deployment** → Automatic health checks and smoke tests
-
-## Infrastructure Management
-
-### **Quick Commands**
-```bash
-# Deploy infrastructure
-cd infrastructure/terraform
-terraform apply
-
-# Check deployment status
-terraform output
-
-# Deploy application (automated via GitHub Actions)
-git push origin main
-```
-
-### **Resource Information**
-```bash
-# Current infrastructure outputs
-database_connection_name = "production-466308:europe-west1:aksio-prod-db"
-media_bucket_name = "aksio-prod-media-84df66d5"
-registry_url = "europe-west1-docker.pkg.dev/production-466308/aksio-prod-registry"
-static_bucket_name = "aksio-prod-static-84df66d5"
-```
-
-## Documentation
-
-### **Available Documentation**
-- **[Infrastructure Setup](./infrastructure/README.md)** - Complete infrastructure guide
-- **[gcloud Commands](./docs/gcloud-commands.md)** - Essential CLI commands
-- **[Repository Structure](./docs/REPOSITORY_STRUCTURE.md)** - Codebase organization
-- **[API Documentation](./API_DOCUMENTATION.md)** - API endpoints and usage
-
-### **Quick Reference**
-- **[Infrastructure Quick Reference](./infrastructure/QUICK_REFERENCE.md)** - Essential commands
-- **[Development Index](./docs/README.md)** - Complete documentation index
-
-### **Configuration Files**
-- **setup.cfg**: Configures flake8, mypy, pytest, and pydocstyle for code quality
-- **pyproject.toml**: Python project metadata and tool configurations
-- **.pre-commit-config.yaml**: Pre-commit hooks for code quality checks
-
-## Current Priority Tasks
-
-### **Immediate (High Priority)**
-1. **Complete spaced repetition algorithm** implementation in assessments
-2. **Enhance AI integration** with retrieval service
-3. **Implement Redis caching** for performance
-4. **Add comprehensive API tests** for all endpoints
-
-### **Short Term (Medium Priority)**
-1. **Set up monitoring and alerting**
-2. **Implement background task processing** with Celery
-3. **Add API rate limiting** and security enhancements
-4. **Create staging environment**
-
-### **Long Term (Low Priority)**
-1. **Implement real-time features** with WebSockets
-2. **Add multi-language support**
-3. **Implement advanced analytics**
-4. **Set up disaster recovery procedures**
-
-## Important Notes
-
-1. **✅ Infrastructure is production-ready**: Fully deployed on GCP with Terraform
-2. **✅ Django apps are implemented**: All core functionality is in place
-3. **✅ CI/CD pipeline is operational**: Automated testing and deployment
-4. **✅ Security is configured**: Secret management and authentication
-5. **🔄 Performance optimization needed**: Caching and database optimization
-6. **🔄 Monitoring enhancement needed**: Comprehensive observability
-
-## Claude Agent Workflow
-
-**For every code change, Claude agents must:**
-
-1. **Write/modify code** following the coding guidelines
-2. **Run quality checks**: `./scripts/format-code.sh`
-3. **Fix any reported issues**
-4. **Verify all checks pass**
-5. **Only then commit the code**
-
-**Example workflow:**
-```bash
-# 1. Make code changes
-# (edit files)
-
-# 2. Format and check code
+# Always run before committing:
 ./scripts/format-code.sh
 
-# 3. If issues found, fix them and re-run
-# (fix issues)
-./scripts/format-code.sh
-
-# 4. When all checks pass, commit
-git add .
-git commit -m "feat: implement new feature
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+# Or manually:
+black apps/
+isort apps/
+flake8 apps/
 ```
 
-The Aksio backend is a fully operational, production-ready educational platform with comprehensive infrastructure, implemented features, and automated deployment. Focus development efforts on optimization, enhancement, and new feature development rather than basic setup.
+## Real Implementation Status by App
+
+### **Accounts App** (Partially Working)
+- ✅ Custom User model (UUID primary key, email auth)
+- ✅ UserProfile model
+- ✅ Registration/Login endpoints
+- ✅ JWT authentication
+- ❌ Email normalization bugs
+- ❌ Model method bugs
+- ❌ Authentication status code issues
+
+### **All Other Apps** (Not Implemented)
+Each app currently has only:
+- Basic `apps.py` configuration
+- Empty `models.py` with TODO comment
+- Empty `serializers.py` with TODO comment
+- Health check view returning `implemented: False`
+- Basic URL pattern for health check
+- One test file checking health endpoint
+
+## Documentation Maintenance
+
+### **When to Update Documentation**
+1. **After fixing bugs** - Update status in CLAUDE.md
+2. **After implementing features** - Update app README.md
+3. **After adding models** - Document in app README.md
+4. **After adding endpoints** - Update API documentation
+
+### **Documentation Files to Maintain**
+- `/README.md` - Overall project documentation
+- `/CLAUDE.md` - This file, current implementation status
+- `/apps/{app_name}/README.md` - App-specific documentation
+- `/docs/` - Additional documentation as needed
+
+## Common Pitfalls to Avoid
+
+1. **Don't assume features exist** - Most apps are empty templates
+2. **Don't trust outdated documentation** - Check actual code
+3. **Don't skip tests** - They reveal the true state
+4. **Don't implement new features on broken foundations** - Fix accounts first
+
+## Current Priority Order
+
+1. **Fix all accounts app test failures**
+2. **Add missing URL patterns**
+3. **Implement courses app models and basic CRUD**
+4. **Implement document upload functionality**
+5. **Then proceed with other apps**
+
+## Useful Commands
+
+```bash
+# Check what's actually implemented
+find apps -name "models.py" -exec grep -l "class.*Model" {} \;
+
+# See current test failures
+make test 2>&1 | grep -E "(FAILED|ERROR)"
+
+# Check which apps have real implementations
+for app in accounts courses documents assessments chat billing learning; do
+  echo "=== $app ==="
+  grep -c "TODO" apps/$app/models.py 2>/dev/null || echo "0"
+done
+```
+
+## Remember
+
+The Aksio backend is a **work in progress**. While the infrastructure is deployed and the accounts app has basic functionality, most features described in documentation are aspirational, not implemented. Always verify actual implementation before building on top of assumed functionality.
+
+**Your first task should always be: Run the tests and fix what's broken.**

@@ -110,13 +110,12 @@ urlpatterns = [
     
     # API routes - organized by app
     path("api/v1/accounts/", include("accounts.urls")),
-    # Note: Uncomment these as you implement each app
-    # path("api/v1/assessments/", include("assessments.urls")),
-    # path("api/v1/billing/", include("billing.urls")),
-    # path("api/v1/chat/", include("chat.urls")),
-    # path("api/v1/courses/", include("courses.urls")),
-    # path("api/v1/documents/", include("documents.urls")),
-    # path("api/v1/learning/", include("learning.urls")),
+    path("api/v1/assessments/", include("assessments.urls")),
+    path("api/v1/billing/", include("billing.urls")),
+    path("api/v1/chat/", include("chat.urls")),
+    path("api/v1/courses/", include("courses.urls")),
+    path("api/v1/documents/", include("documents.urls")),
+    path("api/v1/learning/", include("learning.urls")),
     
     # Core utilities
     path("api/v1/", include("core.urls")),

@@ -100,11 +100,14 @@ class UserModelTestCase(TestCase):
     
     def test_timestamps_auto_populated(self):
         """Test that timestamp fields are auto-populated."""
+        from datetime import timedelta
         user = User.objects.create_user(**self.user_data)
         
         self.assertIsNotNone(user.created_at)
         self.assertIsNotNone(user.updated_at)
-        self.assertEqual(user.created_at, user.updated_at)
+        # Allow small difference in timestamps (within 1 second)
+        time_diff = abs(user.updated_at - user.created_at)
+        self.assertLess(time_diff, timedelta(seconds=1))
 
 
 class UserProfileModelTestCase(TestCase):

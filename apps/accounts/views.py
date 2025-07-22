@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from core.permissions import IsAuthenticatedOrError
 from .models import User
 from .serializers import (
     UserRegistrationSerializer,
@@ -74,7 +75,7 @@ class LoginView(generics.GenericAPIView):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# Use default permission from settings  
 def logout_view(request):
     """
     User logout endpoint - blacklist refresh token.
@@ -100,7 +101,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     User profile view - get and update profile information.
     """
     serializer_class = UserProfileDetailSerializer
-    permission_classes = [IsAuthenticated]
+    # Use default permission from settings
     
     def get_object(self):
         """
