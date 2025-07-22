@@ -3,6 +3,7 @@ Base settings for aksio project.
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -13,6 +14,9 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Add apps folder to Python path
+sys.path.insert(0, str(BASE_DIR / 'apps'))
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
@@ -21,16 +25,15 @@ SECRET_KEY = os.getenv(
 
 # Application definition
 INSTALLED_APPS = [
-    # Your apps
+    # Your apps (now in apps/ folder)
     "accounts",
-    "courses",
-    "learning",
     "assessments",
-    "chat",
     "billing",
+    "chat",
     "core",
-    "api",
-    "document_processing",
+    "courses",
+    "documents",
+    "learning",
     # Django built-in apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -80,6 +83,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "aksio.wsgi.application"
 
 # Database
+# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -89,12 +93,14 @@ DATABASES = {
         "HOST": os.getenv("DATABASE_HOST", "db"),
         "PORT": os.getenv("DATABASE_PORT", "5432"),
         "OPTIONS": {"sslmode": "prefer"},
+        "CONN_MAX_AGE": 60,  # Database connection pooling
     }
 }
 
 AUTH_USER_MODEL = "accounts.User"
 
 # Password validation
+# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -114,12 +120,14 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
+# https://docs.djangoproject.com/en/5.0/topics/i18n/
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.0/howto/static-files/
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
@@ -128,6 +136,7 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
+# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # REST Framework
@@ -172,9 +181,9 @@ SWAGGER_SETTINGS = {
 
 # CSRF Settings
 CSRF_COOKIE_NAME = "csrftoken"
-CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_HTTPONLY = False  # Allows Swagger UI to access CSRF token
 
-# Email Settings
+# Email Configuration
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
@@ -184,8 +193,8 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-# Logging
-LOG_LEVEL = os.getenv("LOGGING_LEVEL") or "INFO"
+# Logging Configuration
+LOG_LEVEL = os.getenv("LOGGING_LEVEL", "INFO")
 
 LOGGING = {
     "version": 1,
@@ -226,12 +235,7 @@ LOGGING = {
         },
         "django.db.backends": {
             "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        "api": {
-            "handlers": ["console", "file"],
-            "level": LOG_LEVEL,
+            "level": "WARNING",  # Suppress SQL query logs below WARNING level
             "propagate": False,
         },
         "aksio": {
@@ -244,22 +248,7 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
-        "courses": {
-            "handlers": ["console", "file"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
-        "learning": {
-            "handlers": ["console", "file"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
         "assessments": {
-            "handlers": ["console", "file"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
-        "chat": {
             "handlers": ["console", "file"],
             "level": LOG_LEVEL,
             "propagate": False,
@@ -269,7 +258,27 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        "chat": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
         "core": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "courses": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "documents": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "learning": {
             "handlers": ["console", "file"],
             "level": LOG_LEVEL,
             "propagate": False,
@@ -277,9 +286,10 @@ LOGGING = {
     },
 }
 
-# Google Cloud Settings
-GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
-GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+# Neo4j Database Settings (Knowledge Graph)
+NEO4J_URI = os.getenv("NEO4J_URL", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USERNAME", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 
 # LLM Settings
 LLM_API_KEY = os.getenv("LLM_API_KEY")
@@ -288,10 +298,17 @@ LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "1000"))
 
+# OpenAI Settings
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Embedding Model Settings
+EMBEDDING_MODEL_TYPE = os.getenv("EMBEDDING_MODEL_TYPE", "sentence_transformers")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+
 # Document Processing Settings
 DOCUMENT_UPLOAD_MAX_SIZE = (
     int(os.getenv("DOCUMENT_UPLOAD_MAX_SIZE", "50")) * 1024 * 1024
-)  # 50MB
+)  # 50MB default
 DOCUMENT_ALLOWED_TYPES = [
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -300,42 +317,6 @@ DOCUMENT_ALLOWED_TYPES = [
     "text/markdown",
 ]
 
-# Feature Flags
-ENABLE_AI_FEATURES = os.getenv("ENABLE_AI_FEATURES", "True").lower() == "true"
-ENABLE_DOCUMENT_PROCESSING = (
-    os.getenv("ENABLE_DOCUMENT_PROCESSING", "True").lower() == "true"
-)
-ENABLE_REAL_TIME_CHAT = os.getenv("ENABLE_REAL_TIME_CHAT", "False").lower() == "true"
-
-# External Service URLs
-SCRAPER_SERVICE_URL = os.getenv("SCRAPER_SERVICE_URL", "http://localhost:8080")
-RETRIEVER_SERVICE_URL = os.getenv("RETRIEVER_SERVICE_URL", "http://localhost:8002")
-USE_MOCK_RETRIEVAL_SERVICE = (
-    os.getenv("USE_MOCK_RETRIEVAL_SERVICE", "True").lower() == "true"
-)
-
-# Rate Limiting
-RATE_LIMIT_AUTHENTICATED = os.getenv("RATE_LIMIT_AUTHENTICATED", "100/min")
-RATE_LIMIT_ANONYMOUS = os.getenv("RATE_LIMIT_ANONYMOUS", "20/min")
-
-# WebSocket Settings (for future chat implementation)
-WEBSOCKET_ENABLED = os.getenv("WEBSOCKET_ENABLED", "False").lower() == "true"
-
-# Neo4j Database Settings (Knowledge Graph)
-NEO4J_URI = os.getenv("NEO4J_URL", "bolt://localhost:7687")
-NEO4J_USER = os.getenv("NEO4J_USERNAME", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
-
-# Embedding Model Settings
-EMBEDDING_MODEL_TYPE = os.getenv("EMBEDDING_MODEL_TYPE", "sentence_transformers")
-EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
-
-# OpenAI Settings
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# Add logging for document_processing app
-LOGGING["loggers"]["document_processing"] = {
-    "handlers": ["console", "file"],
-    "level": LOG_LEVEL,
-    "propagate": False,
-}
+# Google Cloud Settings
+GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")

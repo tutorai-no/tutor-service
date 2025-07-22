@@ -243,7 +243,7 @@ pids
 lib-cov
 
 # Coverage directory used by tools like istanbul
-coverage
+# coverage
 *.lcov
 
 # nyc test coverage
@@ -411,7 +411,7 @@ temp/
 *testdir
 *testfile
 *testfiles
-*testing
+# *testing
 *testingdir
 *testingfile
 *testingfiles
@@ -463,3 +463,10 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraform.lock.hcl

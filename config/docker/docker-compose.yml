@@ -1,0 +1,115 @@
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: config/docker/Dockerfile
+    container_name: aksio-backend
+    # Override the default CMD to keep container running
+    command: tail -f /dev/null
+    volumes:
+      - ../..:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    environment:
+      # Django Configuration
+      - DJANGO_ENV=development
+      - DEBUG=true
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-dev-key}
+      - DJANGO_SETTINGS_MODULE=aksio.settings.development
+      
+      # Database Configuration
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=aksio_db
+      - DATABASE_USER=aksio_user
+      - DATABASE_PASSWORD=aksio_password
+      
+      # Neo4j Configuration
+      - NEO4J_HOST=neo4j
+      - NEO4J_PORT=7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+      
+      # Development Features
+      - CREATE_SUPERUSER=true
+      - LOAD_FIXTURES=false
+    networks:
+      - aksio_network
+    # Remove the healthcheck for now since server isn't running yet
+
+  db:
+    image: postgres:16
+    container_name: aksio-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=aksio_db
+      - POSTGRES_USER=aksio_user
+      - POSTGRES_PASSWORD=aksio_password
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5433:5432"
+    networks:
+      - aksio_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aksio_user -d aksio_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  neo4j:
+    image: neo4j:5.15
+    container_name: aksio-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1G
+    ports:
+      - "7474:7474"  # Neo4j Browser
+      - "7687:7687"  # Bolt protocol
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - aksio_network
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'RETURN 1;' | cypher-shell -u neo4j -p password >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Optional: PGAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: aksio-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@aksio.app
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - aksio_network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+
+networks:
+  aksio_network:
+    driver: bridge

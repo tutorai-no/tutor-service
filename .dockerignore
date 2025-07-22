@@ -3,6 +3,9 @@
 .gitignore
 .gitattributes
 
+# Claude
+.claude
+
 # Documentation
 README.md
 docs/

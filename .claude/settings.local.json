@@ -92,7 +92,9 @@
       "Bash(npm:*)",
       "Bash(COURSE_ID=\"4c74eb40-2e8b-46b4-b038-4a8309a35874\")",
       "Bash(git restore:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(# Register user\ncurl -X POST http://localhost:8000/api/v1/accounts/register/ \\\n  -H \"\"Content-Type: application/json\"\" \\\n  -d ''{\n    \"\"username\"\": \"\"curltest\"\",\n    \"\"email\"\": \"\"curltest@example.com\"\", \n    \"\"password\"\": \"\"TestPass123!\"\",\n    \"\"password_confirm\"\": \"\"TestPass123!\"\"\n  }'' 2>/dev/null || true)",
+      "Bash(# Login to get token\ncurl -s -X POST http://localhost:8000/api/v1/accounts/login/ \\\n  -H \"\"Content-Type: application/json\"\" \\\n  -d ''{\"\"username\"\": \"\"testuser\"\", \"\"password\"\": \"\"TestPass123!\"\"}'')"
     ],
     "deny": []
   }

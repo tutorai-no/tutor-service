@@ -4,33 +4,34 @@ Production settings for aksio project.
 
 from .base import *
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# Production mode
 DEBUG = False
 
 ALLOWED_HOSTS = [
+    os.getenv("ALLOWED_HOSTS", "").split(","),  # Set via environment
     "backend.aksio.app",
     "api.aksio.app",
-    # Add your production domain here
 ]
+
+# Flatten ALLOWED_HOSTS if it's a nested list
+ALLOWED_HOSTS = [host.strip() for sublist in ALLOWED_HOSTS for host in (sublist if isinstance(sublist, list) else [sublist]) if host.strip()]
 
 # CORS settings for production
 CORS_ALLOWED_ORIGINS = [
     "https://aksio.app",
     "https://www.aksio.app",
-    # Add your frontend domain here
 ]
-
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF trusted origins for production
 CSRF_TRUSTED_ORIGINS = [
     "https://aksio.app",
-    "https://www.aksio.app",
+    "https://www.aksio.app", 
     "https://backend.aksio.app",
     "https://api.aksio.app",
 ]
 
-# Security settings
+# Security settings for production
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -40,57 +41,51 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# Database configuration for production (Google Cloud SQL)
+# Google Cloud SQL Database
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DATABASE_NAME"),
         "USER": os.getenv("DATABASE_USER"),
         "PASSWORD": os.getenv("DATABASE_PASSWORD"),
-        "HOST": os.getenv("DATABASE_HOST"),
+        "HOST": os.getenv("DATABASE_HOST"),  # Cloud SQL private IP
         "PORT": os.getenv("DATABASE_PORT", "5432"),
         "OPTIONS": {
             "sslmode": "require",
         },
+        "CONN_MAX_AGE": 60,
     }
 }
 
-# Static files (Google Cloud Storage)
+# Google Cloud Storage for static/media files
 DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 STATICFILES_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
 GS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+GS_DEFAULT_ACL = "publicRead"
 
-# Cache configuration
-REDIS_URL = os.getenv("REDIS_URL")
-if REDIS_URL:
-    # Use Redis if available (recommended for production)
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": REDIS_URL,
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-            "KEY_PREFIX": "aksio",
-            "TIMEOUT": 300,  # 5 minutes default timeout
-        }
-    }
-else:
-    # Fallback to local memory cache (not recommended for production)
-    # This is only suitable for single-instance deployments
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-            "LOCATION": "aksio-cache",
-        }
-    }
+# Production Neo4j (you'll need to set this up)
+NEO4J_URI = os.getenv("NEO4J_URL", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USERNAME", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-# Session configuration
-if REDIS_URL:
-    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-    SESSION_CACHE_ALIAS = "default"
+# Production email settings
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
-# Logging for production
+# Production logging - less verbose
 LOGGING["handlers"]["console"]["level"] = "WARNING"
 LOGGING["loggers"]["django"]["level"] = "WARNING"
 LOGGING["loggers"]["django.db.backends"]["level"] = "ERROR"
+LOGGING["loggers"]["aksio"]["level"] = "INFO"
+
+# Add file logging for production
+LOGGING["handlers"]["file"] = {
+    "level": "INFO",
+    "class": "logging.FileHandler", 
+    "filename": "/tmp/aksio.log",
+    "formatter": "verbose",
+}
+
+# Add file handler to all loggers
+for logger_name in ["django", "aksio"] + [app for app in INSTALLED_APPS if not app.startswith("django")]:
+    if logger_name in LOGGING["loggers"]:
+        LOGGING["loggers"][logger_name]["handlers"].append("file")

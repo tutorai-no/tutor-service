@@ -2,388 +2,867 @@
 
 > An intelligent educational platform that transforms how higher education students master their curriculum through AI-powered study planning and personalized learning exercises.
 
-**Status**: ✅ **Production Ready** - Fully deployed on Google Cloud Platform
-
----
-
-## 🚀 **Project Overview**
-
-**Mission**: Transform how higher education students master their curriculum through intelligent, automated study planning and personalized learning exercises.
-
-### **🎯 Core Features**
-- ✅ **User Management**: Secure JWT authentication and user profiles
-- ✅ **Course Management**: Course creation, document upload, and organization
-- ✅ **Learning Tools**: AI-powered study planning and session scheduling
-- ✅ **Assessments**: Interactive flashcards and quizzes with spaced repetition
-- ✅ **AI Tutoring**: Context-aware AI conversations for learning support
-- ✅ **Progress Tracking**: Comprehensive analytics and learning insights
-- ✅ **Billing**: Subscription management with Stripe integration
-
----
-
-## 🏗️ **Production Architecture**
-
-### **Deployment Stack**
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │────│   Cloud Run      │────│   Cloud SQL     │
-│   (External)    │    │   (Django)       │    │   (PostgreSQL)  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                    ┌─────────┼─────────┐
-                    │                   │
-            ┌───────────────┐   ┌──────────────┐
-            │ Cloud Storage │   │Secret Manager│
-            │ (Static/Media)│   │ (API Keys)   │
-            └───────────────┘   └──────────────┘
-```
-
-### **Technology Stack**
-- **🔧 Backend**: Django 5.1+ with Django REST Framework
-- **💾 Database**: PostgreSQL 15 (Google Cloud SQL)
-- **☁️ Deployment**: Google Cloud Run (serverless containers)
-- **📦 Storage**: Google Cloud Storage (static files, media)
-- **🔐 Secrets**: Google Secret Manager
-- **🤖 AI**: OpenAI API integration
-- **🔄 CI/CD**: GitHub Actions with automated testing and deployment
-- **📊 Monitoring**: Django Prometheus integration
-- **📚 Documentation**: drf-yasg (Swagger/OpenAPI)
-
----
-
-## 📁 **Django App Structure**
-
-This Django project uses a **modular app architecture** with clear separation of concerns:
-
-```
-aksio-backend/
-├── accounts/              # ✅ User management & authentication
-├── courses/               # ✅ Course & document management
-├── learning/              # ✅ Study planning & progress tracking
-├── assessments/           # ✅ Flashcards, quizzes & reviews
-├── chat/                  # ✅ AI tutoring conversations
-├── billing/               # ✅ Subscription management
-├── document_processing/   # ✅ Document upload & processing
-├── core/                  # ✅ Shared utilities & base classes
-├── api/                   # ✅ API versioning & documentation
-└── infrastructure/        # ✅ Terraform deployment configs
-```
-
-### **📋 App Responsibilities**
-
-| App | Status | Description |
-|-----|--------|-------------|
-| **accounts/** | ✅ Complete | JWT authentication, user profiles, permissions |
-| **courses/** | ✅ Complete | Course CRUD, document management, sections |
-| **learning/** | ✅ Complete | AI study plans, progress tracking, analytics |
-| **assessments/** | ✅ Complete | Flashcards, quizzes, spaced repetition |
-| **chat/** | ✅ Complete | AI tutoring, conversation management |
-| **billing/** | ✅ Complete | Stripe integration, subscription management |
-| **document_processing/** | ✅ Complete | File upload, processing, metadata |
-| **core/** | ✅ Complete | Shared utilities, permissions, exceptions |
-| **api/** | ✅ Complete | REST API with versioning and docs |
-
----
-
-## 🌐 **API Endpoints**
-
-The API follows RESTful principles with comprehensive endpoint coverage:
-
-### **🔐 Authentication**
-```
-POST /api/v1/accounts/register/          # User registration
-POST /api/v1/accounts/login/             # JWT login
-POST /api/v1/accounts/token-refresh/     # Token refresh
-POST /api/v1/accounts/logout/            # Logout
-POST /api/v1/accounts/password-reset/    # Request password reset
-POST /api/v1/accounts/password-reset-confirm/  # Confirm password reset
-```
-
-### **👤 User Management**
-```
-GET    /api/v1/accounts/profile/         # Get user profile
-PUT    /api/v1/accounts/profile/         # Update profile
-POST   /api/v1/accounts/activity/        # Create activity
-GET    /api/v1/accounts/activity/list/   # List user activities
-GET    /api/v1/accounts/streak/          # Get user streak
-POST   /api/v1/accounts/feedback/        # Submit feedback
-```
-
-### **📚 Course Management**
-```
-GET    /api/v1/courses/                  # List courses
-POST   /api/v1/courses/                  # Create course
-GET    /api/v1/courses/{id}/             # Course detail
-PUT    /api/v1/courses/{id}/             # Update course
-DELETE /api/v1/courses/{id}/             # Delete course
-POST   /api/v1/courses/{id}/documents/   # Upload documents
-```
-
-### **🎯 Learning & Progress**
-```
-GET    /api/v1/learning/study-plans/     # Study plans
-POST   /api/v1/learning/study-plans/     # Generate study plan
-GET    /api/v1/learning/sessions/        # Study sessions
-POST   /api/v1/learning/sessions/        # Create session
-GET    /api/v1/learning/progress/        # Progress analytics
-```
-
-### **📝 Assessments**
-```
-GET    /api/v1/assessments/flashcards/   # List flashcards
-POST   /api/v1/assessments/flashcards/   # Create flashcard
-POST   /api/v1/assessments/flashcards/{id}/review/  # Review flashcard
-GET    /api/v1/assessments/quizzes/      # List quizzes
-POST   /api/v1/assessments/quizzes/      # Create quiz
-POST   /api/v1/assessments/quizzes/{id}/attempt/    # Take quiz
-```
-
-### **💬 AI Chat**
-```
-GET    /api/v1/chat/chats/               # List chats
-POST   /api/v1/chat/chats/               # Create chat
-GET    /api/v1/chat/messages/            # List messages
-POST   /api/v1/chat/messages/            # Send message
-GET    /api/v1/chat/sessions/            # List tutoring sessions
-POST   /api/v1/chat/sessions/            # Create tutoring session
-```
-
-### **💳 Billing**
-```
-GET    /api/v1/billing/subscription/     # Current subscription
-POST   /api/v1/billing/subscription/     # Create subscription
-PUT    /api/v1/billing/subscription/     # Update subscription
-GET    /api/v1/billing/invoices/         # List invoices
-```
+**Status**: 🚧 **In Development** - Foundation complete, building core features
 
 ---
 
 ## 🚀 **Quick Start**
 
-### **For Users/Frontend Developers**
-The backend is already deployed and ready to use:
+### **Prerequisites**
 
-**Production API Base URL**: `https://api.aksio.app`
-**API Documentation**: `https://api.aksio.app/swagger/`
-**Health Check**: `https://api.aksio.app/api/health/`
+#### **Installing Make**
 
-### **For Backend Developers**
+The project uses Make for task automation. Install it based on your operating system:
 
-#### **🔧 Local Development Setup**
+**Windows:**
 ```bash
-# Clone repository
+# Option 1: Using Chocolatey
+choco install make
+
+# Option 2: Using Git Bash (comes with Git for Windows)
+# Make is included in Git Bash
+
+# Option 3: Using WSL (Windows Subsystem for Linux)
+sudo apt-get update && sudo apt-get install make
+```
+
+**macOS:**
+```bash
+# Make comes pre-installed on macOS
+# If needed, install via Homebrew:
+brew install make
+```
+
+**Linux:**
+```bash
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get install make
+
+# Fedora/RHEL/CentOS
+sudo yum install make
+
+# Arch Linux
+sudo pacman -S make
+```
+
+**Verify Installation:**
+```bash
+make --version
+```
+
+### **One-Command Setup**
+```bash
+# Complete development setup (recommended for first-time)
+make setup
+
+# This will:
+# 1. Build Docker images
+# 2. Start all services (PostgreSQL, Neo4j, Backend)
+# 3. Create and apply database migrations
+# 4. Create a superuser account
+# 5. Start the Django development server
+# 6. Your app will be ready at http://localhost:8000
+```
+
+### **Manual Setup**
+```bash
+# 1. Clone and setup environment
 git clone <repository-url>
 cd aksio-backend
+cp .env.example .env
 
-# Start local services
-docker-compose up -d
+# 2. Edit .env with your API keys (see Environment Setup below)
 
-# Run migrations (first time setup)
-docker-compose exec backend python manage.py migrate
+# 3. Start services
+make up
 
-# Create superuser (optional)
-docker-compose exec backend python manage.py createsuperuser
+# 4. Create initial migrations
+make initial-migrations
 
-# Access local development
-# API: http://localhost:8000
-# Admin: http://localhost:8000/admin/
-# Docs: http://localhost:8000/swagger/
+# 5. Create superuser
+make superuser
+
+# 6. Start the server
+make runserver-bg
 ```
 
-#### **🧪 Running Tests**
+### **🔗 Access Your Application**
+After setup, your application is available at:
+- **🌐 API**: http://localhost:8000
+- **👤 Admin Panel**: http://localhost:8000/admin/
+- **📚 API Documentation**: http://localhost:8000/swagger/
+- **🗂️ Neo4j Browser**: http://localhost:7474
+- **💾 PGAdmin** (optional): http://localhost:5050
+
+**Default superuser credentials** (created during setup):
+- Email: `admin@aksio.app`
+- Password: `admin123`
+
+---
+
+## 📋 **Environment Setup**
+
+### **🔑 Required API Keys**
+
+Edit your `.env` file with these required values:
+
+```bash
+# 1. Generate Django Secret Key (required)
+DJANGO_SECRET_KEY=your-super-secret-key-here
+
+# 2. Set Database Password (required)
+DATABASE_PASSWORD=your-strong-database-password
+
+# 3. OpenAI API Key (required for AI features)
+OPENAI_API_KEY=sk-your-openai-api-key-here
+
+# 4. Email Configuration (optional, for production)
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-specific-password
+```
+
+### **🔧 How to Get API Keys**
+
+**Django Secret Key:**
+```bash
+# Generate automatically:
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+**OpenAI API Key:**
+1. Visit https://platform.openai.com/api-keys
+2. Create a new API key
+3. Copy the `sk-...` key to your `.env` file
+
+**Gmail App Password** (optional):
+1. Enable 2-factor authentication on your Google account
+2. Go to Google Account → Security → App passwords
+3. Generate password for "Django"
+
+---
+
+## 🛠️ **Development Commands**
+
+### **🐳 Services & Server Management**
+```bash
+make up             # Start all services (databases, backend container)
+make down           # Stop all services (keeps data)
+make down-volumes   # Stop services AND delete all data (⚠️ 10s delay)
+make restart        # Restart all services
+make runserver-bg   # Start Django server in background
+make stop-server    # Stop the Django server
+make logs           # View all logs
+make logs-backend   # View Django server logs
+make ps             # Show running services
+```
+
+### **💾 Database**
+```bash
+make migrate        # Apply database migrations
+make makemigrations # Create new migrations
+make initial-migrations  # First-time migration setup
+make superuser      # Create Django superuser
+make dbshell        # Open database shell
+make reset-db       # Reset database (⚠️ deletes data with 10s delay)
+make backup-db      # Backup database to file
+make show-migrations # Show migration status
+```
+
+### **🧪 Testing**
+```bash
+make test           # Run all tests
+make test-accounts  # Test specific app
+make coverage       # Test coverage report
+make health         # Check service health
+make health-simple  # Simple health check (Windows-friendly)
+```
+
+### **🎨 Code Quality**
+```bash
+make format         # Format code (black + isort)
+make lint           # Run linting checks
+make check          # Django system checks
+make security       # Run security checks
+make quality        # Run all quality checks
+```
+
+### **🔧 Development**
+```bash
+make shell          # Django shell
+make bash           # Container bash shell
+make install-dev    # Install development tools
+make clean          # Clean Docker resources (⚠️ 10s delay)
+make clean-all      # Deep clean including images (⚠️ 10s delay)
+make clean-cache    # Clear Python cache files
+```
+
+### **📱 App Generation**
+```bash
+make generate-app name=myapp    # Create new template app
+```
+
+### **🔧 Troubleshooting**
+```bash
+make fix-migrations     # Fix migration issues (⚠️ 10s delay)
+make delete-migrations  # Delete all migration files
+make squash-migrations  # Consolidate migrations
+make show-migrations    # Show migration status
+make reset-all          # Complete reset - everything (⚠️ 10s delay)
+```
+
+### **💡 Help**
+```bash
+make help           # Show all available commands
+make examples       # Show common command examples
+```
+
+---
+
+## 🏗️ **Architecture**
+
+### **Technology Stack**
+- **Backend**: Django 5.0+ with Django REST Framework
+- **Database**: PostgreSQL 16 + Neo4j 5.15
+- **Authentication**: JWT with SimpleJWT (email-based, no usernames)
+- **User Model**: Custom UUID-based User model
+- **API Documentation**: Swagger/OpenAPI with drf-yasg
+- **AI Integration**: OpenAI API
+- **Development**: Docker + Docker Compose
+- **Deployment**: Google Cloud Platform (planned)
+
+### **System Architecture**
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend      │────│   Django API     │────│   PostgreSQL    │
+│   (React)       │    │   Port 8000      │    │   Port 5433     │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                              │
+                    ┌─────────┼─────────┐
+                    │                   │
+            ┌───────────────┐   ┌──────────────┐
+            │     Neo4j     │   │   External   │
+            │   Port 7474   │   │   Services   │
+            └───────────────┘   └──────────────┘
+```
+
+---
+
+## 📁 **Project Structure**
+
+```
+aksio-backend/
+├── 📁 aksio/                  # Django project configuration
+│   ├── settings/              # Environment-specific settings
+│   │   ├── __init__.py       # Auto environment detection
+│   │   ├── base.py           # Shared settings
+│   │   ├── development.py    # Development overrides
+│   │   └── production.py     # Production settings
+│   ├── urls.py               # Main URL routing
+│   └── wsgi.py               # WSGI application
+├── 📁 apps/                   # Django applications
+│   ├── accounts/             # ✅ User authentication & profiles
+│   ├── core/                 # ✅ Shared utilities & base classes
+│   ├── courses/              # 📋 Course management (template)
+│   ├── documents/            # 📋 Document processing (template)
+│   ├── assessments/          # 📋 Flashcards & quizzes (template)
+│   ├── chat/                 # 📋 AI tutoring (template)
+│   ├── billing/              # 📋 Subscription management (template)
+│   └── learning/             # 📋 Progress tracking (template)
+├── 📁 config/                 # Configuration files
+│   └── docker/               # Docker & docker-compose files
+├── 📁 scripts/                # Development & utility scripts
+│   ├── testing/              # Test runners
+│   ├── development/          # Setup & dev tools
+│   ├── code-quality/         # Linting & formatting
+│   └── utilities/            # Helper scripts
+├── 📁 requirements/           # Python dependencies
+│   ├── base.txt             # Core dependencies
+│   ├── development.txt      # Development tools
+│   └── production.txt       # Production dependencies
+├── 📄 Makefile               # Development commands
+├── 📄 .env.example           # Environment template
+└── 📄 manage.py              # Django management script
+```
+
+---
+
+## 📊 **Current Development Status**
+
+### **✅ Completed Foundation**
+- [x] **Project Structure** - Clean, modular Django architecture
+- [x] **Docker Environment** - Development containers with health checks
+- [x] **Database Setup** - PostgreSQL + Neo4j integration
+- [x] **Settings Management** - Environment-based configuration
+- [x] **User Authentication** - Complete JWT auth system with UUID primary keys
+- [x] **Custom User Model** - Email-based authentication (no usernames)
+- [x] **API Documentation** - Auto-generated Swagger docs
+- [x] **Development Tools** - Comprehensive Makefile commands
+- [x] **Template Apps** - Scaffolded apps ready for implementation
+
+### **🔄 Currently Working On**
+- [ ] **Course Management** - CRUD operations for courses
+- [ ] **Document Processing** - File upload and processing
+- [ ] **Frontend Integration** - Basic React frontend
+- [ ] **AI Chat Implementation** - OpenAI integration
+
+### **📋 Next Phase**
+- [ ] **Assessment System** - Flashcards and spaced repetition
+- [ ] **Learning Analytics** - Progress tracking and insights
+- [ ] **Billing Integration** - Subscription management
+- [ ] **Production Deployment** - Google Cloud infrastructure
+
+---
+
+## 🌐 **API Overview**
+
+### **🔐 Authentication Endpoints**
+```bash
+POST /api/v1/accounts/register/     # User registration
+POST /api/v1/accounts/login/        # User login (JWT)
+POST /api/v1/accounts/logout/       # User logout
+POST /api/v1/accounts/token/refresh/ # Refresh JWT token
+GET  /api/v1/accounts/profile/      # Get user profile
+PUT  /api/v1/accounts/profile/      # Update user profile
+```
+
+### **🏥 Health Check Endpoints**
+All apps include health check endpoints for monitoring:
+```bash
+GET /api/v1/accounts/health/        # ✅ Accounts app status
+GET /api/v1/courses/health/         # 📋 Courses app status
+GET /api/v1/documents/health/       # 📋 Documents app status
+# ... and more
+```
+
+### **📚 Interactive API Documentation**
+- **Swagger UI**: http://localhost:8000/swagger/
+- **ReDoc**: http://localhost:8000/redoc/
+
+---
+
+## 🧪 **Testing**
+
+### **🔧 Test Commands**
 ```bash
 # Run all tests
-docker-compose exec backend python manage.py test
+make test
 
-# Run with coverage
-docker-compose exec backend coverage run --source='.' manage.py test
-docker-compose exec backend coverage report
+# Run specific app tests  
+make test-accounts
+
+# Test with coverage
+make coverage
+
+# Test service health
+make health
 ```
 
-#### **📦 Deployment**
-Deployment is automated via GitHub Actions:
-1. Push to `main` or `refactor/project-structure` branch
-2. CI runs tests and builds Docker image
-3. CD deploys to Google Cloud Run
-4. Automatic health checks verify deployment
+### **📊 Test Coverage**
+Current test coverage focuses on:
+- ✅ **User Authentication** - Complete test suite (models, serializers, views, integration)
+- ✅ **Health Checks** - All app health endpoints tested
+- ✅ **Core Utilities** - Base models and permissions tested
 
 ---
 
-## 🛠️ **Infrastructure**
+## 🚀 **Deployment** (Planned)
 
-### **Google Cloud Platform Resources**
+### **🌩️ Google Cloud Platform**
+- **Cloud Run** - Serverless container deployment
+- **Cloud SQL** - Managed PostgreSQL database
+- **Cloud Storage** - Static files and media storage
+- **Secret Manager** - Secure environment variable management
+- **Cloud Build** - CI/CD pipeline
+
+### **🏗️ Infrastructure as Code**
 ```bash
-# Project Configuration
-Project ID: production-466308
-Region: europe-west1
-Environment: prod
-
-# Key Resources
-Database: production-466308:europe-west1:aksio-prod-db
-Registry: europe-west1-docker.pkg.dev/production-466308/aksio-prod-registry
-Static Bucket: aksio-prod-static-84df66d5
-Media Bucket: aksio-prod-media-84df66d5
-```
-
-### **Infrastructure Management**
-Infrastructure is managed with Terraform:
-
-```bash
-# Deploy infrastructure
-cd infrastructure/terraform
+# Terraform deployment (coming soon)
+cd infrastructure/
 terraform init
 terraform apply
-
-# Check status
-terraform output
-
-# View resources
-gcloud run services list
-gcloud sql instances list
-gcloud storage buckets list
 ```
 
-### **Environment Configuration**
-Environment variables are managed via Google Secret Manager:
-- `DJANGO_SECRET_KEY` - Auto-generated Django secret
-- `DATABASE_URL` - Cloud SQL connection string  
-- `OPENAI_API_KEY` - OpenAI API for AI features
-- `STRIPE_SECRET_KEY` - Stripe for payment processing
-- `GCS_BUCKET_NAME` - Cloud Storage bucket names
-
 ---
 
-## 📚 **Documentation**
+## 🤝 **Development Workflow**
 
-### **📖 Available Documentation**
-- **[Infrastructure Guide](./infrastructure/README.md)** - Complete infrastructure setup and management
-- **[gcloud Commands](./docs/gcloud-commands.md)** - Essential Google Cloud CLI commands
-- **[Repository Structure](./docs/REPOSITORY_STRUCTURE.md)** - Detailed codebase organization
-- **[API Documentation](./API_DOCUMENTATION.md)** - Comprehensive API reference
-
-### **🔗 Quick Links**
-- **[Infrastructure Quick Reference](./infrastructure/QUICK_REFERENCE.md)** - Essential commands
-- **[Development Index](./docs/README.md)** - Complete documentation index
-- **[Claude Agent Instructions](./CLAUDE.md)** - Development guidelines for AI agents
-
----
-
-## 🧪 **Testing & Quality**
-
-### **Testing Strategy**
-- ✅ **Unit Tests**: Model logic and business rules
-- ✅ **Integration Tests**: API endpoints and workflows  
-- ✅ **Service Tests**: AI services and external integrations
-- ✅ **End-to-End Tests**: Complete user workflows
-
-### **Code Quality Tools**
-All code changes must pass automated quality checks:
+### **🔄 Daily Development**
 ```bash
-# Format and check code
-./scripts/format-code.sh
-
-# Individual tools
-make format    # Code formatting
-make lint      # Linting
-make test      # Testing
-make check     # All checks
+make up              # Start containers (if not running)
+make runserver-bg    # Start Django server in background
+make logs-backend    # Check server logs
+make shell           # Django shell for development
+make test            # Run tests before committing
+make quality         # Check code quality
+make stop-server     # Stop server when done
+make down            # Stop all services (optional)
 ```
 
-**Quality Tools**:
-- **black** - Code formatting
-- **isort** - Import sorting  
-- **flake8** - Linting
-- **mypy** - Type checking
-- **bandit** - Security scanning
+### **🔀 Contributing**
+1. **Fork** the repository
+2. **Create** feature branch: `git checkout -b feature/awesome-feature`
+3. **Setup** development environment: `make setup`
+4. **Make** your changes
+5. **Test** your changes: `make test`
+6. **Check** code quality: `make quality`
+7. **Commit** changes: `git commit -m 'Add awesome feature'`
+8. **Push** branch: `git push origin feature/awesome-feature`
+9. **Create** Pull Request
 
 ---
 
-## 🔒 **Security & Performance**
+## 📞 **Getting Help**
 
-### **Security Features**
-- ✅ JWT-based authentication
-- ✅ Secret management via Google Secret Manager
-- ✅ HTTPS enforcement
-- ✅ CORS configuration
-- ✅ SQL injection protection
-- ✅ Input validation and sanitization
+### **🐛 Troubleshooting**
+```bash
+make logs           # Check all service logs
+make logs-backend   # Check Django server logs
+make health         # Verify service health
+make clean          # Clean up Docker resources
+make reset-all      # Complete reset (last resort)
+make setup          # Re-run complete setup
+```
 
-### **Performance Optimizations**
-- ✅ Database query optimization
-- ✅ API response caching (Redis ready)
-- ✅ Static file CDN via Cloud Storage
-- ✅ Serverless auto-scaling with Cloud Run
-- ✅ Connection pooling and optimization
-
----
-
-## 💰 **Cost & Monitoring**
-
-### **Current Infrastructure Costs**
-- **Cloud Run**: $0 when idle, scales with usage
-- **Cloud SQL**: ~$25-50/month (custom-1-3840 tier)
-- **Storage**: ~$1-5/month (depends on usage)
-- **Total Estimated**: $30-60/month for production workloads
-
-### **Monitoring & Observability**
-- ✅ Application logs via Google Cloud Logging
-- ✅ Performance metrics via Django Prometheus
-- ✅ Error tracking and alerting
-- ✅ Health check endpoints
-- ✅ Database performance monitoring
-
----
-
-## 🛣️ **Development Roadmap**
-
-### **🔥 Current Priorities**
-1. **Redis caching implementation** for performance optimization
-2. **Enhanced spaced repetition algorithm** for assessments
-3. **Advanced AI integration** with retrieval services
-4. **Comprehensive API rate limiting**
-
-### **📋 Upcoming Features**
-1. **Real-time features** with WebSockets
-2. **Multi-language support** for international users
-3. **Advanced analytics dashboard**
-4. **Mobile app API optimizations**
-
----
-
-## 🤝 **Contributing**
-
-### **Development Workflow**
-1. **Fork and clone** the repository
-2. **Create feature branch** from `main`
-3. **Follow code quality standards** (run `./scripts/format-code.sh`)
-4. **Write comprehensive tests**
-5. **Submit pull request** with clear description
-
-### **Code Standards**
-- Use **type hints** throughout
-- Follow **Django best practices**
-- Write **comprehensive docstrings**
-- Implement **proper error handling**
-- Add **tests for new features**
-
----
-
-## 📞 **Support & Resources**
-
-### **🆘 Getting Help**
-- **Documentation**: Start with `/docs/README.md`
-- **API Issues**: Check `/docs/gcloud-commands.md`
-- **Infrastructure**: See `/infrastructure/README.md`
-- **Development**: Review `/CLAUDE.md` for guidelines
-
-### **🔗 External Resources**
+### **📚 Resources**
 - **[Django Documentation](https://docs.djangoproject.com/)**
 - **[Django REST Framework](https://www.django-rest-framework.org/)**
-- **[Google Cloud Documentation](https://cloud.google.com/docs)**
-- **[OpenAI API Documentation](https://platform.openai.com/docs)**
+- **[OpenAI API Docs](https://platform.openai.com/docs)**
+
+### **💬 Common Issues**
+- **Server not starting**: Run `make runserver-bg` after setup
+- **Can't access URLs**: Check if server is running with `make ps` and `make logs-backend`
+- **Port conflicts**: Make sure ports 8000, 5433, 7474, 7687 are available
+- **Environment variables**: Ensure `.env` file has required API keys
+- **Docker permissions**: On Linux, you may need to run Docker commands with `sudo`
+- **Windows Make**: Use Git Bash or install Make via Chocolatey
+- **Migration errors**: Use `make fix-migrations` to recreate them
 
 ---
 
-**Aksio Backend** is a production-ready, scalable educational platform designed for modern learning experiences. The infrastructure is fully deployed, the codebase is comprehensive, and the system is ready for both users and continued development.
+## 📄 **License**
 
-*Ready to transform education through AI-powered learning.* 🎓✨
+Copyright (c) 2025 Aksio. All rights reserved.
+This software is proprietary and confidential to Aksio.
+
+---
+
+**Aksio Backend** - A production-ready foundation for AI-powered educational platforms. Built with Django, deployed on Google Cloud, designed for scale.
+
+*Transforming education through intelligent technology.* 🎓✨# Aksio Backend
+
+> An intelligent educational platform that transforms how higher education students master their curriculum through AI-powered study planning and personalized learning exercises.
+
+**Status**: 🚧 **In Development** - Foundation complete, building core features
+
+---
+
+## 🚀 **Quick Start**
+
+### **Prerequisites**
+
+#### **Installing Make**
+
+The project uses Make for task automation. Install it based on your operating system:
+
+**Windows:**
+```bash
+# Option 1: Using Chocolatey
+choco install make
+
+# Option 2: Using Git Bash (comes with Git for Windows)
+# Make is included in Git Bash
+
+# Option 3: Using WSL (Windows Subsystem for Linux)
+sudo apt-get update && sudo apt-get install make
+```
+
+**macOS:**
+```bash
+# Make comes pre-installed on macOS
+# If needed, install via Homebrew:
+brew install make
+```
+
+**Linux:**
+```bash
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get install make
+
+# Fedora/RHEL/CentOS
+sudo yum install make
+
+# Arch Linux
+sudo pacman -S make
+```
+
+**Verify Installation:**
+```bash
+make --version
+```
+
+### **One-Command Setup**
+```bash
+# Complete development setup (recommended for first-time)
+make setup
+```
+
+### **Manual Setup**
+```bash
+# 1. Clone and setup environment
+git clone <repository-url>
+cd aksio-backend
+cp .env.example .env
+
+# 2. Edit .env with your API keys (see Environment Setup below)
+
+# 3. Start services
+make up
+
+# 4. Run migrations and create superuser
+make migrate
+make superuser
+```
+
+### **🔗 Access Your Application**
+- **🌐 API**: http://localhost:8000
+- **👤 Admin Panel**: http://localhost:8000/admin/
+- **📚 API Documentation**: http://localhost:8000/swagger/
+- **🗂️ Neo4j Browser**: http://localhost:7474
+- **💾 PGAdmin** (optional): http://localhost:5050
+
+---
+
+## 📋 **Environment Setup**
+
+### **🔑 Required API Keys**
+
+Edit your `.env` file with these required values:
+
+```bash
+# 1. Generate Django Secret Key (required)
+DJANGO_SECRET_KEY=your-super-secret-key-here
+
+# 2. Set Database Password (required)
+DATABASE_PASSWORD=your-strong-database-password
+
+# 3. OpenAI API Key (required for AI features)
+OPENAI_API_KEY=sk-your-openai-api-key-here
+
+# 4. Email Configuration (optional, for production)
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-specific-password
+```
+
+### **🔧 How to Get API Keys**
+
+**Django Secret Key:**
+```bash
+# Generate automatically:
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+**OpenAI API Key:**
+1. Visit https://platform.openai.com/api-keys
+2. Create a new API key
+3. Copy the `sk-...` key to your `.env` file
+
+**Gmail App Password** (optional):
+1. Enable 2-factor authentication on your Google account
+2. Go to Google Account → Security → App passwords
+3. Generate password for "Django"
+
+---
+
+## 🛠️ **Development Commands**
+
+### **🐳 Services**
+```bash
+make up             # Start all services
+make down           # Stop all services (keeps data)
+make down-volumes   # Stop services AND delete all data (⚠️ 10s delay)
+make restart        # Restart all services
+make logs           # View logs
+make ps             # Show running services
+```
+
+### **💾 Database**
+```bash
+make migrate        # Apply database migrations
+make makemigrations # Create new migrations
+make initial-migrations  # First-time migration setup
+make superuser      # Create Django superuser
+make dbshell        # Open database shell
+make reset-db       # Reset database (⚠️ deletes data with 10s delay)
+make backup-db      # Backup database to file
+make show-migrations # Show migration status
+```
+
+### **🧪 Testing**
+```bash
+make test           # Run all tests
+make test-accounts  # Test specific app
+make coverage       # Test coverage report
+make health         # Check service health
+make health-simple  # Simple health check (Windows-friendly)
+```
+
+### **🎨 Code Quality**
+```bash
+make format         # Format code (black + isort)
+make lint           # Run linting checks
+make check          # Django system checks
+make security       # Run security checks
+make quality        # Run all quality checks
+```
+
+### **🔧 Development**
+```bash
+make shell          # Django shell
+make bash           # Container bash shell
+make install-dev    # Install development tools
+make clean          # Clean Docker resources (⚠️ 10s delay)
+make clean-all      # Deep clean including images (⚠️ 10s delay)
+make clean-cache    # Clear Python cache files
+```
+
+### **📱 App Generation**
+```bash
+make generate-app name=myapp    # Create new template app
+```
+
+### **🔧 Troubleshooting**
+```bash
+make fix-migrations     # Fix migration issues (⚠️ 10s delay)
+make show-migrations    # Show migration status
+```
+
+### **💡 Help**
+```bash
+make help           # Show all available commands
+make examples       # Show common command examples
+```
+
+---
+
+## 🏗️ **Architecture**
+
+### **Technology Stack**
+- **Backend**: Django 5.0+ with Django REST Framework
+- **Database**: PostgreSQL 16 + Neo4j 5.15
+- **Authentication**: JWT with SimpleJWT
+- **API Documentation**: Swagger/OpenAPI with drf-yasg
+- **AI Integration**: OpenAI API
+- **Development**: Docker + Docker Compose
+- **Deployment**: Google Cloud Platform (planned)
+
+### **System Architecture**
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend      │────│   Django API     │────│   PostgreSQL    │
+│   (React)       │    │   Port 8000      │    │   Port 5433     │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                              │
+                    ┌─────────┼─────────┐
+                    │                   │
+            ┌───────────────┐   ┌──────────────┐
+            │     Neo4j     │   │   External   │
+            │   Port 7474   │   │   Services   │
+            └───────────────┘   └──────────────┘
+```
+
+---
+
+## 📁 **Project Structure**
+
+```
+aksio-backend/
+├── 📁 aksio/                  # Django project configuration
+│   ├── settings/              # Environment-specific settings
+│   │   ├── __init__.py       # Auto environment detection
+│   │   ├── base.py           # Shared settings
+│   │   ├── development.py    # Development overrides
+│   │   └── production.py     # Production settings
+│   ├── urls.py               # Main URL routing
+│   └── wsgi.py               # WSGI application
+├── 📁 apps/                   # Django applications
+│   ├── accounts/             # ✅ User authentication & profiles
+│   ├── core/                 # ✅ Shared utilities & base classes
+│   ├── courses/              # 📋 Course management (template)
+│   ├── documents/            # 📋 Document processing (template)
+│   ├── assessments/          # 📋 Flashcards & quizzes (template)
+│   ├── chat/                 # 📋 AI tutoring (template)
+│   ├── billing/              # 📋 Subscription management (template)
+│   └── learning/             # 📋 Progress tracking (template)
+├── 📁 config/                 # Configuration files
+│   └── docker/               # Docker & docker-compose files
+├── 📁 scripts/                # Development & utility scripts
+│   ├── testing/              # Test runners
+│   ├── development/          # Setup & dev tools
+│   ├── code-quality/         # Linting & formatting
+│   └── utilities/            # Helper scripts
+├── 📁 requirements/           # Python dependencies
+│   ├── base.txt             # Core dependencies
+│   ├── development.txt      # Development tools
+│   └── production.txt       # Production dependencies
+├── 📄 Makefile               # Development commands
+├── 📄 .env.example           # Environment template
+└── 📄 manage.py              # Django management script
+```
+
+---
+
+## 📊 **Current Development Status**
+
+### **✅ Completed Foundation**
+- [x] **Project Structure** - Clean, modular Django architecture
+- [x] **Docker Environment** - Development containers with health checks
+- [x] **Database Setup** - PostgreSQL + Neo4j integration
+- [x] **Settings Management** - Environment-based configuration
+- [x] **User Authentication** - Complete JWT auth system with tests
+- [x] **API Documentation** - Auto-generated Swagger docs
+- [x] **Development Tools** - Testing framework, code quality tools
+- [x] **Template Apps** - Scaffolded apps ready for implementation
+
+### **🔄 Currently Working On**
+- [ ] **Course Management** - CRUD operations for courses
+- [ ] **Document Processing** - File upload and processing
+- [ ] **Frontend Integration** - Basic React frontend
+- [ ] **AI Chat Implementation** - OpenAI integration
+
+### **📋 Next Phase**
+- [ ] **Assessment System** - Flashcards and spaced repetition
+- [ ] **Learning Analytics** - Progress tracking and insights
+- [ ] **Billing Integration** - Subscription management
+- [ ] **Production Deployment** - Google Cloud infrastructure
+
+---
+
+## 🌐 **API Overview**
+
+### **🔐 Authentication Endpoints**
+```bash
+POST /api/v1/accounts/register/     # User registration
+POST /api/v1/accounts/login/        # User login (JWT)
+POST /api/v1/accounts/logout/       # User logout
+POST /api/v1/accounts/token/refresh/ # Refresh JWT token
+GET  /api/v1/accounts/profile/      # Get user profile
+PUT  /api/v1/accounts/profile/      # Update user profile
+```
+
+### **🏥 Health Check Endpoints**
+All apps include health check endpoints for monitoring:
+```bash
+GET /api/v1/accounts/health/        # ✅ Accounts app status
+GET /api/v1/courses/health/         # 📋 Courses app status
+GET /api/v1/documents/health/       # 📋 Documents app status
+# ... and more
+```
+
+### **📚 Interactive API Documentation**
+- **Swagger UI**: http://localhost:8000/swagger/
+- **ReDoc**: http://localhost:8000/redoc/
+
+---
+
+## 🧪 **Testing**
+
+### **🔧 Test Commands**
+```bash
+# Run all tests
+make test
+
+# Run specific app tests  
+make test-accounts
+
+# Test with coverage
+make coverage
+
+# Test service health
+make health
+```
+
+### **📊 Test Coverage**
+Current test coverage focuses on:
+- ✅ **User Authentication** - Complete test suite (models, serializers, views, integration)
+- ✅ **Health Checks** - All app health endpoints tested
+- ✅ **Core Utilities** - Base models and permissions tested
+
+---
+
+## 🚀 **Deployment** (Planned)
+
+### **🌩️ Google Cloud Platform**
+- **Cloud Run** - Serverless container deployment
+- **Cloud SQL** - Managed PostgreSQL database
+- **Cloud Storage** - Static files and media storage
+- **Secret Manager** - Secure environment variable management
+- **Cloud Build** - CI/CD pipeline
+
+### **🏗️ Infrastructure as Code**
+```bash
+# Terraform deployment (coming soon)
+cd infrastructure/
+terraform init
+terraform apply
+```
+
+---
+
+## 🤝 **Development Workflow**
+
+### **🔄 Daily Development**
+```bash
+make up          # Start your day
+make migrate     # Apply any new migrations  
+make test        # Ensure tests pass
+make shell       # Develop in Django shell
+make quality     # Check code quality before committing
+```
+
+### **🔀 Contributing**
+1. **Fork** the repository
+2. **Create** feature branch: `git checkout -b feature/awesome-feature`
+3. **Setup** development environment: `make setup`
+4. **Make** your changes
+5. **Test** your changes: `make test`
+6. **Check** code quality: `make quality`
+7. **Commit** changes: `git commit -m 'Add awesome feature'`
+8. **Push** branch: `git push origin feature/awesome-feature`
+9. **Create** Pull Request
+
+---
+
+## 📞 **Getting Help**
+
+### **🐛 Troubleshooting**
+```bash
+make logs        # Check service logs
+make health      # Verify service health
+make clean       # Clean up Docker resources
+make setup       # Re-run complete setup
+```
+
+### **📚 Resources**
+- **[Django Documentation](https://docs.djangoproject.com/)**
+- **[Django REST Framework](https://www.django-rest-framework.org/)**
+- **[OpenAI API Docs](https://platform.openai.com/docs)**
+
+### **💬 Common Issues**
+- **Port conflicts**: Make sure ports 8000, 5433, 7474, 7687 are available
+- **Environment variables**: Ensure `.env` file has required API keys
+- **Docker permissions**: On Linux, you may need to run Docker commands with `sudo`
+- **Database connection**: Run `make logs` to check database startup
+- **Windows Make**: Use Git Bash or install Make via Chocolatey
+
+---
+
+## 📄 **License**
+
+Copyright (c) 2025 Aksio. All rights reserved.
+This software is proprietary and confidential to Aksio.
+
+---
+
+**Aksio Backend** - A production-ready foundation for AI-powered educational platforms. Built with Django, deployed on Google Cloud, designed for scale.
+
+*Transforming education through intelligent technology.* 🎓✨
