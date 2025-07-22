@@ -24,31 +24,31 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v4
-      
+       
       - name: Build docker image and run tests
         run: |
           # Build the Docker image first (pointing to correct Dockerfile)
           docker build -f config/docker/Dockerfile -t aksio-backend-test .
           
           # Use the minimal CI docker-compose configuration
-          docker compose -f docker-compose.ci.yml down -v
-          docker compose -f docker-compose.ci.yml build
+          docker compose -f config/docker/docker-compose.ci.yml down -v
+          docker compose -f config/docker/docker-compose.ci.yml build
           
           # Start services
-          docker compose -f docker-compose.ci.yml up -d db
+          docker compose -f config/docker/docker-compose.ci.yml up -d db
           
           # Wait for services to be ready
           echo "Waiting for PostgreSQL to be ready..."
-          timeout 60 bash -c 'until docker compose -f docker-compose.ci.yml exec -T db pg_isready -U aksio_user -d aksio_db; do sleep 2; done'
+          timeout 60 bash -c 'until docker compose -f config/docker/docker-compose.ci.yml exec -T db pg_isready -U aksio_user -d aksio_db; do sleep 2; done'
           
           # Run migrations
-          docker compose -f docker-compose.ci.yml run --rm backend python manage.py migrate
+          docker compose -f config/docker/docker-compose.ci.yml run --rm backend python manage.py migrate
           
           # Run tests
-          docker compose -f docker-compose.ci.yml run --rm backend python manage.py test
+          docker compose -f config/docker/docker-compose.ci.yml run --rm backend python manage.py test
           
           # Clean up
-          docker compose -f docker-compose.ci.yml down -v
+          docker compose -f config/docker/docker-compose.ci.yml down -v
 
   push-image:
     name: Build and Push Docker Image to Artifact Registry
