@@ -7,6 +7,10 @@ echo "Starting Aksio Backend in production mode..."
 echo "Running database migrations..."
 python manage.py migrate --noinput
 
+# Collect static files
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 # Start Gunicorn
 echo "Starting Gunicorn server..."
 exec gunicorn aksio.wsgi:application \

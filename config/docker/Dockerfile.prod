@@ -50,15 +50,17 @@ WORKDIR /app
 # Copy application code
 COPY --chown=django:django . .
 
+# Copy entrypoint script (as root to ensure permissions)
+COPY config/docker/entrypoint.prod.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Create necessary directories
 RUN mkdir -p /app/staticfiles /app/media \
-    && chown -R django:django /app
+    && chown -R django:django /app \
+    && chown django:django /entrypoint.sh
 
 # Switch to non-root user
 USER django
-
-# Collect static files
-RUN python manage.py collectstatic --noinput
 
 # Expose port (Cloud Run uses PORT env var)
 EXPOSE 8080
@@ -67,11 +69,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health/ || exit 1
 
-# Use gunicorn for production
-CMD exec gunicorn aksio.wsgi:application \
-    --bind 0.0.0.0:${PORT} \
-    --workers 2 \
-    --threads 4 \
-    --timeout 0 \
-    --access-logfile - \
-    --error-logfile -
+# Use the entrypoint script
+ENTRYPOINT ["/entrypoint.sh"]
