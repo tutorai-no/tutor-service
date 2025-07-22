@@ -1,7 +1,7 @@
 services:
   backend:
     build:
-      context: .
+      context: ../..
       dockerfile: config/docker/Dockerfile
     environment:
       - DJANGO_ENV=test
