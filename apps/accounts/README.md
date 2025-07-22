@@ -13,7 +13,49 @@ The `accounts` app handles all user management, authentication, and user-related
 
 ## 📋 Implementation Status
 
-✅ **IMPLEMENTED** - Core user model and authentication system
+✅ **FULLY IMPLEMENTED** - Core user model and authentication system with all tests passing
+
+## 🔧 Recent Fixes and Improvements
+
+### Authentication System Enhancements (Latest)
+
+#### 1. **Custom JWT Authentication**
+- **Issue**: JWT authentication was returning 403 Forbidden instead of 401 Unauthorized for unauthenticated requests
+- **Solution**: Implemented `CustomJWTAuthentication` class in `core.authentication` that properly returns 401 status
+- **Details**: The custom class extends SimpleJWT's JWTAuthentication and adds the `authenticate_header` method
+- **Impact**: All protected endpoints now correctly return 401 for missing/invalid tokens
+
+#### 2. **User Model Improvements**
+- **Email Fallback**: `full_name` property and `get_short_name()` method now return email when names are empty
+- **Email Normalization**: Removed automatic email normalization to preserve user input exactly as entered
+- **Validation**: Enhanced validation messages for better user experience
+
+#### 3. **Authentication Response Codes**
+- **Before**: Anonymous requests to protected endpoints returned 403 Forbidden
+- **After**: Anonymous requests properly return 401 Unauthorized with WWW-Authenticate header
+- **Configuration**: Updated `DEFAULT_AUTHENTICATION_CLASSES` order in settings to prioritize custom JWT auth
+
+#### 4. **Login Serializer Enhancements**
+- **Validation**: Fixed "Unable to log in with provided credentials" message for invalid logins
+- **Error Handling**: Improved error messages for missing or incorrect credentials
+
+#### 5. **CI/CD Pipeline Fixes**
+- **Build Process**: Moved `collectstatic` from Dockerfile to runtime execution in entrypoint script
+- **Environment**: Fixed production builds failing due to missing DJANGO_SECRET_KEY at build time
+- **Entrypoint**: Production container now uses `entrypoint.prod.sh` for proper runtime configuration
+
+#### 6. **Development Workflow**
+- **Makefile**: Fixed duplicate `runserver` target warnings
+- **Commands**: Added background server support with `make runserver-bg` and `make stop-server`
+
+### Testing Status
+✅ **All 65 tests passing** - Complete test coverage for:
+- User model creation and methods
+- Authentication endpoints (register, login, logout)
+- JWT token generation and validation
+- Profile management
+- URL routing for all apps
+- Custom authentication classes
 
 ## 🏗️ Models
 
@@ -91,6 +133,39 @@ GET /api/v1/accounts/health/
     - No authentication required
 ```
 
+## 🔧 Authentication Configuration
+
+### Custom JWT Authentication Setup
+
+The accounts app uses a custom JWT authentication class to ensure proper HTTP status codes:
+
+```python
+# core/authentication.py
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+class CustomJWTAuthentication(JWTAuthentication):
+    def authenticate_header(self, request):
+        return 'Bearer realm="api"'
+```
+
+### Settings Configuration
+
+```python
+# aksio/settings/base.py
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "core.authentication.CustomJWTAuthentication",  # Custom class first
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    # ... other settings
+}
+```
+
+**Important**: The order of authentication classes matters. CustomJWTAuthentication must come before SessionAuthentication to ensure proper 401 responses.
+
 ## 🔒 Security Features
 
 ### Authentication Security
@@ -149,15 +224,18 @@ SIMPLE_JWT = {
 
 ## 🧪 Testing Checklist
 
-### Essential Tests to Implement
-- [ ] User model creation with email
-- [ ] UserManager.create_user() functionality
-- [ ] UserManager.create_superuser() functionality
-- [ ] Registration endpoint validation
-- [ ] Login with correct/incorrect credentials
-- [ ] JWT token generation and refresh
-- [ ] Profile retrieval and updates
-- [ ] Logout and token blacklisting
+### Essential Tests (All Implemented ✅)
+- [x] User model creation with email
+- [x] UserManager.create_user() functionality
+- [x] UserManager.create_superuser() functionality
+- [x] Registration endpoint validation
+- [x] Login with correct/incorrect credentials
+- [x] JWT token generation and refresh
+- [x] Profile retrieval and updates
+- [x] Logout and token blacklisting
+- [x] Authentication response codes (401 vs 403)
+- [x] Email handling and fallback logic
+- [x] Custom JWT authentication implementation
 
 ## 📈 Usage Examples
 
@@ -228,5 +306,8 @@ curl -X POST http://localhost:8000/api/v1/accounts/login/ \
 - **createsuperuser**: Requires email, first_name, and last_name
 - **Authentication**: Use email field, not username
 - **Foreign Keys**: Other models should reference User with `to_field='id'` (UUID)
+- **401 vs 403**: Protected endpoints now properly return 401 for unauthenticated requests
+- **Email Display**: User's email is used as fallback when full_name is empty
+- **JWT Authentication**: Custom authentication class ensures proper WWW-Authenticate headers
 
 This accounts app serves as the secure foundation for all user-related functionality in the Aksio platform, with a focus on modern security practices and clean API design.

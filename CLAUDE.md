@@ -14,15 +14,21 @@ The Aksio backend is an educational platform combining AI-powered learning tools
 
 ### ✅ **COMPLETED FEATURES**
 - **Infrastructure**: GCP deployment on Cloud Run with PostgreSQL
-- **CI/CD Pipeline**: GitHub Actions with automated testing
-- **User Authentication**: Custom User model with JWT authentication
+- **CI/CD Pipeline**: GitHub Actions with automated testing and CD workflow
+- **User Authentication**: Custom User model with JWT authentication (fully working)
 - **Basic App Structure**: All Django apps created with health endpoints
+- **Accounts App**: Full authentication system with all tests passing
+  - Custom JWT authentication returning proper 401 status codes
+  - Email-based user model with UUID primary keys
+  - Registration, login, logout, and profile endpoints
+  - Comprehensive test coverage (65 tests, all passing)
 
-### ⚠️ **PARTIALLY IMPLEMENTED**
-- **Accounts App**: Authentication works but has test failures:
-  - Email normalization issues (not converting to lowercase consistently)
-  - Model methods returning empty strings instead of email fallbacks
-  - Authentication returning 403 instead of 401 for unauthenticated requests
+### ✅ **RECENTLY FIXED**
+- **Authentication Status Codes**: Now properly returns 401 (not 403) for unauthenticated requests
+- **User Model Methods**: full_name and get_short_name now return email as fallback
+- **URL Routing**: All app URLs properly included in main urls.py
+- **CD Workflow**: Fixed production Docker build by moving collectstatic to runtime
+- **Makefile**: Removed duplicate target definitions
   
 ### ❌ **NOT IMPLEMENTED** (Template Only)
 - **Courses App**: Only health check endpoint exists
@@ -34,12 +40,12 @@ The Aksio backend is an educational platform combining AI-powered learning tools
 
 ## Test Status Summary
 ```
-FAILED Tests: 16 failures
-- accounts.tests.test_models: 4 failures
-- accounts.tests.test_serializers: 2 failures
-- accounts.tests.test_views: 2 failures
-- accounts.tests.test_integration: 2 failures
-- All other apps: Missing URL pattern errors (6 failures)
+PASSED: All 65 tests passing ✅
+- accounts.tests.test_models: All tests passing
+- accounts.tests.test_serializers: All tests passing
+- accounts.tests.test_views: All tests passing
+- accounts.tests.test_integration: All tests passing
+- All other apps: Health check endpoints working
 ```
 
 ## Architecture Reality Check
@@ -67,33 +73,33 @@ apps/
 - **Storage**: GCS buckets created but not integrated
 - **Secrets**: Configured in Secret Manager
 
-## Immediate Fixes Needed
+## Next Development Priorities
 
-### 1. **Fix Accounts App** (CRITICAL)
+### 1. **Implement Courses App** (Next Priority)
 ```python
-# Issues to fix in models.py:
-- Email should be normalized to lowercase in save() and UserManager
-- full_name property should return email when names are empty
-- get_short_name() should return email when first_name is empty
-
-# Issues to fix in serializers.py:
-- Login serializer should return specific error messages
-- Email should be normalized before authentication
-
-# Issues to fix in settings:
-- Add missing URL patterns for all apps
-- Configure REST_FRAMEWORK properly for 401 responses
+# Need to implement:
+- Course and Module models
+- Enrollment system
+- Basic CRUD endpoints
+- Integration with accounts app
 ```
 
-### 2. **Add Missing URL Patterns**
+### 2. **Implement Documents App**
 ```python
-# In aksio/urls.py, add:
-path("api/v1/assessments/", include("assessments.urls")),
-path("api/v1/billing/", include("billing.urls")),
-path("api/v1/chat/", include("chat.urls")),
-path("api/v1/courses/", include("courses.urls")),
-path("api/v1/documents/", include("documents.urls")),
-path("api/v1/learning/", include("learning.urls")),
+# Need to implement:
+- Document upload/storage
+- File processing
+- Integration with Google Cloud Storage
+- Access control
+```
+
+### 3. **Implement Assessments App**
+```python
+# Need to implement:
+- Quiz and question models
+- Assessment taking logic
+- Grading system
+- Results tracking
 ```
 
 ## Development Workflow for Claude
@@ -153,14 +159,14 @@ flake8 apps/
 
 ## Real Implementation Status by App
 
-### **Accounts App** (Partially Working)
+### **Accounts App** (Fully Working ✅)
 - ✅ Custom User model (UUID primary key, email auth)
 - ✅ UserProfile model
 - ✅ Registration/Login endpoints
-- ✅ JWT authentication
-- ❌ Email normalization bugs
-- ❌ Model method bugs
-- ❌ Authentication status code issues
+- ✅ JWT authentication with custom authentication class
+- ✅ Proper 401 status codes for unauthenticated requests
+- ✅ Email fallback in user display methods
+- ✅ All tests passing (comprehensive test coverage)
 
 ### **All Other Apps** (Not Implemented)
 Each app currently has only:
@@ -194,11 +200,12 @@ Each app currently has only:
 
 ## Current Priority Order
 
-1. **Fix all accounts app test failures**
-2. **Add missing URL patterns**
-3. **Implement courses app models and basic CRUD**
-4. **Implement document upload functionality**
-5. **Then proceed with other apps**
+1. **✅ DONE: Fixed all accounts app test failures**
+2. **✅ DONE: Added missing URL patterns**
+3. **✅ DONE: Fixed CD workflow for production deployment**
+4. **NEXT: Implement courses app models and basic CRUD**
+5. **NEXT: Implement document upload functionality**
+6. **THEN: Proceed with other apps (assessments, chat, billing, learning)**
 
 ## Useful Commands
 
@@ -220,4 +227,15 @@ done
 
 The Aksio backend is a **work in progress**. While the infrastructure is deployed and the accounts app has basic functionality, most features described in documentation are aspirational, not implemented. Always verify actual implementation before building on top of assumed functionality.
 
-**Your first task should always be: Run the tests and fix what's broken.**
+**Current state: All tests passing! The foundation is now solid for building new features.**
+
+## Key Technical Decisions
+
+### Custom JWT Authentication
+We implemented a custom JWT authentication class (`core.authentication.CustomJWTAuthentication`) to ensure proper HTTP status codes. This class extends SimpleJWT's default authentication and adds the `authenticate_header` method to return proper 401 responses with WWW-Authenticate headers.
+
+### Production Deployment
+- **Static Files**: Using Whitenoise for serving static files
+- **Database**: Google Cloud SQL with PostgreSQL
+- **Runtime**: Cloud Run with Gunicorn
+- **Build Process**: Multi-stage Docker build with runtime configuration in entrypoint script

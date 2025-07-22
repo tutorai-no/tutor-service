@@ -113,12 +113,6 @@ stop-server: ## Stop the Django development server
 server: runserver ## Alias for runserver
 server-bg: runserver-bg ## Alias for runserver-bg
 
-runserver: ## Start Django development server
-	@echo "$(BLUE)🚀 Starting Django development server...$(NC)"
-	$(BACKEND_EXEC) python manage.py runserver 0.0.0.0:8000
-
-server: runserver ## Alias for runserver
-
 # =============================================================================
 # DATABASE COMMANDS
 # =============================================================================

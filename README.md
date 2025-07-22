@@ -365,22 +365,35 @@ Current test coverage focuses on:
 
 ---
 
-## 🚀 **Deployment** (Planned)
+## 🚀 **Deployment**
 
 ### **🌩️ Google Cloud Platform**
-- **Cloud Run** - Serverless container deployment
-- **Cloud SQL** - Managed PostgreSQL database
-- **Cloud Storage** - Static files and media storage
-- **Secret Manager** - Secure environment variable management
-- **Cloud Build** - CI/CD pipeline
+- **Cloud Run** - Serverless container deployment with auto-scaling (0-10 instances)
+- **Cloud SQL** - PostgreSQL 15 with automated backups
+- **Cloud Storage** - Static files served via Whitenoise
+- **Secret Manager** - Secure credential management
+- **Cloud Build** - Automatic deployment on image push to Artifact Registry
+- **Artifact Registry** - Docker image storage with vulnerability scanning
 
 ### **🏗️ Infrastructure as Code**
 ```bash
-# Terraform deployment (coming soon)
-cd infrastructure/
+# Deploy infrastructure with Terraform
+cd infrastructure/terraform
 terraform init
 terraform apply
+
+# Set required secrets after infrastructure is created
+gcloud secrets versions add aksio-prod-django-secret --data-file=- <<< "your-secret-key"
+gcloud secrets versions add aksio-prod-openai-key --data-file=- <<< "your-api-key"
 ```
+
+### **🔄 Continuous Deployment**
+Automatic deployment is configured via Cloud Build triggers:
+1. **Push code** → GitHub Actions builds and pushes Docker image
+2. **Image pushed** → Cloud Build trigger activates
+3. **Deployment** → Migrations run, then traffic switches to new revision
+
+See [infrastructure docs](./infrastructure/terraform/README.md) for details.
 
 ---
 
@@ -789,22 +802,35 @@ Current test coverage focuses on:
 
 ---
 
-## 🚀 **Deployment** (Planned)
+## 🚀 **Deployment**
 
 ### **🌩️ Google Cloud Platform**
-- **Cloud Run** - Serverless container deployment
-- **Cloud SQL** - Managed PostgreSQL database
-- **Cloud Storage** - Static files and media storage
-- **Secret Manager** - Secure environment variable management
-- **Cloud Build** - CI/CD pipeline
+- **Cloud Run** - Serverless container deployment with auto-scaling (0-10 instances)
+- **Cloud SQL** - PostgreSQL 15 with automated backups
+- **Cloud Storage** - Static files served via Whitenoise
+- **Secret Manager** - Secure credential management
+- **Cloud Build** - Automatic deployment on image push to Artifact Registry
+- **Artifact Registry** - Docker image storage with vulnerability scanning
 
 ### **🏗️ Infrastructure as Code**
 ```bash
-# Terraform deployment (coming soon)
-cd infrastructure/
+# Deploy infrastructure with Terraform
+cd infrastructure/terraform
 terraform init
 terraform apply
+
+# Set required secrets after infrastructure is created
+gcloud secrets versions add aksio-prod-django-secret --data-file=- <<< "your-secret-key"
+gcloud secrets versions add aksio-prod-openai-key --data-file=- <<< "your-api-key"
 ```
+
+### **🔄 Continuous Deployment**
+Automatic deployment is configured via Cloud Build triggers:
+1. **Push code** → GitHub Actions builds and pushes Docker image
+2. **Image pushed** → Cloud Build trigger activates
+3. **Deployment** → Migrations run, then traffic switches to new revision
+
+See [infrastructure docs](./infrastructure/terraform/README.md) for details.
 
 ---
 
