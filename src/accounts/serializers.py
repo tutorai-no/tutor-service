@@ -122,6 +122,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         validators=[phone_regex],
     )
 
+    date_of_birth = serializers.DateField(
+        required=False,
+        allow_null=True,
+        help_text="Date of birth in DD-MM-YYYY format.",
+    )
+
     subscription = serializers.PrimaryKeyRelatedField(
         queryset=Subscription.objects.filter(active=True),
         required=False,
@@ -137,6 +143,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password_confirm",
             "subscription",
             "phone_number",
+            "date_of_birth",
         )
 
     def validate(self, attrs):
