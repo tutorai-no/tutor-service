@@ -33,6 +33,7 @@ class CustomUser(AbstractUser):
         related_name="subscribers",
     )
     phone_number = models.CharField(max_length=15, blank=True, null=True, default="N/A")
+    date_of_birth = models.DateField(blank=True, null=True)
 
     heard_about_us = models.CharField(max_length=100, blank=True, null=True)
     other_heard_about_us = models.CharField(max_length=255, blank=True, null=True)
