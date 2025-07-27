@@ -108,7 +108,10 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
-SITE_ID = 1
+SITE_ID = 2
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
@@ -313,5 +316,5 @@ AUTHENTICATION_BACKENDS = (
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 
-LOGIN_REDIRECT_URL = "/"
-ACCOUNT_LOGOUT_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/courses/"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/courses/"

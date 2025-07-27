@@ -23,6 +23,7 @@ from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django_prometheus import urls as prometheus_urls  # Import Prometheus URLs
+from tutorai.views import redirect_to_frontend
 
 # Swagger schema view configuration
 schema_view = get_schema_view(
@@ -46,6 +47,8 @@ urlpatterns = [
     ),  # Includes login/logout views
     # API routes
     path("api/", include("api.urls"), name="api"),
+    path("accounts/", include("allauth.urls")),
+    path("courses/", redirect_to_frontend),
     # Swagger routes
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
