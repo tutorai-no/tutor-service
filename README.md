@@ -21,6 +21,7 @@
     - [Clone the repository](#clone-the-repository)
     - [Configuration](#configuration)
     - [Usage](#usage)
+    - [Generate Documentation Site](#generate-documentation-site)
   - [Testing](#testing)
   - [📖 Documentations](#-documentations)
 
@@ -75,6 +76,16 @@ docker compose up --build
 ```
 
 To access the backend, navigate to `http://localhost:8000` in your browser.
+
+### Generate Documentation Site
+
+To build and preview the documentation site locally, run:
+
+```bash
+mkdocs build; mkdocs serve
+```
+
+This will build the documentation and starts a local server at [http://127.0.0.1:8000/](http://127.0.0.1:8000/) where you can browse the docs and API reference.
 
 ## Testing
 To run all the tests, execute the following command in the root directory of the project:
