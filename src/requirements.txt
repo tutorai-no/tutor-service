@@ -20,7 +20,7 @@ cryptography==43.0.1
 cycler==0.12.1
 distro==1.9.0
 Django==5.1.2
-django-cors-headers==4.5.0
+django-cors-headers==4.9.0
 django-prometheus==2.3.1
 django-rest-framework==0.1.0
 djangorestframework==3.15.2
