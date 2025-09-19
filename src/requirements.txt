@@ -47,7 +47,7 @@ langchain==0.3.6
 langchain-core==0.3.15
 langchain-openai==0.2.5
 langchain-text-splitters==0.3.1
-langsmith==0.1.139
+langsmith==0.4.29
 lxml==5.3.0
 matplotlib==3.9.2
 multidict==6.1.0
