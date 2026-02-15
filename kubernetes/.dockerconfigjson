@@ -1,0 +1,10 @@
+{
+  "auths": {
+    "ghcr.io": {
+      "username": "SverreNystad",
+      "password": "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",
+      "email": "sverrenystad@gmail.com",
+      "auth": "U3ZlcnJlTnlzdGFkOmdocF9scEdhQXZ1Rkh3Q3RqTllCVTNmNU84M2lFeUNuTXY0NmpwWXk="
+    }
+  }
+}
